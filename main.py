@@ -28,6 +28,7 @@ from scraper.sites import (
     SardegnaTurismoScraper,
     CastedduOnlineScraper,
     VistanetScraper,
+    ParadisolaScraper,
 )
 
 logging.basicConfig(
@@ -41,6 +42,7 @@ SITI_DISPONIBILI = {
     "sardegnaturismo": SardegnaTurismoScraper,
     "vistanet": VistanetScraper,
     "casteddu": CastedduOnlineScraper,
+    "paradisola": ParadisolaScraper,
 }
 
 
