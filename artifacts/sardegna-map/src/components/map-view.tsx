@@ -1,6 +1,6 @@
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import type { Event } from "@workspace/api-client-react/src/generated/api.schemas";
+import type { Event } from "@workspace/api-client-react";
 import { useEffect, useRef } from "react";
 
 // Fix Leaflet default icon with CDN URLs (avoids Vite bundler issues)
