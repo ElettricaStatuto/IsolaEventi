@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Switch, Route, Link, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -6,6 +7,9 @@ import NotFound from "@/pages/not-found";
 import { Home } from "./pages/home";
 import { Stats } from "./pages/stats";
 import { Map, BarChart2 } from "lucide-react";
+
+// Lazy-loaded — Vite creates a separate chunk, excluded from the public bundle
+const Admin = lazy(() => import("./pages/admin").then((m) => ({ default: m.Admin })));
 
 const queryClient = new QueryClient();
 
@@ -37,13 +41,25 @@ function Layout({ children }: { children: React.ReactNode }) {
 
 function Router() {
   return (
-    <Layout>
-      <Switch>
-        <Route path="/" component={Home} />
-        <Route path="/stats" component={Stats} />
-        <Route component={NotFound} />
-      </Switch>
-    </Layout>
+    <Switch>
+      {/* Admin route — no Layout wrapper, no menu link, lazy chunk */}
+      <Route path="/admin-panel">
+        <Suspense fallback={null}>
+          <Admin />
+        </Suspense>
+      </Route>
+
+      {/* Public routes */}
+      <Route>
+        <Layout>
+          <Switch>
+            <Route path="/" component={Home} />
+            <Route path="/stats" component={Stats} />
+            <Route component={NotFound} />
+          </Switch>
+        </Layout>
+      </Route>
+    </Switch>
   );
 }
 

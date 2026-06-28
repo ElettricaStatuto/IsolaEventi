@@ -107,7 +107,7 @@ router.get("/events/stats", async (_req, res): Promise<void> => {
   res.json(GetEventStatsResponse.parse(stats));
 });
 
-router.post("/events/refresh", async (req, res): Promise<void> => {
+router.post("/events/refresh", requireAdminKey, async (req, res): Promise<void> => {
   req.log.info("Starting events refresh via Python scraper");
 
   const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
