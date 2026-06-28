@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/sardegna-map/"
+title = "Sardegna Events Map"
+version = "1.0.0"
+id = "artifacts/sardegna-map"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/sardegna-map/" ]
+localPort = 22649
+
+[services.development]
+run = "pnpm --filter @workspace/sardegna-map run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sardegna-map", "run", "build" ]
+publicDir = "artifacts/sardegna-map/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22649"
+BASE_PATH = "/sardegna-map/"

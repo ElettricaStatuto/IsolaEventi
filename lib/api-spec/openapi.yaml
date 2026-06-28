@@ -1,22 +1,22 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Sardegna Events Map API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: events
+    description: Sardegna events
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +24,92 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /events:
+    get:
+      operationId: listEvents
+      tags: [events]
+      summary: List all events with optional date filter
+      parameters:
+        - name: date_from
+          in: query
+          required: false
+          schema:
+            type: string
+            description: ISO date string YYYY-MM-DD
+        - name: date_to
+          in: query
+          required: false
+          schema:
+            type: string
+            description: ISO date string YYYY-MM-DD
+        - name: luogo
+          in: query
+          required: false
+          schema:
+            type: string
+            description: Filter by location name (partial match)
+      responses:
+        "200":
+          description: List of events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+
+  /events/stats:
+    get:
+      operationId: getEventStats
+      tags: [events]
+      summary: Summary statistics for the dashboard
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventStats"
+
+  /events/refresh:
+    post:
+      operationId: refreshEvents
+      tags: [events]
+      summary: Trigger scraper to fetch fresh events from paradisola.it
+      responses:
+        "200":
+          description: Refresh result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshResult"
+
+  /events/{id}:
+    get:
+      operationId: getEvent
+      tags: [events]
+      summary: Get a single event by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Event found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +120,72 @@ components:
       required:
         - status
 
+    Event:
+      type: object
+      required: [id, titolo, fonte]
+      properties:
+        id:
+          type: integer
+        titolo:
+          type: string
+        data_inizio:
+          type: ["string", "null"]
+        data_fine:
+          type: ["string", "null"]
+        luogo:
+          type: ["string", "null"]
+        latitudine:
+          type: ["number", "null"]
+        longitudine:
+          type: ["number", "null"]
+        link:
+          type: ["string", "null"]
+        descrizione:
+          type: ["string", "null"]
+        fonte:
+          type: string
+        aggiornato_il:
+          type: string
+
+    EventStats:
+      type: object
+      required: [totale, con_coordinate, prossimi_7_giorni, luoghi]
+      properties:
+        totale:
+          type: integer
+        con_coordinate:
+          type: integer
+        prossimi_7_giorni:
+          type: integer
+        luoghi:
+          type: array
+          items:
+            type: object
+            required: [luogo, count]
+            properties:
+              luogo:
+                type: string
+              count:
+                type: integer
+
+    RefreshResult:
+      type: object
+      required: [success, nuovi, aggiornati, errori]
+      properties:
+        success:
+          type: boolean
+        nuovi:
+          type: integer
+        aggiornati:
+          type: integer
+        errori:
+          type: integer
+        messaggio:
+          type: ["string", "null"]
+
+    ApiError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
