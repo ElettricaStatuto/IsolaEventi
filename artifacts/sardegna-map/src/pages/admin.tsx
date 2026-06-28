@@ -38,8 +38,7 @@ export function Admin() {
     setError(null);
 
     try {
-      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-      const resp = await fetch(`${base}/api/events/refresh`, {
+      const resp = await fetch("/api/events/refresh", {
         method: "POST",
         headers: {
           "x-admin-key": adminKey.trim(),
