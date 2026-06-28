@@ -18,7 +18,7 @@ import psycopg2.extras
 import requests
 
 from scraper.sites.paradisola import ParadisolaScraper
-from scraper.sites.sardegnaturismo import SardegnaturismoScraper
+from scraper.sites.sardegnaturismo import SardegnaTurismoScraper
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -71,7 +71,7 @@ def main():
     # --- Scrape ---
     scrapers = [
         ParadisolaScraper(),
-        SardegnaturismoScraper(),
+        SardegnaTurismoScraper(),
     ]
 
     tutti_eventi = []
