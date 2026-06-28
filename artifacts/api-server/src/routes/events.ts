@@ -13,6 +13,7 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import { logger } from "../lib/logger";
+import { requireAdminKey } from "../middlewares/auth";
 
 const execFileAsync = promisify(execFile);
 
