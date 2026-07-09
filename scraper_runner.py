@@ -9,8 +9,10 @@ Prints a JSON line: {"nuovi": N, "aggiornati": M, "errori": K}
 import json
 import logging
 import os
+import re
 import sys
 import time
+from datetime import datetime
 from typing import Optional
 
 import psycopg2
@@ -35,6 +37,50 @@ if not DATABASE_URL:
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 NOMINATIM_HEADERS = {"User-Agent": "SardegnaEventsMap/1.0 (info@sardegnamap.local)"}
 _geocode_cache: dict[str, Optional[tuple[float, float]]] = {}
+
+# Mappa mesi inglesi -> numerici per normalizzare date tipo "19 Jun 2025"
+_MONTH_MAP = {
+    "jan": "01", "feb": "02", "mar": "03", "apr": "04",
+    "may": "05", "jun": "06", "jul": "07", "aug": "08",
+    "sep": "09", "oct": "10", "nov": "11", "dec": "12",
+}
+
+
+def _parse_mixed_date(raw: str | None) -> str | None:
+    """Converte formati eterogenei in YYYY-MM-DD per PostgreSQL."""
+    if not raw or not isinstance(raw, str):
+        return None
+    raw = raw.strip()
+    if not raw:
+        return None
+
+    # Già formato ISO-ish (2025-06-19 o 2025/06/19)
+    iso_match = re.match(r"(\d{4})[-/](\d{1,2})[-/](\d{1,2})", raw)
+    if iso_match:
+        y, m, d = iso_match.groups()
+        return f"{y}-{int(m):02d}-{int(d):02d}"
+
+    # Formato "19 Jun 2025", "Wed, 24 Jun 2026 15:24:40 +0000",
+    # o "Thu, 09 Jul 2026 13:55:43 +0000" (RFC 822 dates da RSS)
+    eng_match = re.search(
+        r"(\d{1,2})\s+([A-Za-z]{3,})\.?\s+(\d{4})", raw
+    )
+    if eng_match:
+        d, mon, y = eng_match.groups()
+        mon_key = mon[:3].lower()
+        m = _MONTH_MAP.get(mon_key)
+        if m:
+            return f"{y}-{m}-{int(d):02d}"
+
+    # Tenta dateutil-like fallback con strptime comuni
+    for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%Y%m%d"):
+        try:
+            return datetime.strptime(raw, fmt).strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    logger.warning(f"Impossibile parsare data: '{raw}'")
+    return None
 
 
 def geocode(luogo: str) -> Optional[tuple[float, float]]:
@@ -75,9 +121,8 @@ def main():
     scrapers = [
         ParadisolaScraper(),
         SardegnaTurismoScraper(),
-        CastedduOnlineScraper(solo_eventi=True),
+        CastedduOnlineScraper(),  # tutto il feed (notizie incluse) per massima copertura
         VistanetScraper(),
-        SardegnaEventi24Scraper(),
     ]
 
     tutti_eventi = []
@@ -95,6 +140,10 @@ def main():
     cur = conn.cursor()
 
     for ev in tutti_eventi:
+        # Normalizza date in formati eterogenei (es. "19 Jun 2025") → YYYY-MM-DD
+        data_inizio = _parse_mixed_date(ev.data_inizio)
+        data_fine = _parse_mixed_date(ev.data_fine) if ev.data_fine else data_inizio
+
         lat, lon = None, None
         if ev.luogo:
             coords = geocode(ev.luogo)
@@ -119,7 +168,7 @@ def main():
                     WHERE id=%s
                     """,
                     (
-                        ev.data_inizio, ev.data_fine, ev.luogo,
+                        data_inizio, data_fine, ev.luogo,
                         lat, lon, ev.url, ev.descrizione, row[0],
                     ),
                 )
@@ -133,7 +182,7 @@ def main():
                     VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
                     """,
                     (
-                        ev.titolo, ev.data_inizio, ev.data_fine, ev.luogo,
+                        ev.titolo, data_inizio, data_fine, ev.luogo,
                         lat, lon, ev.url, ev.descrizione, ev.fonte or "",
                     ),
                 )
