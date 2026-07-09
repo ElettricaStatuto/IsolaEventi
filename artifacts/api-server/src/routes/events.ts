@@ -52,6 +52,7 @@ router.get("/events", async (req, res): Promise<void> => {
     longitudine: r.longitudine,
     link: r.link,
     descrizione: r.descrizione,
+    immagine: r.immagine,
     fonte: r.fonte,
     aggiornato_il: r.aggiornatoIl.toISOString(),
   }));
@@ -254,6 +255,7 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
             longitudine: ev.longitudine,
             link: ev.link,
             descrizione: ev.descrizione,
+            immagine: ev.immagine,
             aggiornatoIl: new Date(),
           })
           .where(eq(eventsTable.id, existing.id));
@@ -268,6 +270,7 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
           longitudine: ev.longitudine,
           link: ev.link,
           descrizione: ev.descrizione,
+          immagine: ev.immagine,
           fonte: ev.fonte || "",
         });
         nuovi++;
@@ -356,6 +359,7 @@ router.get("/events/:id", async (req, res): Promise<void> => {
       longitudine: row.longitudine,
       link: row.link,
       descrizione: row.descrizione,
+      immagine: row.immagine,
       fonte: row.fonte,
       aggiornato_il: row.aggiornatoIl.toISOString(),
     })

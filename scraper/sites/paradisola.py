@@ -95,6 +95,14 @@ class ParadisolaScraper(BaseScraper):
         # Luogo: estratto dal title dell'<a> ("Festival Letterario di Alghero")
         luogo = self._estrai_luogo(titolo)
 
+        # Immagine: cerca img nel <li> o nell'h3
+        immagine = None
+        for img in li.find_all("img"):
+            src = img.get("src") or img.get("data-src")
+            if src:
+                immagine = urljoin(self.url_base, src)
+                break
+
         # Descrizione: tutto il testo del <li> meno l'h3
         h3.extract()
         descrizione = li.get_text(separator=" ", strip=True)
@@ -110,6 +118,7 @@ class ParadisolaScraper(BaseScraper):
             luogo=luogo,
             url=url,
             descrizione=descrizione,
+            immagine=immagine,
             fonte=self.nome_fonte,
         )
 

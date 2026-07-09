@@ -12,6 +12,7 @@ export const eventsTable = pgTable("events", {
   longitudine: real("longitudine"),
   link: text("link"),
   descrizione: text("descrizione"),
+  immagine: text("immagine"),
   fonte: text("fonte").notNull().default(""),
   aggiornatoIl: timestamp("aggiornato_il", { withTimezone: true }).notNull().defaultNow(),
 });

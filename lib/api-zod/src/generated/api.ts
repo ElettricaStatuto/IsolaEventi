@@ -35,6 +35,7 @@ export const ListEventsResponseItem = zod.object({
   "longitudine": zod.number().nullish(),
   "link": zod.string().nullish(),
   "descrizione": zod.string().nullish(),
+  "immagine": zod.string().nullish(),
   "fonte": zod.string(),
   "aggiornato_il": zod.string().optional()
 })
@@ -85,6 +86,7 @@ export const PreviewEventsResponse = zod.object({
   "longitudine": zod.number().nullish(),
   "link": zod.string().nullish(),
   "descrizione": zod.string().nullish(),
+  "immagine": zod.string().nullish(),
   "fonte": zod.string(),
   "is_new": zod.boolean().optional()
 }))
@@ -104,6 +106,7 @@ export const ApproveEventsBody = zod.object({
   "longitudine": zod.number().nullish(),
   "link": zod.string().nullish(),
   "descrizione": zod.string().nullish(),
+  "immagine": zod.string().nullish(),
   "fonte": zod.string(),
   "is_new": zod.boolean().optional()
 }))
@@ -135,6 +138,7 @@ export const GetEventResponse = zod.object({
   "longitudine": zod.number().nullish(),
   "link": zod.string().nullish(),
   "descrizione": zod.string().nullish(),
+  "immagine": zod.string().nullish(),
   "fonte": zod.string(),
   "aggiornato_il": zod.string().optional()
 })

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Runner script: scrapes events from all sources, geocodes them via Nominatim,
-and upserts them into PostgreSQL.
+downloads event images, and upserts them into PostgreSQL.
 
 Usage: python3 scraper_runner.py
 Prints a JSON line: {"nuovi": N, "aggiornati": M, "errori": K}
@@ -13,7 +13,9 @@ import re
 import sys
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
 import psycopg2
 import psycopg2.extras
@@ -35,6 +37,10 @@ if not DATABASE_URL:
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 NOMINATIM_HEADERS = {"User-Agent": "SardegnaEventsMap/1.0 (info@sardegnamap.local)"}
 _geocode_cache: dict[str, Optional[tuple[float, float]]] = {}
+
+# Directory per le immagini scaricate
+IMAGES_DIR = Path(os.environ.get("EVENT_IMAGES_DIR", "data/event-images"))
+IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 
 # Mappa mesi inglesi -> numerici per normalizzare date tipo "19 Jun 2025"
 _MONTH_MAP = {
@@ -119,6 +125,51 @@ def _load_rejected(conn) -> set[tuple[str, str]]:
     return {(r[0], r[1]) for r in rows}
 
 
+def _download_image(url: str, event_id: int) -> Optional[str]:
+    """Scarica un'immagine da URL e la salva come evento_{id}.{ext}.
+    Restituisce il nome file relativo (es. 'evento_42.jpg')."""
+    if not url:
+        return None
+    try:
+        parsed = urlparse(url)
+        # Estrai estensione dal path
+        ext = Path(parsed.path).suffix.lower()
+        if ext not in (".jpg", ".jpeg", ".png", ".webp", ".gif"):
+            ext = ".jpg"
+        filename = f"evento_{event_id}{ext}"
+        filepath = IMAGES_DIR / filename
+
+        # Non riscaricare se già esiste
+        if filepath.exists():
+            return filename
+
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/125.0.0.0 Safari/537.36"
+            ),
+        }
+        resp = requests.get(url, headers=headers, timeout=15, stream=True)
+        resp.raise_for_status()
+
+        # Verifica content-type
+        content_type = resp.headers.get("content-type", "")
+        if not content_type.startswith("image/"):
+            logger.warning(f"URL non è un'immagine: {url} ({content_type})")
+            return None
+
+        with open(filepath, "wb") as f:
+            for chunk in resp.iter_content(chunk_size=8192):
+                f.write(chunk)
+
+        logger.info(f"Immagine scaricata: {filename} ({url})")
+        return filename
+    except Exception as e:
+        logger.warning(f"Download immagine fallito per {url}: {e}")
+        return None
+
+
 def main():
     dry_run = "--dry-run" in sys.argv
     preview_only = "--preview" in sys.argv
@@ -172,6 +223,7 @@ def main():
                 "longitudine": lon,
                 "link": ev.url,
                 "descrizione": ev.descrizione,
+                "immagine": ev.immagine,
                 "fonte": ev.fonte or "",
                 "is_new": True,
             })
@@ -197,7 +249,7 @@ def main():
         }))
         return
 
-    # --- Geocode & upsert ---
+    # --- Geocode, download images & upsert ---
     cur = conn.cursor()
 
     for ev in filtrati:
@@ -218,17 +270,25 @@ def main():
             row = cur.fetchone()
 
             if row:
+                event_id = row[0]
+                # Download immagine solo se esiste un'immagine nuova
+                image_filename = None
+                if ev.immagine:
+                    image_filename = _download_image(ev.immagine, event_id)
+
                 cur.execute(
                     """
                     UPDATE events
                     SET data_inizio=%s, data_fine=%s, luogo=%s,
                         latitudine=%s, longitudine=%s, link=%s,
-                        descrizione=%s, aggiornato_il=now()
+                        descrizione=%s, immagine=%s, aggiornato_il=now()
                     WHERE id=%s
                     """,
                     (
                         data_inizio, data_fine, ev.luogo,
-                        lat, lon, ev.url, ev.descrizione, row[0],
+                        lat, lon, ev.url, ev.descrizione,
+                        image_filename or ev.immagine,
+                        event_id,
                     ),
                 )
                 aggiornati += 1
@@ -237,15 +297,27 @@ def main():
                     """
                     INSERT INTO events
                         (titolo, data_inizio, data_fine, luogo, latitudine, longitudine,
-                         link, descrizione, fonte, aggiornato_il)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
+                         link, descrizione, immagine, fonte, aggiornato_il)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
+                    RETURNING id
                     """,
                     (
                         ev.titolo, data_inizio, data_fine, ev.luogo,
-                        lat, lon, ev.url, ev.descrizione, ev.fonte or "",
+                        lat, lon, ev.url, ev.descrizione, None, ev.fonte or "",
                     ),
                 )
+                event_id = cur.fetchone()[0]
                 nuovi += 1
+
+                # Download immagine con l'ID appena creato
+                image_filename = None
+                if ev.immagine:
+                    image_filename = _download_image(ev.immagine, event_id)
+                    if image_filename:
+                        cur.execute(
+                            "UPDATE events SET immagine = %s WHERE id = %s",
+                            (image_filename, event_id),
+                        )
         except Exception as e:
             logger.error(f"DB error for event '{ev.titolo}': {e}")
             conn.rollback()

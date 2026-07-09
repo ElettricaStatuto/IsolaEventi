@@ -26,6 +26,8 @@ export interface Event {
   link?: string | null;
   /** @nullable */
   descrizione?: string | null;
+  /** @nullable */
+  immagine?: string | null;
   fonte: string;
   aggiornato_il?: string;
 }
@@ -67,6 +69,8 @@ export interface EventPreview {
   link?: string | null;
   /** @nullable */
   descrizione?: string | null;
+  /** @nullable */
+  immagine?: string | null;
   fonte: string;
   is_new?: boolean;
 }

@@ -206,6 +206,8 @@ components:
           type: ["string", "null"]
         descrizione:
           type: ["string", "null"]
+        immagine:
+          type: ["string", "null"]
         fonte:
           type: string
         aggiornato_il:
@@ -285,6 +287,8 @@ components:
         link:
           type: ["string", "null"]
         descrizione:
+          type: ["string", "null"]
+        immagine:
           type: ["string", "null"]
         fonte:
           type: string

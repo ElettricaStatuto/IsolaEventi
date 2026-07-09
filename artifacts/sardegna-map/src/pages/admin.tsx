@@ -17,6 +17,7 @@ interface EventPreview {
   longitudine: number | null;
   link: string | null;
   descrizione: string | null;
+  immagine: string | null;
   fonte: string;
   is_new?: boolean;
 }
@@ -245,6 +246,7 @@ export function Admin() {
                       <thead className="bg-muted sticky top-0">
                         <tr>
                           <th className="w-10 p-2"></th>
+                          <th className="p-2 text-left">Immagine</th>
                           <th className="p-2 text-left">Titolo</th>
                           <th className="p-2 text-left">Data</th>
                           <th className="p-2 text-left">Luogo</th>
@@ -259,6 +261,20 @@ export function Admin() {
                                 checked={selectedIds.has(i)}
                                 onCheckedChange={(v) => toggleOne(i, v === true)}
                               />
+                            </td>
+                            <td className="p-2">
+                              {ev.immagine ? (
+                                <img
+                                  src={ev.immagine.startsWith("http") ? ev.immagine : `/api/event-images/${ev.immagine}`}
+                                  alt={ev.titolo}
+                                  className="w-16 h-12 object-cover rounded border"
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <div className="w-16 h-12 bg-muted rounded border flex items-center justify-center text-xs text-muted-foreground">
+                                  —
+                                </div>
+                              )}
                             </td>
                             <td className="p-2 font-medium">
                               {ev.link ? (
