@@ -21,9 +21,7 @@ import requests
 
 from scraper.sites.paradisola import ParadisolaScraper
 from scraper.sites.sardegnaturismo import SardegnaTurismoScraper
-from scraper.sites.castedduonline import CastedduOnlineScraper
 from scraper.sites.vistanet import VistanetScraper
-from scraper.sites.sardegnaeventi24 import SardegnaEventi24Scraper
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -121,7 +119,6 @@ def main():
     scrapers = [
         ParadisolaScraper(),
         SardegnaTurismoScraper(),
-        CastedduOnlineScraper(),  # tutto il feed (notizie incluse) per massima copertura
         VistanetScraper(),
     ]
 
