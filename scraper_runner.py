@@ -110,7 +110,18 @@ def geocode(luogo: str) -> Optional[tuple[float, float]]:
     return None
 
 
+def _load_rejected(conn) -> set[tuple[str, str]]:
+    """Carica i titoli+fonte degli eventi rifiutati dal DB."""
+    cur = conn.cursor()
+    cur.execute("SELECT titolo, fonte FROM rejected_events")
+    rows = cur.fetchall()
+    cur.close()
+    return {(r[0], r[1]) for r in rows}
+
+
 def main():
+    dry_run = "--dry-run" in sys.argv
+    preview_only = "--preview" in sys.argv
     nuovi = 0
     aggiornati = 0
     errori = 0
@@ -132,12 +143,64 @@ def main():
             logger.error(f"Scraper {s.nome_fonte} failed: {e}")
             errori += 1
 
-    # --- Geocode & upsert ---
     conn = psycopg2.connect(DATABASE_URL)
+    rejected_set = _load_rejected(conn)
+
+    # Escludi eventi precedentemente rifiutati
+    filtrati = [ev for ev in tutti_eventi if (ev.titolo, ev.fonte or "") not in rejected_set]
+    scartati = len(tutti_eventi) - len(filtrati)
+    if scartati:
+        logger.info(f"Scartati {scartati} eventi precedentemente rifiutati")
+
+    if preview_only:
+        # Restituisce JSON con lista eventi trovati, senza toccare il DB
+        events_preview = []
+        for ev in filtrati:
+            data_inizio = _parse_mixed_date(ev.data_inizio)
+            data_fine = _parse_mixed_date(ev.data_fine) if ev.data_fine else data_inizio
+            lat, lon = None, None
+            if ev.luogo:
+                coords = geocode(ev.luogo)
+                if coords:
+                    lat, lon = coords
+            events_preview.append({
+                "titolo": ev.titolo,
+                "data_inizio": data_inizio,
+                "data_fine": data_fine,
+                "luogo": ev.luogo,
+                "latitudine": lat,
+                "longitudine": lon,
+                "link": ev.url,
+                "descrizione": ev.descrizione,
+                "fonte": ev.fonte or "",
+                "is_new": True,
+            })
+        conn.close()
+        print(json.dumps({
+            "success": True,
+            "nuovi": len(events_preview),
+            "aggiornati": 0,
+            "errori": errori,
+            "events": events_preview,
+            "messaggio": f"Preview: {len(events_preview)} eventi trovati",
+        }))
+        return
+
+    if dry_run:
+        conn.close()
+        print(json.dumps({
+            "success": True,
+            "nuovi": len(filtrati),
+            "aggiornati": 0,
+            "errori": errori,
+            "messaggio": f"Dry-run: {len(filtrati)} eventi pronti per approvazione",
+        }))
+        return
+
+    # --- Geocode & upsert ---
     cur = conn.cursor()
 
-    for ev in tutti_eventi:
-        # Normalizza date in formati eterogenei (es. "19 Jun 2025") → YYYY-MM-DD
+    for ev in filtrati:
         data_inizio = _parse_mixed_date(ev.data_inizio)
         data_fine = _parse_mixed_date(ev.data_fine) if ev.data_fine else data_inizio
 
@@ -148,7 +211,6 @@ def main():
                 lat, lon = coords
 
         try:
-            # Try to find existing by (titolo, fonte)
             cur.execute(
                 "SELECT id FROM events WHERE titolo = %s AND fonte = %s LIMIT 1",
                 (ev.titolo, ev.fonte or ""),

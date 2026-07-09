@@ -51,6 +51,48 @@ export interface RefreshResult {
   messaggio?: string | null;
 }
 
+export interface EventPreview {
+  titolo: string;
+  /** @nullable */
+  data_inizio?: string | null;
+  /** @nullable */
+  data_fine?: string | null;
+  /** @nullable */
+  luogo?: string | null;
+  /** @nullable */
+  latitudine?: number | null;
+  /** @nullable */
+  longitudine?: number | null;
+  /** @nullable */
+  link?: string | null;
+  /** @nullable */
+  descrizione?: string | null;
+  fonte: string;
+  is_new?: boolean;
+}
+
+export interface RefreshPreviewResult {
+  success: boolean;
+  nuovi: number;
+  aggiornati: number;
+  errori: number;
+  /** @nullable */
+  messaggio: string | null;
+  events: EventPreview[];
+}
+
+export interface ApproveEventsBody {
+  events: EventPreview[];
+}
+
+export interface ApproveEventsResult {
+  success: boolean;
+  nuovi: number;
+  aggiornati: number;
+  errori: number;
+  messaggio: string;
+}
+
 export interface ApiError {
   error: string;
 }
@@ -68,5 +110,14 @@ date_to?: string;
  * Filter by location name (partial match)
  */
 luogo?: string;
+};
+
+export type DeleteEventBody = {
+  record_rejected?: boolean;
+};
+
+export type DeleteEvent200 = {
+  success?: boolean;
+  message?: string;
 };
 

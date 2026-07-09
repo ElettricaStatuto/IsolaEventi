@@ -21,15 +21,20 @@ import type {
 
 import type {
   ApiError,
+  ApproveEventsBody,
+  ApproveEventsResult,
+  DeleteEvent200,
+  DeleteEventBody,
   Event,
   EventStats,
   HealthStatus,
   ListEventsParams,
+  RefreshPreviewResult,
   RefreshResult
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
-import type { ErrorType } from '../custom-fetch';
+import type { ErrorType , BodyType } from '../custom-fetch';
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -363,6 +368,146 @@ export const useRefreshEvents = <TError = ErrorType<unknown>,
       return useMutation(getRefreshEventsMutationOptions(options));
     }
 
+export const getPreviewEventsUrl = () => {
+
+
+
+
+  return `/api/events/refresh/preview`
+}
+
+/**
+ * @summary Preview events from scraper without writing to DB (human-in-the-loop)
+ */
+export const previewEvents = async ( options?: RequestInit): Promise<RefreshPreviewResult> => {
+
+  return customFetch<RefreshPreviewResult>(getPreviewEventsUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getPreviewEventsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewEvents>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewEvents>>, TError,void, TContext> => {
+
+const mutationKey = ['previewEvents'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewEvents>>, void> = () => {
+
+
+          return  previewEvents(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewEventsMutationResult = NonNullable<Awaited<ReturnType<typeof previewEvents>>>
+
+    export type PreviewEventsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Preview events from scraper without writing to DB (human-in-the-loop)
+ */
+export const usePreviewEvents = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewEvents>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewEvents>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getPreviewEventsMutationOptions(options));
+    }
+
+export const getApproveEventsUrl = () => {
+
+
+
+
+  return `/api/events/approve`
+}
+
+/**
+ * @summary Accept selected events into the database (human-in-the-loop approval)
+ */
+export const approveEvents = async (approveEventsBody: ApproveEventsBody, options?: RequestInit): Promise<ApproveEventsResult> => {
+
+  return customFetch<ApproveEventsResult>(getApproveEventsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(approveEventsBody)
+  }
+);}
+
+
+
+
+export const getApproveEventsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveEvents>>, TError,{data: BodyType<ApproveEventsBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof approveEvents>>, TError,{data: BodyType<ApproveEventsBody>}, TContext> => {
+
+const mutationKey = ['approveEvents'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof approveEvents>>, {data: BodyType<ApproveEventsBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  approveEvents(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApproveEventsMutationResult = NonNullable<Awaited<ReturnType<typeof approveEvents>>>
+    export type ApproveEventsMutationBody = BodyType<ApproveEventsBody>
+    export type ApproveEventsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Accept selected events into the database (human-in-the-loop approval)
+ */
+export const useApproveEvents = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveEvents>>, TError,{data: BodyType<ApproveEventsBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof approveEvents>>,
+        TError,
+        {data: BodyType<ApproveEventsBody>},
+        TContext
+      > => {
+      return useMutation(getApproveEventsMutationOptions(options));
+    }
+
 export const getGetEventUrl = (id: number,) => {
 
 
@@ -439,4 +584,75 @@ export function useGetEvent<TData = Awaited<ReturnType<typeof getEvent>>, TError
 
 
 
+
+export const getDeleteEventUrl = (id: number,) => {
+
+
+
+
+  return `/api/events/${id}`
+}
+
+/**
+ * @summary Delete an event and optionally record it as rejected
+ */
+export const deleteEvent = async (id: number,
+    deleteEventBody?: DeleteEventBody, options?: RequestInit): Promise<DeleteEvent200> => {
+
+  return customFetch<DeleteEvent200>(getDeleteEventUrl(id),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(deleteEventBody)
+  }
+);}
+
+
+
+
+export const getDeleteEventMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteEvent>>, TError,{id: number;data?: BodyType<DeleteEventBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteEvent>>, TError,{id: number;data?: BodyType<DeleteEventBody>}, TContext> => {
+
+const mutationKey = ['deleteEvent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteEvent>>, {id: number;data?: BodyType<DeleteEventBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  deleteEvent(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteEventMutationResult = NonNullable<Awaited<ReturnType<typeof deleteEvent>>>
+    export type DeleteEventMutationBody = BodyType<DeleteEventBody> | undefined
+    export type DeleteEventMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete an event and optionally record it as rejected
+ */
+export const useDeleteEvent = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteEvent>>, TError,{id: number;data?: BodyType<DeleteEventBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteEvent>>,
+        TError,
+        {id: number;data?: BodyType<DeleteEventBody>},
+        TContext
+      > => {
+      return useMutation(getDeleteEventMutationOptions(options));
+    }
 

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { and, gte, lte, ilike, sql } from "drizzle-orm";
-import { db, eventsTable } from "@workspace/db";
+import { and, gte, lte, ilike, sql, eq } from "drizzle-orm";
+import { db, eventsTable, rejectedEventsTable } from "@workspace/db";
 import {
   ListEventsQueryParams,
   ListEventsResponse,
@@ -8,6 +8,9 @@ import {
   GetEventResponse,
   GetEventStatsResponse,
   RefreshEventsResponse,
+  PreviewEventsResponse,
+  ApproveEventsBody,
+  ApproveEventsResponse,
 } from "@workspace/api-zod";
 import { execFile } from "child_process";
 import { promisify } from "util";
@@ -126,7 +129,6 @@ router.post("/events/refresh", requireAdminKey, async (req, res): Promise<void> 
     req.log.info({ stdout: stdout.slice(0, 500) }, "Scraper output");
     if (stderr) req.log.warn({ stderr: stderr.slice(0, 200) }, "Scraper stderr");
 
-    // Parse result from stdout JSON line
     let nuovi = 0, aggiornati = 0, errori = 0;
     const jsonMatch = stdout.match(/\{.*"nuovi".*\}/);
     if (jsonMatch) {
@@ -156,6 +158,172 @@ router.post("/events/refresh", requireAdminKey, async (req, res): Promise<void> 
         messaggio: String(err),
       })
     );
+  }
+});
+
+// Human-in-the-loop: preview events without writing to DB
+router.post("/events/refresh/preview", requireAdminKey, async (req, res): Promise<void> => {
+  req.log.info("Starting scraper preview (dry-run)");
+
+  const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
+    ? path.resolve(process.cwd(), "../..")
+    : process.cwd();
+
+  const scraperScript = path.resolve(workspaceRoot, "scraper_runner.py");
+
+  try {
+    const { stdout, stderr } = await execFileAsync(
+      "python3",
+      [scraperScript, "--preview"],
+      { timeout: 120000, env: { ...process.env }, cwd: workspaceRoot }
+    );
+
+    req.log.info({ stdout: stdout.slice(0, 500) }, "Preview output");
+    if (stderr) req.log.warn({ stderr: stderr.slice(0, 200) }, "Preview stderr");
+
+    const jsonMatch = stdout.match(/\{.*"nuovi".*\}/);
+    if (!jsonMatch) {
+      res.json(PreviewEventsResponse.parse({
+        success: false,
+        nuovi: 0,
+        aggiornati: 0,
+        errori: 1,
+        messaggio: "No preview output from scraper",
+        events: [],
+      }));
+      return;
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    res.json(PreviewEventsResponse.parse({
+      success: parsed.success ?? true,
+      nuovi: parsed.nuovi ?? 0,
+      aggiornati: parsed.aggiornati ?? 0,
+      errori: parsed.errori ?? 0,
+      messaggio: parsed.messaggio || `Preview: ${parsed.nuovi ?? 0} eventi trovati`,
+      events: parsed.events || [],
+    }));
+  } catch (err) {
+    req.log.error({ err }, "Preview failed");
+    res.json(PreviewEventsResponse.parse({
+      success: false,
+      nuovi: 0,
+      aggiornati: 0,
+      errori: 1,
+      messaggio: String(err),
+      events: [],
+    }));
+  }
+});
+
+// Human-in-the-loop: approve selected events into the database
+router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> => {
+  req.log.info("Starting manual approval of selected events");
+
+  const parsed = ApproveEventsBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const { events } = parsed.data;
+  let nuovi = 0;
+  let aggiornati = 0;
+  let errori = 0;
+
+  for (const ev of events) {
+    try {
+      const [existing] = await db
+        .select({ id: eventsTable.id })
+        .from(eventsTable)
+        .where(
+          and(
+            sql`${eventsTable.titolo} = ${ev.titolo}`,
+            sql`${eventsTable.fonte} = ${ev.fonte || ""}`
+          )
+        )
+        .limit(1);
+
+      if (existing) {
+        await db.update(eventsTable)
+          .set({
+            dataInizio: ev.data_inizio,
+            dataFine: ev.data_fine,
+            luogo: ev.luogo,
+            latitudine: ev.latitudine,
+            longitudine: ev.longitudine,
+            link: ev.link,
+            descrizione: ev.descrizione,
+            aggiornatoIl: new Date(),
+          })
+          .where(eq(eventsTable.id, existing.id));
+        aggiornati++;
+      } else {
+        await db.insert(eventsTable).values({
+          titolo: ev.titolo,
+          dataInizio: ev.data_inizio,
+          dataFine: ev.data_fine,
+          luogo: ev.luogo,
+          latitudine: ev.latitudine,
+          longitudine: ev.longitudine,
+          link: ev.link,
+          descrizione: ev.descrizione,
+          fonte: ev.fonte || "",
+        });
+        nuovi++;
+      }
+    } catch (e) {
+      req.log.error({ err: e, event: ev.titolo }, "Approval insert/update failed");
+      errori++;
+    }
+  }
+
+  res.json(ApproveEventsResponse.parse({
+    success: true,
+    nuovi,
+    aggiornati,
+    errori,
+    messaggio: `Pubblicati: ${nuovi} nuovi, ${aggiornati} aggiornati`,
+  }));
+});
+
+router.delete("/events/:id", requireAdminKey, async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+  if (Number.isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+
+  const recordRejected = req.body?.record_rejected === true;
+
+  try {
+    const [row] = await db
+      .select()
+      .from(eventsTable)
+      .where(eq(eventsTable.id, id));
+
+    if (!row) {
+      res.status(404).json({ error: "Event not found" });
+      return;
+    }
+
+    if (recordRejected) {
+      await db.insert(rejectedEventsTable).values({
+        titolo: row.titolo,
+        fonte: row.fonte,
+        motivo: "Rifiutato dall'admin",
+      });
+      req.log.info({ eventId: id, titolo: row.titolo }, "Event recorded as rejected");
+    }
+
+    await db.delete(eventsTable).where(eq(eventsTable.id, id));
+    req.log.info({ eventId: id }, "Event deleted");
+
+    res.json({ success: true, message: "Evento eliminato" });
+  } catch (e) {
+    req.log.error({ err: e }, "Delete failed");
+    res.status(500).json({ error: String(e) });
   }
 });
 

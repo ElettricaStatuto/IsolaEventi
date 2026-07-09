@@ -68,6 +68,57 @@ export const RefreshEventsResponse = zod.object({
 
 
 /**
+ * @summary Preview events from scraper without writing to DB (human-in-the-loop)
+ */
+export const PreviewEventsResponse = zod.object({
+  "success": zod.boolean(),
+  "nuovi": zod.number(),
+  "aggiornati": zod.number(),
+  "errori": zod.number(),
+  "messaggio": zod.string().nullable(),
+  "events": zod.array(zod.object({
+  "titolo": zod.string(),
+  "data_inizio": zod.string().nullish(),
+  "data_fine": zod.string().nullish(),
+  "luogo": zod.string().nullish(),
+  "latitudine": zod.number().nullish(),
+  "longitudine": zod.number().nullish(),
+  "link": zod.string().nullish(),
+  "descrizione": zod.string().nullish(),
+  "fonte": zod.string(),
+  "is_new": zod.boolean().optional()
+}))
+})
+
+
+/**
+ * @summary Accept selected events into the database (human-in-the-loop approval)
+ */
+export const ApproveEventsBody = zod.object({
+  "events": zod.array(zod.object({
+  "titolo": zod.string(),
+  "data_inizio": zod.string().nullish(),
+  "data_fine": zod.string().nullish(),
+  "luogo": zod.string().nullish(),
+  "latitudine": zod.number().nullish(),
+  "longitudine": zod.number().nullish(),
+  "link": zod.string().nullish(),
+  "descrizione": zod.string().nullish(),
+  "fonte": zod.string(),
+  "is_new": zod.boolean().optional()
+}))
+})
+
+export const ApproveEventsResponse = zod.object({
+  "success": zod.boolean(),
+  "nuovi": zod.number(),
+  "aggiornati": zod.number(),
+  "errori": zod.number(),
+  "messaggio": zod.string()
+})
+
+
+/**
  * @summary Get a single event by ID
  */
 export const GetEventParams = zod.object({
@@ -86,6 +137,25 @@ export const GetEventResponse = zod.object({
   "descrizione": zod.string().nullish(),
   "fonte": zod.string(),
   "aggiornato_il": zod.string().optional()
+})
+
+
+/**
+ * @summary Delete an event and optionally record it as rejected
+ */
+export const DeleteEventParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const deleteEventBodyRecordRejectedDefault = false;
+
+export const DeleteEventBody = zod.object({
+  "record_rejected": zod.boolean().default(deleteEventBodyRecordRejectedDefault)
+})
+
+export const DeleteEventResponse = zod.object({
+  "success": zod.boolean().optional(),
+  "message": zod.string().optional()
 })
 
 

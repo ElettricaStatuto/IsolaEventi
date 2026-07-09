@@ -85,6 +85,38 @@ paths:
               schema:
                 $ref: "#/components/schemas/RefreshResult"
 
+  /events/refresh/preview:
+    post:
+      operationId: previewEvents
+      tags: [events]
+      summary: Preview events from scraper without writing to DB (human-in-the-loop)
+      responses:
+        "200":
+          description: Preview of scraped events with full details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshPreviewResult"
+
+  /events/approve:
+    post:
+      operationId: approveEvents
+      tags: [events]
+      summary: Accept selected events into the database (human-in-the-loop approval)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApproveEventsBody"
+      responses:
+        "200":
+          description: Approval result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApproveEventsResult"
+
   /events/{id}:
     get:
       operationId: getEvent
@@ -109,6 +141,38 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: deleteEvent
+      tags: [events]
+      summary: Delete an event and optionally record it as rejected
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                record_rejected:
+                  type: boolean
+                  default: false
+      responses:
+        "200":
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
 
 components:
   schemas:
@@ -182,6 +246,74 @@ components:
           type: integer
         messaggio:
           type: ["string", "null"]
+
+    RefreshPreviewResult:
+      type: object
+      required: [success, nuovi, aggiornati, errori, events, messaggio]
+      properties:
+        success:
+          type: boolean
+        nuovi:
+          type: integer
+        aggiornati:
+          type: integer
+        errori:
+          type: integer
+        messaggio:
+          type: ["string", "null"]
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventPreview"
+
+    EventPreview:
+      type: object
+      required: [titolo, fonte]
+      properties:
+        titolo:
+          type: string
+        data_inizio:
+          type: ["string", "null"]
+        data_fine:
+          type: ["string", "null"]
+        luogo:
+          type: ["string", "null"]
+        latitudine:
+          type: ["number", "null"]
+        longitudine:
+          type: ["number", "null"]
+        link:
+          type: ["string", "null"]
+        descrizione:
+          type: ["string", "null"]
+        fonte:
+          type: string
+        is_new:
+          type: boolean
+
+    ApproveEventsBody:
+      type: object
+      required: [events]
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventPreview"
+
+    ApproveEventsResult:
+      type: object
+      required: [success, nuovi, aggiornati, errori, messaggio]
+      properties:
+        success:
+          type: boolean
+        nuovi:
+          type: integer
+        aggiornati:
+          type: integer
+        errori:
+          type: integer
+        messaggio:
+          type: string
 
     ApiError:
       type: object
