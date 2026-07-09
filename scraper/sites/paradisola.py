@@ -95,13 +95,8 @@ class ParadisolaScraper(BaseScraper):
         # Luogo: estratto dal title dell'<a> ("Festival Letterario di Alghero")
         luogo = self._estrai_luogo(titolo)
 
-        # Immagine: cerca img nel <li> o nell'h3
-        immagine = None
-        for img in li.find_all("img"):
-            src = img.get("src") or img.get("data-src")
-            if src:
-                immagine = urljoin(self.url_base, src)
-                break
+        # Immagine: la pagina lista NON la contiene; la carichiamo dalla pagina dettaglio
+        immagine = self._estrai_immagine(url) if url else None
 
         # Descrizione: tutto il testo del <li> meno l'h3
         h3.extract()
@@ -171,4 +166,39 @@ class ParadisolaScraper(BaseScraper):
             luogo = re.sub(r"\s*\d{4}.*$", "", luogo).strip()
             if luogo:
                 return luogo
+        return None
+
+    def _estrai_immagine(self, url: str) -> Optional[str]:
+        """
+        Visita la pagina dettaglio dell'evento e cerca l'immagine.
+        Priorità: og:image meta tag → primo img nell'articolo → primo img generico.
+        Restituisce l'URL assoluto dell'immagine o None.
+        """
+        if not url:
+            return None
+        soup = self.get_pagina(url, pausa=0.3)
+        if soup is None:
+            return None
+
+        # 1) Cerca meta og:image
+        og = soup.find("meta", property="og:image")
+        if og:
+            src = og.get("content") or og.get("value")
+            if src:
+                return urljoin(self.url_base, src)
+
+        # 2) Cerca primo <img> dentro .item-page o article con attributo src significativo
+        container = soup.select_one(".item-page, article, .event-detail, .evento-dettaglio")
+        if container:
+            for img in container.find_all("img"):
+                src = img.get("src") or img.get("data-src")
+                if src and not src.startswith("data:") and "/images/" not in src and "/system/" not in src:
+                    return urljoin(self.url_base, src)
+
+        # 3) Fallback: qualsiasi img con src che sembra un'immagine evento
+        for img in soup.find_all("img"):
+            src = img.get("src") or img.get("data-src")
+            if src and "/djevents/images/" in src:
+                return urljoin(self.url_base, src)
+
         return None

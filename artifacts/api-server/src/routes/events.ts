@@ -122,7 +122,7 @@ router.post("/events/refresh", requireAdminKey, async (req, res): Promise<void> 
 
   try {
     const { stdout, stderr } = await execFileAsync("python3", [scraperScript], {
-      timeout: 120000,
+      timeout: 300000,
       env: { ...process.env },
       cwd: workspaceRoot,
     });
@@ -176,7 +176,7 @@ router.post("/events/refresh/preview", requireAdminKey, async (req, res): Promis
     const { stdout, stderr } = await execFileAsync(
       "python3",
       [scraperScript, "--preview"],
-      { timeout: 120000, env: { ...process.env }, cwd: workspaceRoot }
+      { timeout: 300000, env: { ...process.env }, cwd: workspaceRoot }
     );
 
     req.log.info({ stdout: stdout.slice(0, 500) }, "Preview output");

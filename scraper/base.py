@@ -31,12 +31,12 @@ class BaseScraper(ABC):
         self.session = requests.Session()
         self.session.headers.update(HEADERS)
 
-    def get_pagina(self, url: str, params: Optional[dict] = None) -> Optional[BeautifulSoup]:
+    def get_pagina(self, url: str, params: Optional[dict] = None, pausa: Optional[float] = None) -> Optional[BeautifulSoup]:
         try:
             logger.info(f"[{self.nome_fonte}] GET {url}")
             risposta = self.session.get(url, params=params, timeout=self.timeout)
             risposta.raise_for_status()
-            time.sleep(self.pausa)
+            time.sleep(pausa if pausa is not None else self.pausa)
             return BeautifulSoup(risposta.text, "html.parser")
         except requests.RequestException as e:
             logger.error(f"[{self.nome_fonte}] Errore su {url}: {e}")
