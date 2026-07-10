@@ -21,6 +21,13 @@ interface MapContainerProps {
 const SARDINIA_CENTER: [number, number] = [40.12, 9.07];
 const DEFAULT_ZOOM = 7;
 
+// Constraint: map cannot pan/zoom outside Sardinia bounding box
+// Extent with small buffer: lat 38.5°N–41.5°N, lon 7.8°E–10.2°E
+const SARDINIA_BOUNDS: L.LatLngBoundsLiteral = [
+  [38.5, 7.8],  // SW corner
+  [41.5, 10.2], // NE corner
+];
+
 export function MapContainer({
   events,
   selectedEventId,
@@ -38,6 +45,10 @@ export function MapContainer({
       center: SARDINIA_CENTER,
       zoom: DEFAULT_ZOOM,
       zoomControl: false,
+      maxBounds: SARDINIA_BOUNDS,
+      maxBoundsViscosity: 1.0,
+      minZoom: 6,
+      maxZoom: 16,
     });
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
