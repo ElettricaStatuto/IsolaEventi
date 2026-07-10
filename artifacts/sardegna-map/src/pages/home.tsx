@@ -1,8 +1,6 @@
 import { useState } from "react";
-import { useListEvents, getListEventsQueryKey, useRefreshEvents } from "@workspace/api-client-react";
+import { useListEvents, getListEventsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 import { useEventsFilter } from "../hooks/use-events-filter";
 import { DateFilter } from "../components/date-filter";
@@ -19,14 +17,6 @@ export function Home() {
     {},
     { query: { queryKey: getListEventsQueryKey({}) } }
   );
-
-  const refreshMutation = useRefreshEvents({
-    mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListEventsQueryKey({}) });
-      },
-    },
-  });
 
   // Client-side date range filtering
   const { filteredEvents, dateRange, setDateRange } = useEventsFilter(events);
@@ -60,22 +50,6 @@ export function Home() {
 
               {/* Date range picker */}
               <DateFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
-
-              {/* Refresh button */}
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => refreshMutation.mutate(undefined)}
-                disabled={refreshMutation.isPending}
-                className="w-full"
-              >
-                {refreshMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                )}
-                Aggiorna eventi
-              </Button>
             </div>
 
             {/* Scrollable event list */}
