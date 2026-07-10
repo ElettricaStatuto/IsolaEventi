@@ -24,6 +24,7 @@ import requests
 from scraper.sites.paradisola import ParadisolaScraper
 from scraper.sites.sardegnaturismo import SardegnaTurismoScraper
 from scraper.sites.vistanet import VistanetScraper
+from scraper.sites.eventiinsardegna import EventiInSardegnaScraper
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -182,6 +183,7 @@ def main():
         ParadisolaScraper(),
         SardegnaTurismoScraper(),
         VistanetScraper(),
+        EventiInSardegnaScraper(),
     ]
 
     tutti_eventi = []
