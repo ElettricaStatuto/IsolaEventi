@@ -23,9 +23,12 @@ function Layout({ children }: { children: React.ReactNode }) {
             <h1 className="font-serif text-2xl font-bold tracking-tight text-foreground group-hover:text-primary transition-colors">Sardegna Eventi</h1>
           </Link>
           <nav className="flex gap-4">
-            <Link href="/" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted text-sm font-medium transition-colors">
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("toggle-map-fullscreen"))}
+              className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted text-sm font-medium transition-colors cursor-pointer bg-transparent border-none"
+            >
               <Map className="w-4 h-4 text-primary" /> Mappa
-            </Link>
+            </button>
             <Link href="/stats" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted text-sm font-medium transition-colors">
               <BarChart2 className="w-4 h-4 text-secondary" /> Statistiche
             </Link>

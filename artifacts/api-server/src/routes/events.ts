@@ -97,7 +97,7 @@ router.get("/events/stats", async (_req, res): Promise<void> => {
     .where(sql`${eventsTable.luogo} is not null`)
     .groupBy(eventsTable.luogo)
     .orderBy(sql`count(*) desc`)
-    .limit(10);
+    .limit(8);
 
   const stats = {
     totale: totaleRow?.count ?? 0,

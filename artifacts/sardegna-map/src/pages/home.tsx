@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useListEvents, getListEventsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -11,6 +11,13 @@ export function Home() {
   const queryClient = useQueryClient();
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Listen for global "toggle-map-fullscreen" event from the nav "Mappa" button
+  useEffect(() => {
+    const handleToggle = () => setIsFullscreen((prev) => !prev);
+    window.addEventListener("toggle-map-fullscreen", handleToggle);
+    return () => window.removeEventListener("toggle-map-fullscreen", handleToggle);
+  }, []);
 
   // Fetch all events (no server-side date filter — filtering happens client-side)
   const { data: events = [], isLoading, isError } = useListEvents(
