@@ -24,7 +24,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           </Link>
           <nav className="flex gap-4">
             <button
-              onClick={() => window.dispatchEvent(new CustomEvent("toggle-map-fullscreen"))}
+              onClick={() => window.dispatchEvent(new CustomEvent("toggle-map-view"))}
               className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted text-sm font-medium transition-colors cursor-pointer bg-transparent border-none"
             >
               <Map className="w-4 h-4 text-primary" /> Mappa

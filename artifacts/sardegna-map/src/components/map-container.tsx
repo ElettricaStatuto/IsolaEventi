@@ -1,8 +1,6 @@
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef } from "react";
-import { Maximize2, Minimize2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import type { Event } from "@workspace/api-client-react";
 
 // Fix Leaflet default icon with CDN URLs (avoids Vite bundler issues)
@@ -18,8 +16,6 @@ interface MapContainerProps {
   events: Event[];
   selectedEventId: number | null;
   onSelectEvent: (id: number) => void;
-  isFullscreen: boolean;
-  onToggleFullscreen: () => void;
 }
 
 const SARDINIA_CENTER: [number, number] = [40.12, 9.07];
@@ -29,8 +25,6 @@ export function MapContainer({
   events,
   selectedEventId,
   onSelectEvent,
-  isFullscreen,
-  onToggleFullscreen,
 }: MapContainerProps) {
   const mapDivRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<L.Map | null>(null);
@@ -64,16 +58,16 @@ export function MapContainer({
     };
   }, []);
 
-  // Invalidate map size when fullscreen toggles (container dimensions change)
+  // Invalidate map size when container dimensions may have changed
   useEffect(() => {
     const map = leafletMap.current;
     if (!map) return;
-    // Wait for CSS transition to complete before resizing
     const timer = setTimeout(() => {
       map.invalidateSize();
     }, 100);
     return () => clearTimeout(timer);
-  }, [isFullscreen]);
+  // Re-run whenever events list length changes (sidebar may collapse/expand)
+  }, [events.length]);
 
   // Rebuild markers whenever events change
   useEffect(() => {
@@ -129,22 +123,6 @@ export function MapContainer({
       {/* Leaflet map div — fills the parent container */}
       <div ref={mapDivRef} style={{ width: "100%", height: "100%" }} />
 
-      {/* Fullscreen toggle button — top-right corner */}
-      <div className="absolute top-3 right-3 z-[1000]">
-        <Button
-          variant="secondary"
-          size="icon"
-          className="w-9 h-9 shadow-md bg-white/90 hover:bg-white border border-border text-foreground"
-          onClick={onToggleFullscreen}
-          title={isFullscreen ? "Esci da schermo intero" : "Schermo intero"}
-        >
-          {isFullscreen ? (
-            <Minimize2 className="w-4 h-4" />
-          ) : (
-            <Maximize2 className="w-4 h-4" />
-          )}
-        </Button>
-      </div>
     </div>
   );
 }
