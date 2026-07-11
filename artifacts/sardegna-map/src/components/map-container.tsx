@@ -47,8 +47,8 @@ export function MapContainer({
       zoomControl: false,
       maxBounds: SARDINIA_BOUNDS,
       maxBoundsViscosity: 1.0,
-      minZoom: 6,
-      maxZoom: 16,
+      minZoom: 7,
+      maxZoom: 20,
     });
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
