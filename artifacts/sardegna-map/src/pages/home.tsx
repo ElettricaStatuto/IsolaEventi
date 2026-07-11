@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
-import { useListEvents, getListEventsQueryKey } from "@workspace/api-client-react";
+import {
+  useListEvents,
+  getListEventsQueryKey,
+} from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useEventsFilter } from "../hooks/use-events-filter";
@@ -20,10 +23,11 @@ export function Home() {
   }, []);
 
   // Fetch all events (no server-side date filter — filtering happens client-side)
-  const { data: events = [], isLoading, isError } = useListEvents(
-    {},
-    { query: { queryKey: getListEventsQueryKey({}) } }
-  );
+  const {
+    data: events = [],
+    isLoading,
+    isError,
+  } = useListEvents({}, { query: { queryKey: getListEventsQueryKey({}) } });
 
   // Client-side date range filtering
   const { filteredEvents, dateRange, setDateRange } = useEventsFilter(events);
@@ -36,7 +40,6 @@ export function Home() {
     <div className="flex flex-col h-[calc(100vh-4rem)] gap-0">
       {/* ── Sidebar + Map layout ── */}
       <div className="flex flex-1 gap-4 min-h-0 lg:flex-row flex-col">
-
         {/* ── Left sidebar: controls always on top, then list or map below ── */}
         <aside
           className={
@@ -51,13 +54,21 @@ export function Home() {
               <h2 className="font-serif text-xl font-semibold text-foreground mb-0.5">
                 Esplora Eventi
               </h2>
-              <p className="text-sm text-muted-foreground">
-                Sagre e festival in Sardegna.
-              </p>
+              <div className="flex flex-col gap-0.5">
+                <p className="font-serif text-base font-semibold text-foreground leading-snug">
+                  Il tuo calendario sardo:
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  vivi la tua Sardegna.
+                </p>
+              </div>
             </div>
 
             {/* Date range picker */}
-            <DateFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
+            <DateFilter
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
+            />
           </div>
 
           {/* Scrollable event list — shown when "Mappa" is OFF */}
