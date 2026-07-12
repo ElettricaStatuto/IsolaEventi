@@ -30,7 +30,9 @@ import type {
   HealthStatus,
   ListEventsParams,
   RefreshPreviewResult,
-  RefreshResult
+  RefreshResult,
+  RejectedEvent,
+  RestoreRejectedEvent200
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -436,6 +438,153 @@ export const usePreviewEvents = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getPreviewEventsMutationOptions(options));
+    }
+
+export const getListRejectedEventsUrl = () => {
+
+
+
+
+  return `/api/events/rejected`
+}
+
+/**
+ * @summary List all rejected (blacklisted) events
+ */
+export const listRejectedEvents = async ( options?: RequestInit): Promise<RejectedEvent[]> => {
+
+  return customFetch<RejectedEvent[]>(getListRejectedEventsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListRejectedEventsQueryKey = () => {
+    return [
+    `/api/events/rejected`
+    ] as const;
+    }
+
+
+export const getListRejectedEventsQueryOptions = <TData = Awaited<ReturnType<typeof listRejectedEvents>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRejectedEvents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListRejectedEventsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRejectedEvents>>> = ({ signal }) => listRejectedEvents({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listRejectedEvents>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListRejectedEventsQueryResult = NonNullable<Awaited<ReturnType<typeof listRejectedEvents>>>
+export type ListRejectedEventsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all rejected (blacklisted) events
+ */
+
+export function useListRejectedEvents<TData = Awaited<ReturnType<typeof listRejectedEvents>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRejectedEvents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListRejectedEventsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRestoreRejectedEventUrl = (id: number,) => {
+
+
+
+
+  return `/api/events/rejected/${id}`
+}
+
+/**
+ * @summary Remove an event from the rejected list (allow it to be scraped again)
+ */
+export const restoreRejectedEvent = async (id: number, options?: RequestInit): Promise<RestoreRejectedEvent200> => {
+
+  return customFetch<RestoreRejectedEvent200>(getRestoreRejectedEventUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getRestoreRejectedEventMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreRejectedEvent>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreRejectedEvent>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['restoreRejectedEvent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreRejectedEvent>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  restoreRejectedEvent(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreRejectedEventMutationResult = NonNullable<Awaited<ReturnType<typeof restoreRejectedEvent>>>
+
+    export type RestoreRejectedEventMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Remove an event from the rejected list (allow it to be scraped again)
+ */
+export const useRestoreRejectedEvent = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreRejectedEvent>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof restoreRejectedEvent>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRestoreRejectedEventMutationOptions(options));
     }
 
 export const getApproveEventsUrl = () => {

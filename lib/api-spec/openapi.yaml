@@ -49,6 +49,18 @@ paths:
           schema:
             type: string
             description: Filter by location name (partial match)
+        - name: titolo
+          in: query
+          required: false
+          schema:
+            type: string
+            description: Filter by title (partial match, case-insensitive)
+        - name: fonte
+          in: query
+          required: false
+          schema:
+            type: string
+            description: Filter by source/site name (partial match)
       responses:
         "200":
           description: List of events
@@ -97,6 +109,45 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RefreshPreviewResult"
+
+  /events/rejected:
+    get:
+      operationId: listRejectedEvents
+      tags: [events]
+      summary: List all rejected (blacklisted) events
+      responses:
+        "200":
+          description: List of rejected events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RejectedEvent"
+
+  /events/rejected/{id}:
+    delete:
+      operationId: restoreRejectedEvent
+      tags: [events]
+      summary: Remove an event from the rejected list (allow it to be scraped again)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Restored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
 
   /events/approve:
     post:
@@ -317,6 +368,21 @@ components:
         errori:
           type: integer
         messaggio:
+          type: string
+
+    RejectedEvent:
+      type: object
+      required: [id, titolo, fonte, rifiutato_il]
+      properties:
+        id:
+          type: integer
+        titolo:
+          type: string
+        fonte:
+          type: string
+        motivo:
+          type: ["string", "null"]
+        rifiutato_il:
           type: string
 
     ApiError:

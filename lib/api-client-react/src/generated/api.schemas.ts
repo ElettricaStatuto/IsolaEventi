@@ -97,6 +97,15 @@ export interface ApproveEventsResult {
   messaggio: string;
 }
 
+export interface RejectedEvent {
+  id: number;
+  titolo: string;
+  fonte: string;
+  /** @nullable */
+  motivo?: string | null;
+  rifiutato_il: string;
+}
+
 export interface ApiError {
   error: string;
 }
@@ -114,6 +123,19 @@ date_to?: string;
  * Filter by location name (partial match)
  */
 luogo?: string;
+/**
+ * Filter by title (partial match, case-insensitive)
+ */
+titolo?: string;
+/**
+ * Filter by source/site name (partial match)
+ */
+fonte?: string;
+};
+
+export type RestoreRejectedEvent200 = {
+  success?: boolean;
+  message?: string;
 };
 
 export type DeleteEventBody = {

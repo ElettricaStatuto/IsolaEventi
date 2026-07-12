@@ -22,7 +22,9 @@ export const HealthCheckResponse = zod.object({
 export const ListEventsQueryParams = zod.object({
   "date_from": zod.coerce.string().optional(),
   "date_to": zod.coerce.string().optional(),
-  "luogo": zod.coerce.string().optional()
+  "luogo": zod.coerce.string().optional(),
+  "titolo": zod.coerce.string().optional(),
+  "fonte": zod.coerce.string().optional()
 })
 
 export const ListEventsResponseItem = zod.object({
@@ -90,6 +92,32 @@ export const PreviewEventsResponse = zod.object({
   "fonte": zod.string(),
   "is_new": zod.boolean().optional()
 }))
+})
+
+
+/**
+ * @summary List all rejected (blacklisted) events
+ */
+export const ListRejectedEventsResponseItem = zod.object({
+  "id": zod.number(),
+  "titolo": zod.string(),
+  "fonte": zod.string(),
+  "motivo": zod.string().nullish(),
+  "rifiutato_il": zod.string()
+})
+export const ListRejectedEventsResponse = zod.array(ListRejectedEventsResponseItem)
+
+
+/**
+ * @summary Remove an event from the rejected list (allow it to be scraped again)
+ */
+export const RestoreRejectedEventParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RestoreRejectedEventResponse = zod.object({
+  "success": zod.boolean().optional(),
+  "message": zod.string().optional()
 })
 
 
