@@ -30,9 +30,13 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
+def emit_log(msg: str):
+    print(json.dumps({"log": msg}), flush=True)
+    logger.info(msg)
+
 if not DATABASE_URL:
     logger.error("DATABASE_URL not set")
-    print(json.dumps({"nuovi": 0, "aggiornati": 0, "errori": 1}))
+    print(json.dumps({"nuovi": 0, "aggiornati": 0, "errori": 1}), flush=True)
     sys.exit(1)
 
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
@@ -189,10 +193,12 @@ def main():
     tutti_eventi = []
     for s in scrapers:
         try:
+            emit_log(f"Inizio scraping da: {s.nome_fonte}...")
             eventi = s.scrapa_eventi()
-            logger.info(f"{s.nome_fonte}: {len(eventi)} eventi")
+            emit_log(f"Completato {s.nome_fonte}: trovati {len(eventi)} articoli.")
             tutti_eventi.extend(eventi)
         except Exception as e:
+            emit_log(f"Errore scraping {s.nome_fonte}: {e}")
             logger.error(f"Scraper {s.nome_fonte} failed: {e}")
             errori += 1
 
@@ -203,7 +209,7 @@ def main():
     filtrati = [ev for ev in tutti_eventi if (ev.titolo, ev.fonte or "") not in rejected_set]
     scartati = len(tutti_eventi) - len(filtrati)
     if scartati:
-        logger.info(f"Scartati {scartati} eventi precedentemente rifiutati")
+        emit_log(f"Scartati in automatico {scartati} eventi presenti nella blacklist.")
 
     if preview_only:
         # Restituisce JSON con lista eventi trovati, senza toccare il DB
@@ -230,25 +236,29 @@ def main():
                 "is_new": True,
             })
         conn.close()
-        print(json.dumps({
+        result = {
             "success": True,
             "nuovi": len(events_preview),
             "aggiornati": 0,
             "errori": errori,
             "events": events_preview,
-            "messaggio": f"Preview: {len(events_preview)} eventi trovati",
-        }))
+            "messaggio": f"Preview completata: {len(events_preview)} eventi da visionare",
+        }
+        emit_log(result["messaggio"])
+        print(json.dumps(result), flush=True)
         return
 
     if dry_run:
         conn.close()
-        print(json.dumps({
+        result = {
             "success": True,
             "nuovi": len(filtrati),
             "aggiornati": 0,
             "errori": errori,
             "messaggio": f"Dry-run: {len(filtrati)} eventi pronti per approvazione",
-        }))
+        }
+        emit_log(result["messaggio"])
+        print(json.dumps(result), flush=True)
         return
 
     # --- Geocode, download images & upsert ---
@@ -331,8 +341,8 @@ def main():
     conn.close()
 
     result = {"nuovi": nuovi, "aggiornati": aggiornati, "errori": errori}
-    logger.info(f"Done: {result}")
-    print(json.dumps(result))
+    emit_log(f"Salvataggio terminato. Nuovi: {nuovi}, Aggiornati: {aggiornati}, Errori: {errori}")
+    print(json.dumps(result), flush=True)
 
 
 if __name__ == "__main__":

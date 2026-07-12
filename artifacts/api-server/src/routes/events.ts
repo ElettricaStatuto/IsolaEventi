@@ -14,7 +14,7 @@ import {
   ListRejectedEventsResponse,
   RestoreRejectedEventParams,
 } from "@workspace/api-zod";
-import { execFile } from "child_process";
+import { execFile, spawn } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import { logger } from "../lib/logger";
@@ -125,7 +125,7 @@ router.post("/events/refresh", requireAdminKey, async (req, res): Promise<void> 
   const scraperScript = path.resolve(workspaceRoot, "scraper_runner.py");
 
   try {
-    const { stdout, stderr } = await execFileAsync("python3", [scraperScript], {
+    const { stdout, stderr } = await execFileAsync("python", [scraperScript], {
       timeout: 300000,
       env: { ...process.env },
       cwd: workspaceRoot,
@@ -167,8 +167,8 @@ router.post("/events/refresh", requireAdminKey, async (req, res): Promise<void> 
 });
 
 // Human-in-the-loop: preview events without writing to DB
-router.post("/events/refresh/preview", requireAdminKey, async (req, res): Promise<void> => {
-  req.log.info("Starting scraper preview (dry-run)");
+router.post("/events/refresh/preview", requireAdminKey, (req, res): void => {
+  req.log.info("Starting scraper preview (dry-run) with streaming");
 
   const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
     ? path.resolve(process.cwd(), "../..")
@@ -176,49 +176,36 @@ router.post("/events/refresh/preview", requireAdminKey, async (req, res): Promis
 
   const scraperScript = path.resolve(workspaceRoot, "scraper_runner.py");
 
-  try {
-    const { stdout, stderr } = await execFileAsync(
-      "python3",
-      [scraperScript, "--preview"],
-      { timeout: 300000, env: { ...process.env }, cwd: workspaceRoot }
-    );
+  res.setHeader("Content-Type", "application/json-lines");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
 
-    req.log.info({ stdout: stdout.slice(0, 500) }, "Preview output");
-    if (stderr) req.log.warn({ stderr: stderr.slice(0, 200) }, "Preview stderr");
+  const child = spawn("python", [scraperScript, "--preview"], {
+    cwd: workspaceRoot,
+    env: { ...process.env },
+  });
 
-    const jsonMatch = stdout.match(/\{.*"nuovi".*\}/);
-    if (!jsonMatch) {
-      res.json(PreviewEventsResponse.parse({
-        success: false,
-        nuovi: 0,
-        aggiornati: 0,
-        errori: 1,
-        messaggio: "No preview output from scraper",
-        events: [],
-      }));
-      return;
+  child.stdout.on("data", (data) => {
+    res.write(data);
+  });
+
+  child.stderr.on("data", (data) => {
+    req.log.warn({ stderr: data.toString() }, "Preview stderr");
+  });
+
+  child.on("close", (code) => {
+    if (code !== 0) {
+      req.log.error({ code }, "Preview failed");
+      res.write(JSON.stringify({ success: false, nuovi: 0, aggiornati: 0, errori: 1, messaggio: `Process exited with code ${code}`, events: [] }) + "\n");
     }
+    res.end();
+  });
 
-    const parsed = JSON.parse(jsonMatch[0]);
-    res.json(PreviewEventsResponse.parse({
-      success: parsed.success ?? true,
-      nuovi: parsed.nuovi ?? 0,
-      aggiornati: parsed.aggiornati ?? 0,
-      errori: parsed.errori ?? 0,
-      messaggio: parsed.messaggio || `Preview: ${parsed.nuovi ?? 0} eventi trovati`,
-      events: parsed.events || [],
-    }));
-  } catch (err) {
-    req.log.error({ err }, "Preview failed");
-    res.json(PreviewEventsResponse.parse({
-      success: false,
-      nuovi: 0,
-      aggiornati: 0,
-      errori: 1,
-      messaggio: String(err),
-      events: [],
-    }));
-  }
+  child.on("error", (err) => {
+    req.log.error({ err }, "Preview process error");
+    res.write(JSON.stringify({ success: false, nuovi: 0, aggiornati: 0, errori: 1, messaggio: String(err), events: [] }) + "\n");
+    res.end();
+  });
 });
 
 // Human-in-the-loop: approve selected events into the database
