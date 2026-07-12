@@ -334,6 +334,40 @@ router.delete("/events/:id", requireAdminKey, async (req, res): Promise<void> =>
   }
 });
 
+router.get("/events/rejected", requireAdminKey, async (_req, res): Promise<void> => {
+  const rows = await db
+    .select()
+    .from(rejectedEventsTable)
+    .orderBy(sql`${rejectedEventsTable.rifiutatoIl} desc`);
+
+  const mapped = rows.map((r) => ({
+    id: r.id,
+    titolo: r.titolo,
+    fonte: r.fonte,
+    motivo: r.motivo,
+    rifiutato_il: r.rifiutatoIl.toISOString(),
+  }));
+
+  res.json(ListRejectedEventsResponse.parse(mapped));
+});
+
+router.delete("/events/rejected/:id", requireAdminKey, async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const parsed = RestoreRejectedEventParams.safeParse({ id: parseInt(raw, 10) });
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+
+  try {
+    await db.delete(rejectedEventsTable).where(eq(rejectedEventsTable.id, parsed.data.id));
+    res.json({ success: true, message: "Evento rimosso dalla blacklist" });
+  } catch (e) {
+    req.log.error({ err: e }, "Restore rejected event failed");
+    res.status(500).json({ error: String(e) });
+  }
+});
+
 router.get("/events/:id", async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const parsed = GetEventParams.safeParse({ id: parseInt(raw, 10) });
@@ -368,40 +402,6 @@ router.get("/events/:id", async (req, res): Promise<void> => {
       aggiornato_il: row.aggiornatoIl.toISOString(),
     })
   );
-});
-
-router.get("/events/rejected", requireAdminKey, async (_req, res): Promise<void> => {
-  const rows = await db
-    .select()
-    .from(rejectedEventsTable)
-    .orderBy(sql`${rejectedEventsTable.rifiutatoIl} desc`);
-
-  const mapped = rows.map((r) => ({
-    id: r.id,
-    titolo: r.titolo,
-    fonte: r.fonte,
-    motivo: r.motivo,
-    rifiutato_il: r.rifiutatoIl.toISOString(),
-  }));
-
-  res.json(ListRejectedEventsResponse.parse(mapped));
-});
-
-router.delete("/events/rejected/:id", requireAdminKey, async (req, res): Promise<void> => {
-  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const parsed = RestoreRejectedEventParams.safeParse({ id: parseInt(raw, 10) });
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid id" });
-    return;
-  }
-
-  try {
-    await db.delete(rejectedEventsTable).where(eq(rejectedEventsTable.id, parsed.data.id));
-    res.json({ success: true, message: "Evento rimosso dalla blacklist" });
-  } catch (e) {
-    req.log.error({ err: e }, "Restore rejected event failed");
-    res.status(500).json({ error: String(e) });
-  }
 });
 
 export default router;
