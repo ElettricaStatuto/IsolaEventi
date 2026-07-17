@@ -91,18 +91,45 @@ export function MapContainer({
     events.forEach((evt) => {
       if (evt.latitudine == null || evt.longitudine == null) return;
 
-      const marker = L.marker([evt.latitudine, evt.longitudine]);
+      const isFestival = events.some(e => e.parent_id === evt.id);
+      let icon = new L.Icon.Default();
+
+      if (isFestival) {
+        icon = L.divIcon({
+          className: "custom-div-icon",
+          html: `<div style="background-color: #c0661b; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3); border: 2px solid white;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
+                 </div>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 30]
+        });
+      } else if (evt.parent_id) {
+        // Child event: smaller, different color
+        icon = L.divIcon({
+          className: "custom-div-icon-child",
+          html: `<div style="background-color: #6b21a8; border-radius: 50%; width: 16px; height: 16px; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div>`,
+          iconSize: [16, 16],
+          iconAnchor: [8, 8]
+        });
+      }
+
+      const marker = L.marker([evt.latitudine, evt.longitudine], { icon });
 
       const dateStr = evt.data_inizio
         ? `${evt.data_inizio}${evt.data_fine && evt.data_fine !== evt.data_inizio ? " – " + evt.data_fine : ""}`
         : "";
+        
+      const parentLink = evt.parent_id ? `<a href="/festival/${evt.parent_id}" style="font-size:11px;color:#6b21a8;text-decoration:underline;display:block;margin-top:4px;">↑ Vedi Festival Padre</a>` : '';
+      const festivalLink = isFestival ? `<a href="/festival/${evt.id}" style="font-size:12px;color:#c0661b;text-decoration:underline;font-weight:bold;display:block;margin-top:4px;background:#fef3c7;padding:4px;border-radius:4px;text-align:center;">Vedi Programma Festival</a>` : '';
 
       marker.bindPopup(`
         <div style="min-width:190px;font-family:sans-serif;">
           <strong style="font-size:13px;line-height:1.35;display:block;margin-bottom:5px;">${evt.titolo}</strong>
           ${dateStr ? `<div style="font-size:11px;color:#666;margin-bottom:3px;">${dateStr}</div>` : ""}
           ${evt.luogo ? `<div style="font-size:11px;font-weight:600;margin-bottom:5px;">${evt.luogo}</div>` : ""}
-          ${evt.link ? `<a href="${evt.link}" target="_blank" rel="noreferrer" style="font-size:11px;color:#c0661b;text-decoration:underline;">Vedi fonte →</a>` : ""}
+          ${evt.link && !isFestival ? `<a href="${evt.link}" target="_blank" rel="noreferrer" style="font-size:11px;color:#c0661b;text-decoration:underline;">Vedi fonte →</a>` : ""}
+          ${parentLink}
+          ${festivalLink}
         </div>
       `);
 

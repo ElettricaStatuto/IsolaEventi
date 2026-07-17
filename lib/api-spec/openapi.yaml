@@ -263,6 +263,12 @@ components:
           type: string
         aggiornato_il:
           type: string
+        parent_id:
+          type: ["integer", "null"]
+        testo_estratto:
+          type: ["string", "null"]
+        is_festival:
+          type: ["boolean", "null"]
 
     EventStats:
       type: object
@@ -345,6 +351,12 @@ components:
           type: string
         is_new:
           type: boolean
+        parent_id:
+          type: ["integer", "null"]
+        testo_estratto:
+          type: ["string", "null"]
+        is_festival:
+          type: ["boolean", "null"]
 
     ApproveEventsBody:
       type: object

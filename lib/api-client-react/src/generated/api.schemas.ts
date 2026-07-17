@@ -30,6 +30,12 @@ export interface Event {
   immagine?: string | null;
   fonte: string;
   aggiornato_il?: string;
+  /** @nullable */
+  parent_id?: number | null;
+  /** @nullable */
+  testo_estratto?: string | null;
+  /** @nullable */
+  is_festival?: boolean | null;
 }
 
 export type EventStatsLuoghiItem = {
@@ -73,6 +79,12 @@ export interface EventPreview {
   immagine?: string | null;
   fonte: string;
   is_new?: boolean;
+  /** @nullable */
+  parent_id?: number | null;
+  /** @nullable */
+  testo_estratto?: string | null;
+  /** @nullable */
+  is_festival?: boolean | null;
 }
 
 export interface RefreshPreviewResult {

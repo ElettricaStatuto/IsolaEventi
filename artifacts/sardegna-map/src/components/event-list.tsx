@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MapPin, Calendar, ExternalLink, Loader2 } from "lucide-react";
+import { MapPin, Calendar, ExternalLink, Loader2, Flag } from "lucide-react";
 import { format } from "date-fns";
 import type { Event } from "@workspace/api-client-react";
+import { Link } from "wouter";
 
 interface EventListProps {
   events: Event[];
@@ -58,61 +59,83 @@ export function EventList({
           )}
           {!isLoading &&
             !isError &&
-            events.map((evt) => (
-              <div
-                key={evt.id}
-                ref={(el) => {
-                  if (el) cardRefs.current.set(evt.id, el);
-                  else cardRefs.current.delete(evt.id);
-                }}
-              >
-                <Card
-                  className={`cursor-pointer transition-all hover:border-primary/50 ${
-                    selectedEventId === evt.id
-                      ? "border-primary shadow-sm bg-primary/5"
-                      : "bg-card"
-                  }`}
-                  onClick={() => onSelectEvent(evt.id)}
+            events.map((evt) => {
+              const isFestival = events.some(e => e.parent_id === evt.id);
+              
+              // Nascondi i sotto-eventi dalla lista principale per non creare confusione
+              // (verranno visti nella pagina del festival o sulla mappa)
+              if (evt.parent_id) return null;
+
+              return (
+                <div
+                  key={evt.id}
+                  ref={(el) => {
+                    if (el) cardRefs.current.set(evt.id, el);
+                    else cardRefs.current.delete(evt.id);
+                  }}
                 >
-                  <CardContent className="p-4">
-                    <h3 className="font-bold text-foreground mb-2 leading-tight text-sm">
-                      {evt.titolo}
-                    </h3>
-                    <div className="flex flex-col gap-1.5 text-xs text-muted-foreground">
-                      {evt.data_inizio && (
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
-                          <span>
-                            {format(new Date(evt.data_inizio), "dd/MM/yyyy")}
-                            {evt.data_fine && evt.data_fine !== evt.data_inizio
-                              ? ` – ${format(new Date(evt.data_fine), "dd/MM/yyyy")}`
-                              : ""}
-                          </span>
+                  <Card
+                    className={`cursor-pointer transition-all hover:border-primary/50 ${
+                      selectedEventId === evt.id
+                        ? "border-primary shadow-sm bg-primary/5"
+                        : "bg-card"
+                    }`}
+                    onClick={() => onSelectEvent(evt.id)}
+                  >
+                    <CardContent className="p-4 relative">
+                      {isFestival && (
+                        <div className="absolute top-4 right-4 bg-primary/10 text-primary p-1.5 rounded-md">
+                          <Flag className="w-4 h-4" />
                         </div>
                       )}
-                      {evt.luogo && (
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-secondary" />
-                          <span className="font-medium">{evt.luogo}</span>
-                        </div>
-                      )}
-                      {evt.link && (
-                        <a
-                          href={evt.link}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center gap-1 text-primary hover:underline mt-0.5"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          Vedi fonte
-                        </a>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            ))}
+                      <h3 className="font-bold text-foreground mb-2 leading-tight text-sm pr-8">
+                        {evt.titolo}
+                      </h3>
+                      <div className="flex flex-col gap-1.5 text-xs text-muted-foreground">
+                        {evt.data_inizio && (
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span>
+                              {format(new Date(evt.data_inizio), "dd/MM/yyyy")}
+                              {evt.data_fine && evt.data_fine !== evt.data_inizio
+                                ? ` - ${format(new Date(evt.data_fine), "dd/MM/yyyy")}`
+                                : ""}
+                            </span>
+                          </div>
+                        )}
+                        {evt.luogo && (
+                          <div className="flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-secondary" />
+                            <span className="font-medium">{evt.luogo}</span>
+                          </div>
+                        )}
+                        
+                        {isFestival ? (
+                           <Link href={`/festival/${evt.id}`}>
+                             <a className="flex items-center gap-1 text-primary hover:underline mt-2 font-medium bg-primary/5 w-fit px-2 py-1 rounded-md" onClick={(e) => e.stopPropagation()}>
+                               Vedi Programma Festival
+                             </a>
+                           </Link>
+                        ) : (
+                          evt.link && (
+                            <a
+                              href={evt.link}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex items-center gap-1 text-primary hover:underline mt-0.5"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              Vedi fonte
+                            </a>
+                          )
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              );
+            })}
         </div>
       </ScrollArea>
     </div>

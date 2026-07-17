@@ -33,8 +33,20 @@ router.get("/events", async (req, res): Promise<void> => {
 
   const { date_from, date_to, luogo, titolo, fonte } = parsed.data;
 
+  // Filtro eventi più vecchi di 3 mesi
+  const cutoffDate = new Date();
+  cutoffDate.setMonth(cutoffDate.getMonth() - 3);
+  const cutoffString = cutoffDate.toISOString().split("T")[0];
+
   const conditions = [];
-  if (date_from) conditions.push(gte(eventsTable.dataInizio, date_from));
+  conditions.push(gte(eventsTable.dataInizio, cutoffString));
+
+  if (date_from && date_from > cutoffString) {
+    conditions.push(gte(eventsTable.dataInizio, date_from));
+  } else if (date_from) {
+    // If date_from is provided but older than cutoff, we still rely on cutoff
+  }
+  
   if (date_to) conditions.push(lte(eventsTable.dataInizio, date_to));
   if (luogo) conditions.push(ilike(eventsTable.luogo, `%${luogo}%`));
   if (titolo) conditions.push(ilike(eventsTable.titolo, `%${titolo}%`));
@@ -58,6 +70,8 @@ router.get("/events", async (req, res): Promise<void> => {
     descrizione: r.descrizione,
     immagine: r.immagine,
     fonte: r.fonte,
+    testo_estratto: r.testoEstratto,
+    parent_id: r.parentId,
     aggiornato_il: r.aggiornatoIl.toISOString(),
   }));
 
@@ -166,6 +180,8 @@ router.post("/events/refresh", requireAdminKey, async (req, res): Promise<void> 
   }
 });
 
+import fs from "fs";
+
 // Human-in-the-loop: preview events without writing to DB
 router.post("/events/refresh/preview", requireAdminKey, (req, res): void => {
   req.log.info("Starting scraper preview (dry-run) with streaming");
@@ -175,6 +191,7 @@ router.post("/events/refresh/preview", requireAdminKey, (req, res): void => {
     : process.cwd();
 
   const scraperScript = path.resolve(workspaceRoot, "scraper_runner.py");
+  const cacheFile = path.resolve(workspaceRoot, "preview_cache.json");
 
   res.setHeader("Content-Type", "application/json-lines");
   res.setHeader("Cache-Control", "no-cache");
@@ -185,7 +202,10 @@ router.post("/events/refresh/preview", requireAdminKey, (req, res): void => {
     env: { ...process.env },
   });
 
+  let outputBuffer = "";
+
   child.stdout.on("data", (data) => {
+    outputBuffer += data.toString();
     res.write(data);
   });
 
@@ -197,6 +217,23 @@ router.post("/events/refresh/preview", requireAdminKey, (req, res): void => {
     if (code !== 0) {
       req.log.error({ code }, "Preview failed");
       res.write(JSON.stringify({ success: false, nuovi: 0, aggiornati: 0, errori: 1, messaggio: `Process exited with code ${code}`, events: [] }) + "\n");
+    } else {
+      // Parse output buffer to find the final events payload and cache it
+      try {
+        const lines = outputBuffer.split("\n");
+        for (let i = lines.length - 1; i >= 0; i--) {
+          const line = lines[i].trim();
+          if (line.startsWith("{") && line.includes('"events"')) {
+            const parsed = JSON.parse(line);
+            if (parsed.events) {
+              fs.writeFileSync(cacheFile, JSON.stringify(parsed.events, null, 2), "utf8");
+              break;
+            }
+          }
+        }
+      } catch (e) {
+        req.log.error({ err: e }, "Failed to parse/save preview cache");
+      }
     }
     res.end();
   });
@@ -206,6 +243,46 @@ router.post("/events/refresh/preview", requireAdminKey, (req, res): void => {
     res.write(JSON.stringify({ success: false, nuovi: 0, aggiornati: 0, errori: 1, messaggio: String(err), events: [] }) + "\n");
     res.end();
   });
+});
+
+router.get("/events/refresh/preview/cache", requireAdminKey, (req, res): void => {
+  const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
+    ? path.resolve(process.cwd(), "../..")
+    : process.cwd();
+  const cacheFile = path.resolve(workspaceRoot, "preview_cache.json");
+  
+  try {
+    if (fs.existsSync(cacheFile)) {
+      const data = fs.readFileSync(cacheFile, "utf8");
+      const events = JSON.parse(data);
+      res.json({ success: true, events });
+    } else {
+      res.json({ success: true, events: [] });
+    }
+  } catch (err) {
+    req.log.error({ err }, "Failed to read preview cache");
+    res.json({ success: false, events: [], messaggio: String(err) });
+  }
+});
+
+router.put("/events/refresh/preview/cache", requireAdminKey, (req, res): void => {
+  const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
+    ? path.resolve(process.cwd(), "../..")
+    : process.cwd();
+  const cacheFile = path.resolve(workspaceRoot, "preview_cache.json");
+  
+  try {
+    const { events } = req.body;
+    if (Array.isArray(events)) {
+      fs.writeFileSync(cacheFile, JSON.stringify(events, null, 2), "utf8");
+      res.json({ success: true });
+    } else {
+      res.status(400).json({ error: "Invalid events array" });
+    }
+  } catch (err) {
+    req.log.error({ err }, "Failed to write preview cache");
+    res.status(500).json({ error: String(err) });
+  }
 });
 
 // Human-in-the-loop: approve selected events into the database
@@ -279,6 +356,108 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
     errori,
     messaggio: `Pubblicati: ${nuovi} nuovi, ${aggiornati} aggiornati`,
   }));
+});
+
+router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> => {
+  req.log.info("Starting on-demand AI analysis for events");
+
+  const { events } = req.body;
+  if (!events || !Array.isArray(events) || events.length === 0) {
+    res.status(400).json({ error: "No events provided" });
+    return;
+  }
+
+  const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
+    ? path.resolve(process.cwd(), "../..")
+    : process.cwd();
+
+  const aiScript = path.resolve(workspaceRoot, "scraper/run_ai.py");
+
+  try {
+    const child = spawn("python", [aiScript], {
+      cwd: workspaceRoot,
+      env: { ...process.env },
+    });
+
+    child.stdin.write(JSON.stringify(events));
+    child.stdin.end();
+
+    let stdoutData = "";
+    let stderrData = "";
+
+    child.stdout.on("data", (chunk) => {
+      stdoutData += chunk;
+    });
+
+    child.stderr.on("data", (chunk) => {
+      stderrData += chunk;
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      child.on("close", (code) => {
+        if (code === 0) resolve();
+        else reject(new Error(`Python script exited with code ${code}. Stderr: ${stderrData}`));
+      });
+      child.on("error", reject);
+    });
+
+    let results = [];
+    try {
+      results = JSON.parse(stdoutData);
+    } catch (e) {
+      throw new Error(`Failed to parse Python output: ${stdoutData}`);
+    }
+
+    let errori = 0;
+    for (const r of results) {
+      if (r.error) {
+        errori++;
+        req.log.error({ err: r.error, event_id: r.id, tmp_id: r.tmp_id }, "AI analysis failed for event");
+      } else if (r.id) {
+        // If it has a real DB ID, update the DB directly
+        try {
+          await db.update(eventsTable)
+            .set({
+              testoEstratto: r.testo_estratto,
+              aggiornatoIl: new Date(),
+            })
+            .where(eq(eventsTable.id, r.id));
+            
+          // We can also insert sotto_eventi if it's a festival, but since this
+          // event is already published, we should create the sub-events in the DB
+          if (r.is_festival && r.sotto_eventi && r.sotto_eventi.length > 0) {
+            // First fetch the parent event to copy its location and source
+            const [parent] = await db.select().from(eventsTable).where(eq(eventsTable.id, r.id));
+            if (parent) {
+              for (const se of r.sotto_eventi) {
+                await db.insert(eventsTable).values({
+                  titolo: `${parent.titolo} - ${se.titolo}`,
+                  dataInizio: se.data_inizio,
+                  dataFine: se.data_fine || se.data_inizio,
+                  luogo: se.luogo || parent.luogo,
+                  parentId: parent.id,
+                  fonte: parent.fonte,
+                });
+              }
+            }
+          }
+        } catch (e) {
+          req.log.error({ err: e, event_id: r.id }, "Failed to save AI results to DB");
+          errori++;
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      results,
+      errori,
+      messaggio: `Analisi completata. ${results.length - errori} successi, ${errori} errori.`,
+    });
+  } catch (err) {
+    req.log.error({ err }, "AI analysis endpoint failed");
+    res.status(500).json({ error: String(err) });
+  }
 });
 
 router.delete("/events/:id", requireAdminKey, async (req, res): Promise<void> => {
@@ -386,6 +565,8 @@ router.get("/events/:id", async (req, res): Promise<void> => {
       descrizione: row.descrizione,
       immagine: row.immagine,
       fonte: row.fonte,
+      testo_estratto: row.testoEstratto,
+      parent_id: row.parentId,
       aggiornato_il: row.aggiornatoIl.toISOString(),
     })
   );

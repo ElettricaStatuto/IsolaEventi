@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Loader2, CheckCircle2, XCircle, ShieldCheck, ArrowLeft, Eye, Database,
-  Trash2, RotateCcw, AlertTriangle, Calendar, MapPin, Globe, Search,
+  Trash2, RotateCcw, AlertTriangle, Calendar, MapPin, Globe, Search, RefreshCw, Clock
 } from "lucide-react";
 
 const LS_KEY = "sardegna_admin_key";
@@ -25,6 +26,10 @@ interface EventPreview {
   immagine: string | null;
   fonte: string;
   is_new?: boolean;
+  parent_id?: number | null;
+  testo_estratto?: string | null;
+  is_festival?: boolean | null;
+  sotto_eventi?: any[];
 }
 
 interface DbEvent {
@@ -40,6 +45,8 @@ interface DbEvent {
   immagine: string | null;
   fonte: string;
   aggiornato_il: string;
+  testo_estratto?: string | null;
+  parent_id?: number | null;
 }
 
 interface RejectedEvent {
@@ -75,16 +82,46 @@ export function Admin() {
 
   // ── Scraping tab ──
   const [previewEvents, setPreviewEvents] = useState<EventPreview[]>([]);
-  const [selectedPreviewIds, setSelectedPreviewIds] = useState<Set<number>>(new Set());
+  const [selectedApproveIds, setSelectedApproveIds] = useState<Set<number>>(new Set());
+  const [selectedAnalyzeIds, setSelectedAnalyzeIds] = useState<Set<number>>(new Set());
+  const [analyzingPreview, setAnalyzingPreview] = useState(false);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [approvalResult, setApprovalResult] = useState<RefreshResult | null>(null);
   const [scrapingStep, setScrapingStep] = useState<"input" | "list" | "result">("input");
   const [scrapingLogs, setScrapingLogs] = useState<string[]>([]);
 
+  const loadPreviewCache = useCallback(async () => {
+    if (!adminKey) return;
+    try {
+      const data: any = await fetchJson("/api/events/refresh/preview/cache", "GET", undefined, adminKey);
+      if (data.success && data.events && data.events.length > 0) {
+        setPreviewEvents(data.events);
+        setSelectedApproveIds(new Set());
+        setSelectedAnalyzeIds(new Set());
+        setScrapingStep("list");
+      }
+    } catch (e) { /* ignore */ }
+  }, [adminKey]);
+
+  const updatePreviewCache = async (events: EventPreview[]) => {
+    try {
+      await fetchJson("/api/events/refresh/preview/cache", "PUT", { events }, adminKey);
+    } catch (e) { /* ignore */ }
+  };
+
+  useEffect(() => {
+    if ((activeTab === "scraping" || activeTab === "pending") && keyVerified && previewEvents.length === 0 && !loadingPreview) {
+      loadPreviewCache();
+    }
+  }, [activeTab, keyVerified, previewEvents.length, loadingPreview, loadPreviewCache]);
+
   // ── Published tab ──
   const [publishedEvents, setPublishedEvents] = useState<DbEvent[]>([]);
   const [loadingPublished, setLoadingPublished] = useState(false);
   const [selectedPubIds, setSelectedPubIds] = useState<Set<number>>(new Set());
+  const [selectedPubAnalyzeIds, setSelectedPubAnalyzeIds] = useState<Set<number>>(new Set());
+  const [analyzingPublished, setAnalyzingPublished] = useState(false);
+  const [inspectingEvent, setInspectingEvent] = useState<any | null>(null);
   const [filterTitolo, setFilterTitolo] = useState("");
   const [filterDataFrom, setFilterDataFrom] = useState("");
   const [filterDataTo, setFilterDataTo] = useState("");
@@ -180,7 +217,10 @@ export function Admin() {
     setScrapingStep("input");
     setScrapingLogs([]);
     setPreviewEvents([]);
-    setSelectedPreviewIds(new Set());
+    setSelectedApproveIds(new Set());
+    setSelectedAnalyzeIds(new Set());
+    setSelectedPubAnalyzeIds(new Set());
+    setInspectingEvent(null);
     setApprovalResult(null);
     setPublishedEvents([]);
     setRejectedEvents([]);
@@ -201,6 +241,7 @@ export function Admin() {
       const data: DbEvent[] = await fetchJson(`/api/events?${params}`, "GET", undefined, adminKey);
       setPublishedEvents(data);
       setSelectedPubIds(new Set());
+      setSelectedPubAnalyzeIds(new Set());
     } catch (e) {
       setError(`Errore caricamento eventi: ${String(e)}`);
     } finally {
@@ -271,7 +312,9 @@ export function Admin() {
       }
       const evs = finalResult.events || [];
       setPreviewEvents(evs);
-      setSelectedPreviewIds(new Set(evs.map((_, i) => i)));
+      setSelectedApproveIds(new Set());
+      setSelectedAnalyzeIds(new Set());
+      updatePreviewCache(evs);
       setScrapingStep("list");
     } catch (e) {
       setError(`Errore di rete: ${String(e)}`);
@@ -281,18 +324,18 @@ export function Admin() {
   };
 
   const handleApprove = async () => {
-    if (selectedPreviewIds.size === 0) {
+    if (selectedApproveIds.size === 0) {
       setError("Seleziona almeno un evento da approvare.");
       return;
     }
-    const toApprove = Array.from(selectedPreviewIds).map((i) => previewEvents[i]);
+    const toApprove = Array.from(selectedApproveIds).map((i) => previewEvents[i]);
     setLoadingPreview(true);
     setError(null);
     try {
       const data: RefreshResult = await fetchJson("/api/events/approve", "POST", { events: toApprove }, adminKey);
       setApprovalResult(data);
       setScrapingStep("result");
-      // Refresh published list if we switch to that tab
+      updatePreviewCache([]);
       loadPublished(appliedFilters);
     } catch (e) {
       setError(`Errore di rete: ${String(e)}`);
@@ -301,15 +344,91 @@ export function Admin() {
     }
   };
 
-  const togglePreviewAll = (checked: boolean) => {
-    if (checked) setSelectedPreviewIds(new Set(previewEvents.map((_, i) => i)));
-    else setSelectedPreviewIds(new Set());
+  const handleAnalyzePreview = async () => {
+    if (selectedAnalyzeIds.size === 0) {
+      setError("Seleziona almeno un evento per l'analisi locandina.");
+      return;
+    }
+    const toAnalyze = Array.from(selectedAnalyzeIds).map(i => ({ ...previewEvents[i], idx: i }))
+      .filter((ev) => !ev.testo_estratto);
+
+    if (toAnalyze.length === 0) {
+      setError("Seleziona almeno un evento non ancora analizzato.");
+      return;
+    }
+
+    setAnalyzingPreview(true);
+    setError(null);
+    try {
+      const payload = toAnalyze.map((ev) => ({
+        tmp_id: ev.idx.toString(),
+        titolo: ev.titolo,
+        descrizione: ev.descrizione,
+        immagine: ev.immagine,
+      }));
+
+      const data = await fetchJson<any>("/api/events/analyze", "POST", { events: payload }, adminKey);
+      if (data.success) {
+        setPreviewEvents((prev) => {
+          const next = [...prev];
+          for (const res of data.results) {
+            if (!res.error && res.tmp_id != null) {
+              const idx = parseInt(res.tmp_id, 10);
+              next[idx] = {
+                ...next[idx],
+                testo_estratto: res.testo_estratto,
+                is_festival: res.is_festival,
+                sotto_eventi: res.sotto_eventi
+              };
+            }
+          }
+          updatePreviewCache(next);
+          return next;
+        });
+        setSelectedAnalyzeIds(new Set());
+        alert(`Analisi completata: ${data.messaggio}`);
+      }
+    } catch (e) {
+      setError(`Errore analisi: ${String(e)}`);
+    } finally {
+      setAnalyzingPreview(false);
+    }
   };
-  const togglePreviewOne = (idx: number, checked: boolean) => {
-    const next = new Set(selectedPreviewIds);
+
+  const deletePreviewEvent = (idx: number) => {
+    const next = previewEvents.filter((_, i) => i !== idx);
+    setPreviewEvents(next);
+    setSelectedApproveIds(new Set());
+    setSelectedAnalyzeIds(new Set());
+    updatePreviewCache(next);
+  };
+
+  const toggleApproveAll = (checked: boolean) => {
+    if (checked) setSelectedApproveIds(new Set(previewEvents.map((_, i) => i)));
+    else setSelectedApproveIds(new Set());
+  };
+  const toggleApproveOne = (idx: number, checked: boolean) => {
+    const next = new Set(selectedApproveIds);
     if (checked) next.add(idx);
     else next.delete(idx);
-    setSelectedPreviewIds(next);
+    setSelectedApproveIds(next);
+  };
+
+  const toggleAnalyzeAll = (checked: boolean) => {
+    if (checked) setSelectedAnalyzeIds(new Set(previewEvents.map((_, i) => i)));
+    else setSelectedAnalyzeIds(new Set());
+  };
+  const toggleAnalyzeOne = (idx: number, checked: boolean) => {
+    const next = new Set(selectedAnalyzeIds);
+    if (checked) {
+       next.add(idx);
+       const nextApprove = new Set(selectedApproveIds);
+       nextApprove.add(idx);
+       setSelectedApproveIds(nextApprove);
+    } else {
+       next.delete(idx);
+    }
+    setSelectedAnalyzeIds(next);
   };
 
   useEffect(() => {
@@ -371,6 +490,7 @@ export function Admin() {
     loadPublished(appliedFilters);
     if (recordRejected) refreshRejected();
     setSelectedPubIds(new Set());
+    setSelectedPubAnalyzeIds(new Set());
     if (failed > 0) setError(`${failed} eliminazioni fallite su ${ids.length}`);
   };
 
@@ -383,6 +503,67 @@ export function Admin() {
     if (checked) next.add(id);
     else next.delete(id);
     setSelectedPubIds(next);
+  };
+
+  const togglePubAnalyzeAll = (checked: boolean) => {
+    if (checked) setSelectedPubAnalyzeIds(new Set(publishedEvents.map((e) => e.id)));
+    else setSelectedPubAnalyzeIds(new Set());
+    setInspectingEvent(null);
+  };
+  const togglePubAnalyzeOne = (id: number, checked: boolean) => {
+    const next = new Set(selectedPubAnalyzeIds);
+    if (checked) next.add(id);
+    else next.delete(id);
+    setSelectedPubAnalyzeIds(next);
+  };
+
+  const handleAnalyzePublished = async () => {
+    if (selectedPubAnalyzeIds.size === 0) {
+      setError("Seleziona almeno un evento pubblicato per l'analisi locandina.");
+      return;
+    }
+    const toAnalyze = publishedEvents.filter(ev => selectedPubAnalyzeIds.has(ev.id));
+    setAnalyzingPublished(true);
+    setError(null);
+    try {
+      const payload = toAnalyze.map((ev) => ({
+        id: ev.id,
+        titolo: ev.titolo,
+        descrizione: ev.descrizione,
+        immagine: ev.immagine,
+      }));
+      const data = await fetchJson<any>("/api/events/analyze", "POST", { events: payload }, adminKey);
+      if (data.success) {
+        setSelectedPubAnalyzeIds(new Set());
+        alert(`Analisi completata: ${data.messaggio}`);
+        loadPublished(appliedFilters);
+      }
+    } catch (e) {
+      setError(`Errore analisi pubblicati: ${String(e)}`);
+    } finally {
+      setAnalyzingPublished(false);
+    }
+  };
+
+  const openEventDetails = (ev: any, isPending: boolean) => {
+    let subEvents: any[] = [];
+    if (isPending) {
+      subEvents = ev.sotto_eventi || [];
+    } else {
+      subEvents = publishedEvents
+        .filter((child) => child.parent_id === ev.id)
+        .map((child) => ({
+          titolo: child.titolo.replace(`${ev.titolo} - `, ""),
+          data_inizio: child.data_inizio,
+          data_fine: child.data_fine,
+          luogo: child.luogo,
+        }));
+    }
+    setInspectingEvent({
+      ...ev,
+      is_pending: isPending,
+      sub_events_list: subEvents,
+    });
   };
 
   // ── Rejected data & handlers ──
@@ -438,12 +619,18 @@ export function Admin() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 max-w-md">
+          <TabsList className="grid w-full grid-cols-5 max-w-3xl">
             <TabsTrigger value="scraping">
               <Eye className="w-4 h-4 mr-1" /> Scraping
             </TabsTrigger>
+            <TabsTrigger value="pending">
+              <Clock className="w-4 h-4 mr-1" /> In Attesa
+            </TabsTrigger>
             <TabsTrigger value="published">
               <Database className="w-4 h-4 mr-1" /> Pubblicati
+            </TabsTrigger>
+            <TabsTrigger value="analyzed">
+              <CheckCircle2 className="w-4 h-4 mr-1" /> Analizzati
             </TabsTrigger>
             <TabsTrigger value="rejected">
               <AlertTriangle className="w-4 h-4 mr-1" /> Scartati
@@ -482,7 +669,10 @@ export function Admin() {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
 
+          {/* ── PENDING TAB ── */}
+          <TabsContent value="pending" className="mt-4">
             {scrapingStep === "list" && (
               <Card>
                 <CardHeader className="pb-2">
@@ -505,105 +695,90 @@ export function Admin() {
                     <>
                       <div className="flex items-center gap-2 pb-2 border-b border-border">
                         <Checkbox
-                          checked={selectedPreviewIds.size === previewEvents.length && previewEvents.length > 0}
-                          onCheckedChange={(v) => togglePreviewAll(v === true)}
+                          checked={selectedApproveIds.size === previewEvents.length && previewEvents.length > 0}
+                          onCheckedChange={(v) => toggleApproveAll(v === true)}
+                          id="approve-all"
                         />
-                        <span className="text-sm font-medium">
-                          {selectedPreviewIds.size} / {previewEvents.length} selezionati
-                        </span>
+                        <Label htmlFor="approve-all" className="text-sm font-medium">Seleziona tutti (Pubblicazione)</Label>
+                        <div className="mx-2 border-l h-4 border-border"></div>
+                        <Checkbox
+                          checked={selectedAnalyzeIds.size === previewEvents.length && previewEvents.length > 0}
+                          onCheckedChange={(v) => toggleAnalyzeAll(v === true)}
+                          id="analyze-all"
+                        />
+                        <Label htmlFor="analyze-all" className="text-sm font-medium">Seleziona tutti (Analisi)</Label>
                       </div>
-                      <div className="max-h-[60vh] overflow-auto border rounded-md">
-                        <table className="w-full text-sm">
-                          <thead className="bg-muted sticky top-0">
-                            <tr>
-                              <th className="w-10 p-2"></th>
-                              <th className="p-2 text-left text-xs font-semibold">Immagine</th>
-                              <th className="p-2 text-left text-xs font-semibold"><div className="flex items-center gap-1"><Search className="w-3 h-3" /> Titolo</div></th>
-                              <th className="p-2 text-left text-xs font-semibold"><div className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Data</div></th>
-                              <th className="p-2 text-left text-xs font-semibold"><div className="flex items-center gap-1"><MapPin className="w-3 h-3" /> Luogo</div></th>
-                              <th className="p-2 text-left text-xs font-semibold"><div className="flex items-center gap-1"><Globe className="w-3 h-3" /> Fonte</div></th>
-                            </tr>
-                            <tr className="border-t border-border">
-                              <th className="p-1"></th>
-                              <th className="p-1"></th>
-                              <th className="p-1">
-                                <Input placeholder="Filtra titolo…" value={prevFilterTitolo} onChange={(e) => setPrevFilterTitolo(e.target.value)} className="h-7 text-xs" />
-                              </th>
-                              <th className="p-1">
-                                <div className="flex gap-1">
-                                  <Input type="date" value={prevFilterDataFrom} onChange={(e) => setPrevFilterDataFrom(e.target.value)} className="h-7 text-xs px-1" />
-                                  <Input type="date" value={prevFilterDataTo} onChange={(e) => setPrevFilterDataTo(e.target.value)} className="h-7 text-xs px-1" />
-                                </div>
-                              </th>
-                              <th className="p-1">
-                                <Input placeholder="Filtra luogo…" value={prevFilterLuogo} onChange={(e) => setPrevFilterLuogo(e.target.value)} className="h-7 text-xs" />
-                              </th>
-                              <th className="p-1">
-                                <div className="flex gap-1">
-                                  <Input placeholder="Filtra fonte…" value={prevFilterFonte} onChange={(e) => setPrevFilterFonte(e.target.value)} className="h-7 text-xs" />
-                                  <Button size="sm" className="h-7 text-xs px-2 shrink-0" onClick={applyPrevFilters}><Search className="w-3 h-3 mr-1" /> Applica</Button>
-                                  <Button variant="ghost" size="sm" className="h-7 text-xs px-2 shrink-0" onClick={clearPrevFilters}>Azzera</Button>
-                                </div>
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {filteredPreviewEvents.length === 0 ? (
+
+                      <div className="border border-border rounded-md overflow-hidden relative z-0">
+                        <ScrollArea className="h-[400px]">
+                          <table className="w-full text-sm text-left">
+                            <thead className="text-xs uppercase bg-muted text-muted-foreground sticky top-0 z-20">
                               <tr>
-                                <td colSpan={6} className="p-8 text-center text-muted-foreground">Nessun evento trovato con i filtri attuali.</td>
+                                <th className="px-4 py-3 w-10">Pubblica</th>
+                                <th className="px-4 py-3 w-10">Analizza</th>
+                                <th className="px-4 py-3">Titolo</th>
+                                <th className="px-4 py-3">Data</th>
+                                <th className="px-4 py-3">Fonte</th>
+                                <th className="px-4 py-3 text-right">Azioni</th>
                               </tr>
-                            ) : (
-                              filteredPreviewEvents.map(({ ev, i }) => (
-                                <tr key={i} className="border-t border-border hover:bg-muted/40">
-                                  <td className="p-2">
+                            </thead>
+                            <tbody>
+                              {previewEvents.map((ev, i) => (
+                                <tr key={i} className="border-b border-border hover:bg-muted/50">
+                                  <td className="px-4 py-3">
                                     <Checkbox
-                                      checked={selectedPreviewIds.has(i)}
-                                      onCheckedChange={(v) => togglePreviewOne(i, v === true)}
+                                      checked={selectedApproveIds.has(i)}
+                                      onCheckedChange={(v) => toggleApproveOne(i, v === true)}
+                                      aria-label={`Approva ${ev.titolo}`}
                                     />
                                   </td>
-                                  <td className="p-2">
-                                    {ev.immagine ? (
-                                      <img
-                                        src={ev.immagine.startsWith("http") ? ev.immagine : `/api/event-images/${ev.immagine}`}
-                                        alt={ev.titolo}
-                                        className="w-16 h-12 object-cover rounded border"
-                                        loading="lazy"
-                                      />
-                                    ) : (
-                                      <div className="w-16 h-12 bg-muted rounded border flex items-center justify-center text-xs text-muted-foreground">—</div>
-                                    )}
+                                  <td className="px-4 py-3">
+                                    <Checkbox
+                                      checked={selectedAnalyzeIds.has(i)}
+                                      onCheckedChange={(v) => toggleAnalyzeOne(i, v === true)}
+                                      aria-label={`Analizza ${ev.titolo}`}
+                                    />
                                   </td>
-                                  <td className="p-2 font-medium">
-                                    {ev.link ? (
-                                      <a href={ev.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{ev.titolo}</a>
-                                    ) : ev.titolo}
+                                  <td className="px-4 py-3 font-medium">
+                                    {ev.titolo}
+                                    {ev.is_new && <Badge variant="default" className="ml-2 bg-blue-600 text-white">Nuovo</Badge>}
+                                    {ev.testo_estratto && <Badge variant="outline" className="ml-2 border-green-500 text-green-500">Analizzato</Badge>}
                                   </td>
-                                  <td className="p-2 text-muted-foreground whitespace-nowrap">
-                                    {ev.data_inizio ?? "—"}
-                                    {ev.data_fine && ev.data_fine !== ev.data_inizio ? <span className="text-xs"> → {ev.data_fine}</span> : null}
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    {ev.data_inizio ? new Date(ev.data_inizio).toLocaleDateString("it-IT") : "N/D"}
                                   </td>
-                                  <td className="p-2 text-muted-foreground">
-                                    {ev.luogo ?? "—"}
-                                    {ev.latitudine != null && ev.longitudine != null && <span className="text-xs text-green-600 ml-1">✓ geo</span>}
+                                  <td className="px-4 py-3">
+                                    <Badge variant="outline" className="bg-background">{ev.fonte}</Badge>
                                   </td>
-                                  <td className="p-2">
-                                    <Badge variant="secondary">{ev.fonte}</Badge>
+                                  <td className="px-4 py-3 text-right">
+                                    <Button variant="ghost" size="icon" onClick={() => deletePreviewEvent(i)} title="Cestina evento">
+                                      <Trash2 className="w-4 h-4 text-red-500" />
+                                    </Button>
                                   </td>
                                 </tr>
-                              ))
-                            )}
-                          </tbody>
-                        </table>
+                              ))}
+                            </tbody>
+                          </table>
+                        </ScrollArea>
                       </div>
-                      <div className="flex gap-2 pt-2">
-                        <Button onClick={handleApprove} disabled={loadingPreview} className="flex-1">
-                          {loadingPreview ? (
-                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Approvazione…</>
-                          ) : (
-                            <><Database className="w-4 h-4 mr-2" /> Pubblica {selectedPreviewIds.size} eventi</>
-                          )}
-                        </Button>
+
+                      <div className="flex justify-end gap-3 pt-2">
                         <Button variant="outline" onClick={() => setScrapingStep("input")}>Annulla</Button>
+                        <Button
+                          variant="secondary"
+                          onClick={handleAnalyzePreview}
+                          disabled={analyzingPreview || selectedAnalyzeIds.size === 0}
+                        >
+                          {analyzingPreview && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                          Analizza Locandine ({selectedAnalyzeIds.size})
+                        </Button>
+                        <Button
+                          onClick={handleApprove}
+                          disabled={loadingPreview || selectedApproveIds.size === 0}
+                        >
+                          {loadingPreview && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                          Approva Eventi ({selectedApproveIds.size})
+                        </Button>
                       </div>
                     </>
                   )}
@@ -630,12 +805,105 @@ export function Admin() {
                       </div>
                     ))}
                   </div>
-                  <Button variant="outline" className="mt-2" onClick={() => setScrapingStep("input")}>
+                  <Button variant="outline" className="mt-2 text-foreground" onClick={() => setScrapingStep("input")}>
                     <ArrowLeft className="w-4 h-4 mr-1" /> Nuovo preview
                   </Button>
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          {/* ── ANALYZED TAB ── */}
+          <TabsContent value="analyzed" className="mt-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Eventi Analizzati</CardTitle>
+                <CardDescription>
+                  Visualizza tutti gli eventi che hanno una locandina analizzata e le relative informazioni estratte.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                <div className="overflow-auto border rounded-md">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted sticky top-0">
+                      <tr>
+                        <th className="p-2 text-left text-xs font-semibold">Stato</th>
+                        <th className="p-2 text-left text-xs font-semibold">Immagine</th>
+                        <th className="p-2 text-left text-xs font-semibold">Titolo</th>
+                        <th className="p-2 text-left text-xs font-semibold">Data</th>
+                        <th className="p-2 text-left text-xs font-semibold">Fonte</th>
+                        <th className="p-2 text-left text-xs font-semibold">Sotto-eventi</th>
+                        <th className="p-2 text-left text-xs font-semibold">Azione</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        const analyzedPreview = previewEvents
+                          .filter((ev) => (ev as any).testo_estratto)
+                          .map((ev) => ({ ...ev, is_pending: true, id_key: `prev-${ev.titolo}` }));
+                        const analyzedPublished = publishedEvents
+                          .filter((ev) => (ev as any).testo_estratto)
+                          .map((ev) => ({ ...ev, is_pending: false, id_key: `pub-${ev.id}` }));
+                        const allAnalyzed = [...analyzedPreview, ...analyzedPublished];
+
+                        if (allAnalyzed.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                                Nessun evento analizzato trovato.
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        return allAnalyzed.map((ev: any) => {
+                          const img = imageUrl(ev);
+                          const subCount = ev.is_pending
+                            ? (ev.sotto_eventi?.length || 0)
+                            : publishedEvents.filter((child) => child.parent_id === ev.id).length;
+
+                          return (
+                            <tr key={ev.id_key} className="border-t border-border hover:bg-muted/40">
+                              <td className="p-2">
+                                <Badge variant={ev.is_pending ? "secondary" : "default"} className={ev.is_pending ? "bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200" : ""}>
+                                  {ev.is_pending ? "In Attesa" : "Pubblicato"}
+                                </Badge>
+                              </td>
+                              <td className="p-2">
+                                {img ? (
+                                  <img src={img} alt={ev.titolo} className="w-16 h-12 object-cover rounded border" loading="lazy" />
+                                ) : (
+                                  <div className="w-16 h-12 bg-muted rounded border flex items-center justify-center text-xs text-muted-foreground">—</div>
+                                )}
+                              </td>
+                              <td className="p-2 font-medium max-w-xs truncate">
+                                {ev.titolo}
+                              </td>
+                              <td className="p-2 text-muted-foreground whitespace-nowrap">
+                                {ev.data_inizio ? new Date(ev.data_inizio).toLocaleDateString("it-IT") : "N/D"}
+                              </td>
+                              <td className="p-2">
+                                <Badge variant="outline">{ev.fonte}</Badge>
+                              </td>
+                              <td className="p-2">
+                                <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-50">
+                                  {subCount} sotto-eventi
+                                </Badge>
+                              </td>
+                              <td className="p-2">
+                                <Button variant="outline" size="sm" onClick={() => openEventDetails(ev, ev.is_pending)}>
+                                  <Eye className="w-4 h-4 mr-1" /> Dettagli
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        });
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* ── PUBLISHED TAB ── */}
@@ -654,16 +922,36 @@ export function Admin() {
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
                 {/* Bulk actions */}
-                {selectedPubIds.size > 0 && (
+                {(selectedPubIds.size > 0 || selectedPubAnalyzeIds.size > 0) && (
                   <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
-                    <span className="text-sm font-medium">{selectedPubIds.size} selezionati</span>
+                    {selectedPubIds.size > 0 && (
+                      <span className="text-sm font-medium">{selectedPubIds.size} da eliminare</span>
+                    )}
+                    {selectedPubAnalyzeIds.size > 0 && (
+                      <span className="text-sm font-medium ml-4">{selectedPubAnalyzeIds.size} da analizzare</span>
+                    )}
                     <div className="flex-1"></div>
-                    <Button variant="destructive" size="sm" onClick={() => bulkDelete(false)}>
-                      <Trash2 className="w-4 h-4 mr-1" /> Elimina
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => bulkDelete(true)}>
-                      <AlertTriangle className="w-4 h-4 mr-1" /> Elimina e scarta
-                    </Button>
+                    {selectedPubAnalyzeIds.size > 0 && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleAnalyzePublished}
+                        disabled={analyzingPublished}
+                      >
+                        {analyzingPublished && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        Analizza Locandine ({selectedPubAnalyzeIds.size})
+                      </Button>
+                    )}
+                    {selectedPubIds.size > 0 && (
+                      <>
+                        <Button variant="destructive" size="sm" onClick={() => bulkDelete(false)}>
+                          <Trash2 className="w-4 h-4 mr-1" /> Elimina
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => bulkDelete(true)}>
+                          <AlertTriangle className="w-4 h-4 mr-1" /> Elimina e scarta
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -675,6 +963,12 @@ export function Admin() {
                           <Checkbox
                             checked={publishedEvents.length > 0 && selectedPubIds.size === publishedEvents.length}
                             onCheckedChange={(v) => togglePubAll(v === true)}
+                          />
+                        </th>
+                        <th className="w-10 p-2">
+                          <Checkbox
+                            checked={publishedEvents.length > 0 && selectedPubAnalyzeIds.size === publishedEvents.length}
+                            onCheckedChange={(v) => togglePubAnalyzeAll(v === true)}
                           />
                         </th>
                         <th className="p-2 text-left text-xs font-semibold">Immagine</th>
@@ -693,6 +987,7 @@ export function Admin() {
                         <th className="p-2 text-left text-xs font-semibold">Azioni</th>
                       </tr>
                       <tr className="border-t border-border">
+                        <th className="p-1"></th>
                         <th className="p-1"></th>
                         <th className="p-1"></th>
                         <th className="p-1">
@@ -740,7 +1035,7 @@ export function Admin() {
                     <tbody>
                       {publishedEvents.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                          <td colSpan={8} className="p-8 text-center text-muted-foreground">
                             {loadingPublished ? "Caricamento…" : "Nessun evento trovato con i filtri attuali."}
                           </td>
                         </tr>
@@ -756,6 +1051,12 @@ export function Admin() {
                                 />
                               </td>
                               <td className="p-2">
+                                <Checkbox
+                                  checked={selectedPubAnalyzeIds.has(ev.id)}
+                                  onCheckedChange={(v) => togglePubAnalyzeOne(ev.id, v === true)}
+                                />
+                              </td>
+                              <td className="p-2">
                                 {img ? (
                                   <img src={img} alt={ev.titolo} className="w-16 h-12 object-cover rounded border" loading="lazy" />
                                 ) : (
@@ -766,6 +1067,7 @@ export function Admin() {
                                 {ev.link ? (
                                   <a href={ev.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{ev.titolo}</a>
                                 ) : ev.titolo}
+                                {ev.testo_estratto && <Badge variant="outline" className="ml-2 border-green-500 text-green-500">Analizzato</Badge>}
                               </td>
                               <td className="p-2 text-muted-foreground whitespace-nowrap">
                                 {ev.data_inizio ?? "—"}
@@ -879,6 +1181,93 @@ export function Admin() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Detail Modal */}
+        {inspectingEvent && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+            <Card className="w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl relative bg-card">
+              <CardHeader className="pb-3 border-b border-border">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={inspectingEvent.is_pending ? "secondary" : "default"} className={inspectingEvent.is_pending ? "bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200" : ""}>
+                        {inspectingEvent.is_pending ? "In Attesa" : "Pubblicato"}
+                      </Badge>
+                      <Badge variant="outline">{inspectingEvent.fonte}</Badge>
+                    </div>
+                    <CardTitle className="text-lg font-bold mt-1">{inspectingEvent.titolo}</CardTitle>
+                    <CardDescription>
+                      {inspectingEvent.data_inizio ? new Date(inspectingEvent.data_inizio).toLocaleDateString("it-IT") : "N/D"}
+                      {inspectingEvent.data_fine && inspectingEvent.data_fine !== inspectingEvent.data_inizio ? ` - ${new Date(inspectingEvent.data_fine).toLocaleDateString("it-IT")}` : ""}
+                    </CardDescription>
+                  </div>
+                  <Button variant="ghost" onClick={() => setInspectingEvent(null)} className="h-8 w-8 p-0">
+                    <XCircle className="w-6 h-6 text-muted-foreground" />
+                  </Button>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
+                {/* Image & Description */}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  {imageUrl(inspectingEvent) && (
+                    <img
+                      src={imageUrl(inspectingEvent)!}
+                      alt={inspectingEvent.titolo}
+                      className="w-full sm:w-48 h-36 object-cover rounded-md border"
+                    />
+                  )}
+                  <div className="flex-1">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Descrizione Originale</h4>
+                    <p className="text-sm text-foreground line-clamp-6">{inspectingEvent.descrizione || "Nessuna descrizione fornita."}</p>
+                  </div>
+                </div>
+
+                {/* Extracted Text */}
+                <div>
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Testo Estratto dalla Locandina</h4>
+                  <div className="bg-muted p-4 rounded-md font-mono text-xs max-h-48 overflow-y-auto border whitespace-pre-wrap">
+                    {inspectingEvent.testo_estratto || "Nessun testo estratto."}
+                  </div>
+                </div>
+
+                {/* Sub-events (Sotto-eventi) */}
+                <div>
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                    Sotto-eventi Rilevati ({inspectingEvent.sub_events_list?.length || 0})
+                  </h4>
+                  {inspectingEvent.sub_events_list && inspectingEvent.sub_events_list.length > 0 ? (
+                    <div className="flex flex-col gap-2">
+                      {inspectingEvent.sub_events_list.map((se: any, idx: number) => (
+                        <div key={idx} className="p-3 bg-muted/40 rounded-lg border border-border/50 text-sm">
+                          <div className="font-semibold text-foreground">{se.titolo}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5 flex gap-3">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {se.data_inizio ? new Date(se.data_inizio).toLocaleDateString("it-IT") : "N/D"}
+                              {se.data_fine && se.data_fine !== se.data_inizio ? ` - ${new Date(se.data_fine).toLocaleDateString("it-IT")}` : ""}
+                            </span>
+                            {se.luogo && (
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3" /> {se.luogo}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">Nessun sotto-evento rilevato o inserito.</p>
+                  )}
+                </div>
+              </CardContent>
+              
+              <div className="p-4 border-t border-border flex justify-end">
+                <Button onClick={() => setInspectingEvent(null)}>Chiudi</Button>
+              </div>
+            </Card>
+          </div>
+        )}
 
         {/* Global error */}
         {error && (

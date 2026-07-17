@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { Home } from "./pages/home";
 import { Stats } from "./pages/stats";
+import { FestivalPage } from "./pages/festival";
 import { Map, BarChart2 } from "lucide-react";
 
 // Lazy-loaded — Vite creates a separate chunk, excluded from the public bundle
@@ -58,6 +59,7 @@ function Router() {
           <Switch>
             <Route path="/" component={Home} />
             <Route path="/stats" component={Stats} />
+            <Route path="/festival/:id" component={FestivalPage} />
             <Route component={NotFound} />
           </Switch>
         </Layout>

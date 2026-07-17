@@ -1,6 +1,13 @@
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, List
 
+
+@dataclass
+class SottoEvento:
+    titolo: str
+    data_inizio: str
+    data_fine: str
+    luogo: Optional[str] = None
 
 @dataclass
 class Evento:
@@ -14,6 +21,10 @@ class Evento:
     fonte: Optional[str] = None
     categoria: Optional[str] = None
     immagine: Optional[str] = None
+    
+    testo_estratto: Optional[str] = None
+    is_festival: bool = False
+    sotto_eventi: List[SottoEvento] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {k: v for k, v in self.__dict__.items()}

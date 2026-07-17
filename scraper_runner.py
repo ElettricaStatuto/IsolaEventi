@@ -12,7 +12,7 @@ import os
 import re
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
@@ -23,8 +23,9 @@ import requests
 
 from scraper.sites.paradisola import ParadisolaScraper
 from scraper.sites.sardegnaturismo import SardegnaTurismoScraper
-from scraper.sites.vistanet import VistanetScraper
 from scraper.sites.eventiinsardegna import EventiInSardegnaScraper
+from scraper.ai_analyzer import analyze_event
+from scraper.models import SottoEvento
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -186,7 +187,6 @@ def main():
     scrapers = [
         ParadisolaScraper(),
         SardegnaTurismoScraper(),
-        VistanetScraper(),
         EventiInSardegnaScraper(),
     ]
 
@@ -205,35 +205,83 @@ def main():
     conn = psycopg2.connect(DATABASE_URL)
     rejected_set = _load_rejected(conn)
 
-    # Escludi eventi precedentemente rifiutati
     filtrati = [ev for ev in tutti_eventi if (ev.titolo, ev.fonte or "") not in rejected_set]
     scartati = len(tutti_eventi) - len(filtrati)
     if scartati:
         emit_log(f"Scartati in automatico {scartati} eventi presenti nella blacklist.")
 
+    # Process events and analyze via AI if new
+    events_to_save = []
+    
+    # Date parsing and filtering
+    cutoff_date = datetime.now()
+    # Subtract 90 days as approx 3 months
+    cutoff_date = cutoff_date - timedelta(days=90)
+    cutoff_str = cutoff_date.strftime("%Y-%m-%d")
+
+    # We need to know which ones are completely new to avoid re-analyzing
+    cur = conn.cursor()
+    
+    for ev in filtrati:
+        data_inizio = _parse_mixed_date(ev.data_inizio)
+        if data_inizio and data_inizio < cutoff_str:
+            continue # ignore events older than 3 months
+            
+        cur.execute(
+            "SELECT id FROM events WHERE titolo = %s AND fonte = %s LIMIT 1",
+            (ev.titolo, ev.fonte or ""),
+        )
+        row = cur.fetchone()
+        
+        is_new = row is None
+        
+        if is_new:
+            # L'analisi AI è stata disabilitata in fase di scraping per permettere
+            # l'esecuzione manuale su richiesta dell'utente tramite interfaccia.
+            pass
+            
+        data_inizio = _parse_mixed_date(ev.data_inizio)
+        data_fine = _parse_mixed_date(ev.data_fine) if ev.data_fine else data_inizio
+
+        lat, lon = None, None
+        if ev.luogo:
+            coords = geocode(ev.luogo)
+            if coords:
+                lat, lon = coords
+                
+        events_to_save.append({
+            "ev": ev,
+            "data_inizio": data_inizio,
+            "data_fine": data_fine,
+            "lat": lat,
+            "lon": lon,
+            "is_new": is_new,
+            "row_id": row[0] if row else None
+        })
+
+    cur.close()
+
+
     if preview_only:
         # Restituisce JSON con lista eventi trovati, senza toccare il DB
         events_preview = []
-        for ev in filtrati:
-            data_inizio = _parse_mixed_date(ev.data_inizio)
-            data_fine = _parse_mixed_date(ev.data_fine) if ev.data_fine else data_inizio
-            lat, lon = None, None
-            if ev.luogo:
-                coords = geocode(ev.luogo)
-                if coords:
-                    lat, lon = coords
+        for obj in events_to_save:
+            ev = obj["ev"]
             events_preview.append({
                 "titolo": ev.titolo,
-                "data_inizio": data_inizio,
-                "data_fine": data_fine,
+                "data_inizio": obj["data_inizio"],
+                "data_fine": obj["data_fine"],
                 "luogo": ev.luogo,
-                "latitudine": lat,
-                "longitudine": lon,
+                "latitudine": obj["lat"],
+                "longitudine": obj["lon"],
                 "link": ev.url,
                 "descrizione": ev.descrizione,
                 "immagine": ev.immagine,
                 "fonte": ev.fonte or "",
-                "is_new": True,
+                "is_new": obj["is_new"],
+                "testo_estratto": ev.testo_estratto,
+                "is_festival": ev.is_festival,
+                "sotto_eventi": [se.__dict__ for se in ev.sotto_eventi]
             })
         conn.close()
         result = {
@@ -252,10 +300,10 @@ def main():
         conn.close()
         result = {
             "success": True,
-            "nuovi": len(filtrati),
-            "aggiornati": 0,
+            "nuovi": len([e for e in events_to_save if e["is_new"]]),
+            "aggiornati": len([e for e in events_to_save if not e["is_new"]]),
             "errori": errori,
-            "messaggio": f"Dry-run: {len(filtrati)} eventi pronti per approvazione",
+            "messaggio": f"Dry-run: {len(events_to_save)} eventi pronti per approvazione",
         }
         emit_log(result["messaggio"])
         print(json.dumps(result), flush=True)
@@ -264,25 +312,17 @@ def main():
     # --- Geocode, download images & upsert ---
     cur = conn.cursor()
 
-    for ev in filtrati:
-        data_inizio = _parse_mixed_date(ev.data_inizio)
-        data_fine = _parse_mixed_date(ev.data_fine) if ev.data_fine else data_inizio
-
-        lat, lon = None, None
-        if ev.luogo:
-            coords = geocode(ev.luogo)
-            if coords:
-                lat, lon = coords
+    for obj in events_to_save:
+        ev = obj["ev"]
+        data_inizio = obj["data_inizio"]
+        data_fine = obj["data_fine"]
+        lat = obj["lat"]
+        lon = obj["lon"]
+        is_new = obj["is_new"]
+        event_id = obj["row_id"]
 
         try:
-            cur.execute(
-                "SELECT id FROM events WHERE titolo = %s AND fonte = %s LIMIT 1",
-                (ev.titolo, ev.fonte or ""),
-            )
-            row = cur.fetchone()
-
-            if row:
-                event_id = row[0]
+            if not is_new:
                 # Download immagine solo se esiste un'immagine nuova
                 image_filename = None
                 if ev.immagine:
@@ -293,13 +333,14 @@ def main():
                     UPDATE events
                     SET data_inizio=%s, data_fine=%s, luogo=%s,
                         latitudine=%s, longitudine=%s, link=%s,
-                        descrizione=%s, immagine=%s, aggiornato_il=now()
+                        descrizione=%s, immagine=%s, testo_estratto=%s, aggiornato_il=now()
                     WHERE id=%s
                     """,
                     (
                         data_inizio, data_fine, ev.luogo,
                         lat, lon, ev.url, ev.descrizione,
                         image_filename or ev.immagine,
+                        ev.testo_estratto,
                         event_id,
                     ),
                 )
@@ -309,17 +350,34 @@ def main():
                     """
                     INSERT INTO events
                         (titolo, data_inizio, data_fine, luogo, latitudine, longitudine,
-                         link, descrizione, immagine, fonte, aggiornato_il)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
+                         link, descrizione, immagine, fonte, testo_estratto, aggiornato_il)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
                     RETURNING id
                     """,
                     (
                         ev.titolo, data_inizio, data_fine, ev.luogo,
-                        lat, lon, ev.url, ev.descrizione, None, ev.fonte or "",
+                        lat, lon, ev.url, ev.descrizione, None, ev.fonte or "", ev.testo_estratto,
                     ),
                 )
                 event_id = cur.fetchone()[0]
                 nuovi += 1
+                
+                # Se è un festival, salva i sotto-eventi
+                if ev.is_festival and ev.sotto_eventi:
+                    for se in ev.sotto_eventi:
+                        se_inizio = _parse_mixed_date(se.data_inizio)
+                        se_fine = _parse_mixed_date(se.data_fine) if se.data_fine else se_inizio
+                        cur.execute(
+                            """
+                            INSERT INTO events
+                                (titolo, data_inizio, data_fine, luogo, parent_id, fonte, aggiornato_il)
+                            VALUES (%s,%s,%s,%s,%s,%s,now())
+                            """,
+                            (
+                                f"{ev.titolo} - {se.titolo}", se_inizio, se_fine,
+                                se.luogo or ev.luogo, event_id, ev.fonte or "",
+                            ),
+                        )
 
                 # Download immagine con l'ID appena creato
                 image_filename = None
