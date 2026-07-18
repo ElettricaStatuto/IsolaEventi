@@ -40,11 +40,11 @@ def analyze_event(descrizione: str, image_url: str = None, target: str = "both",
     if not api_key:
         return {"testo_estratto": "Chiave API Gemini mancante.", "is_festival": False, "sotto_eventi": [], "link_organizzatore": None}
 
-    import google.generativeai as genai
-    genai.configure(api_key=api_key)
+    from google import genai
+    client = genai.Client(api_key=api_key)
 
     try:
-        model = genai.GenerativeModel("gemini-3.5-flash")
+        MODEL = "gemini-2.0-flash-lite"
         
         # Extract text from the source page link if target is source_page or both_source
         if target in ("source_page", "both_source"):
@@ -200,7 +200,7 @@ def analyze_event(descrizione: str, image_url: str = None, target: str = "both",
                 "link_organizzatore": None
             }
             
-        response = model.generate_content(contents)
+        response = client.models.generate_content(model=MODEL, contents=contents)
         
         text = response.text.strip()
         if text.startswith("```json"):
