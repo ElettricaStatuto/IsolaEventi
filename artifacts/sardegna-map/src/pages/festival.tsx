@@ -109,9 +109,13 @@ export function FestivalPage() {
 
         {/* Right Column: Timeline of Sub-Events */}
         <div className="lg:col-span-7 flex flex-col gap-6">
-          <h2 className="font-serif text-2xl font-bold flex items-center gap-2">
-            <Calendar className="w-6 h-6 text-primary" /> Programma del Festival
-          </h2>
+          <div className="flex flex-col gap-1 pb-3 border-b border-border">
+            <h2 className="font-serif text-2xl font-bold flex items-center gap-2 text-foreground">
+              <Calendar className="w-6 h-6 text-primary shrink-0" />
+              Programma di {festival.titolo}
+            </h2>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Date, luoghi e dettagli di tutti gli appuntamenti</p>
+          </div>
 
           {subEvents.length === 0 ? (
             <div className="bg-muted/50 rounded-2xl p-8 text-center border border-border border-dashed">
