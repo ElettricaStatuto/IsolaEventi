@@ -44,7 +44,7 @@ def analyze_event(descrizione: str, image_url: str = None, target: str = "both",
     client = genai.Client(api_key=api_key)
 
     try:
-        MODEL = "gemini-2.0-flash-lite"
+        MODEL = "gemini-3-flash-preview"
         
         # Extract text from the source page link if target is source_page or both_source
         if target in ("source_page", "both_source"):

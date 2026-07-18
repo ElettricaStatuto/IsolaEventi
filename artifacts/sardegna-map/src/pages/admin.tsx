@@ -830,6 +830,7 @@ export function Admin() {
                               <tr>
                                 <th className="px-4 py-3 w-10">Pubblica</th>
                                 <th className="px-4 py-3 w-10">Analizza</th>
+                                <th className="px-4 py-3">Immagine</th>
                                 <th className="px-4 py-3">Titolo</th>
                                 <th className="px-4 py-3">Data</th>
                                 <th className="px-4 py-3">Fonte</th>
@@ -852,6 +853,21 @@ export function Admin() {
                                       onCheckedChange={(v) => toggleAnalyzeOne(i, v === true)}
                                       aria-label={`Analizza ${ev.titolo}`}
                                     />
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    {ev.immagine ? (
+                                      <img
+                                        src={ev.immagine}
+                                        alt={ev.titolo}
+                                        className="w-16 h-16 object-cover rounded-md border border-border"
+                                        loading="lazy"
+                                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                      />
+                                    ) : (
+                                      <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center text-xs text-muted-foreground">
+                                        N/D
+                                      </div>
+                                    )}
                                   </td>
                                   <td className="px-4 py-3 font-medium">
                                     {ev.titolo}
