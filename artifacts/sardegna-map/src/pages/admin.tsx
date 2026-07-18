@@ -86,6 +86,7 @@ export function Admin() {
   const [analysisLogs, setAnalysisLogs] = useState<string[]>([]);
   const [analyzingStep, setAnalyzingStep] = useState<"idle" | "preview" | "published">("idle");
   const abortControllerRef = useRef<AbortController | null>(null);
+  const isAbortedRef = useRef<boolean>(false);
 
   // ── Scraping tab ──
   const [previewEvents, setPreviewEvents] = useState<EventPreview[]>([]);
@@ -367,68 +368,75 @@ export function Admin() {
     setAnalyzingStep("preview");
     setAnalysisLogs([]);
     setError(null);
+    isAbortedRef.current = false;
+
+    const total = toAnalyze.length;
+    let nextEvents = [...previewEvents];
+    let successi = 0;
+    let erroriCount = 0;
+
     try {
-      const payload = toAnalyze.map((ev) => ({
-        tmp_id: ev.idx.toString(),
-        titolo: ev.titolo,
-        descrizione: ev.descrizione,
-        immagine: ev.immagine,
-        link: ev.link,
-      }));
-
-      abortControllerRef.current = new AbortController();
-      const response = await fetch("/api/events/analyze", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-key": adminKey,
-        },
-        body: JSON.stringify({ events: payload, target: analysisTarget }),
-        signal: abortControllerRef.current.signal,
-      });
-
-      if (!response.body) throw new Error("No response body");
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          const data = JSON.parse(line);
-          if (data.log) {
-            setAnalysisLogs(prev => [...prev, data.log]);
-          }
-          if (data.success) {
-            setPreviewEvents((prev) => {
-              const next = [...prev];
-              for (const res of data.results) {
-                if (!res.error && res.tmp_id != null) {
-                  const idx = parseInt(res.tmp_id, 10);
-                  next[idx] = {
-                    ...next[idx],
-                    testo_estratto: res.testo_estratto,
-                    is_festival: res.is_festival,
-                    sotto_eventi: res.sotto_eventi,
-                    link_organizzatore: res.link_organizzatore,
-                  };
-                }
-              }
-              updatePreviewCache(next);
-              return next;
-            });
-            setSelectedAnalyzeIds(new Set());
-            alert(`Analisi completata: ${data.messaggio}`);
-          }
-          if (data.error) {
-            throw new Error(data.error);
-          }
+      for (let i = 0; i < total; i++) {
+        if (isAbortedRef.current) {
+          setAnalysisLogs(prev => [...prev, "🚫 Analisi interrotta dall'utente."]);
+          break;
         }
+
+        const ev = toAnalyze[i];
+        setAnalysisLogs(prev => [...prev, `[${i + 1}/${total}] Sto analizzando l'evento: '${ev.titolo}' (Target: ${analysisTarget})...`]);
+
+        const payload = [{
+          tmp_id: ev.idx.toString(),
+          titolo: ev.titolo,
+          descrizione: ev.descrizione,
+          immagine: ev.immagine,
+          link: ev.link,
+        }];
+
+        abortControllerRef.current = new AbortController();
+        const response = await fetch("/api/events/analyze", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-key": adminKey,
+          },
+          body: JSON.stringify({ events: payload, target: analysisTarget }),
+          signal: abortControllerRef.current.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (data.success && data.results && data.results.length > 0) {
+          const res = data.results[0];
+          if (res.error) {
+            erroriCount++;
+            setAnalysisLogs(prev => [...prev, `❌ Errore: ${res.error}`]);
+          } else {
+            successi++;
+            const idx = parseInt(res.tmp_id, 10);
+            nextEvents[idx] = {
+              ...nextEvents[idx],
+              testo_estratto: res.testo_estratto,
+              is_festival: res.is_festival,
+              sotto_eventi: res.sotto_eventi,
+              link_organizzatore: res.link_organizzatore,
+            };
+            setPreviewEvents([...nextEvents]);
+            updatePreviewCache(nextEvents);
+            setAnalysisLogs(prev => [...prev, `✅ Completato con successo!`]);
+          }
+        } else {
+          erroriCount++;
+          setAnalysisLogs(prev => [...prev, `❌ Errore durante l'analisi.`]);
+        }
+      }
+      
+      if (!isAbortedRef.current) {
+        setSelectedAnalyzeIds(new Set());
+        alert(`Analisi completata. ${successi} successi, ${erroriCount} errori.`);
       }
     } catch (e: any) {
       if (e.name !== "AbortError") {
@@ -571,52 +579,65 @@ export function Admin() {
     setAnalyzingStep("published");
     setAnalysisLogs([]);
     setError(null);
+    isAbortedRef.current = false;
+
+    const total = toAnalyze.length;
+    let successi = 0;
+    let erroriCount = 0;
+
     try {
-      const payload = toAnalyze.map((ev) => ({
-        id: ev.id,
-        titolo: ev.titolo,
-        descrizione: ev.descrizione,
-        immagine: ev.immagine,
-        link: ev.link,
-      }));
-
-      abortControllerRef.current = new AbortController();
-      const response = await fetch("/api/events/analyze", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-key": adminKey,
-        },
-        body: JSON.stringify({ events: payload, target: analysisTarget }),
-        signal: abortControllerRef.current.signal,
-      });
-
-      if (!response.body) throw new Error("No response body");
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          const data = JSON.parse(line);
-          if (data.log) {
-            setAnalysisLogs(prev => [...prev, data.log]);
-          }
-          if (data.success) {
-            setSelectedPubAnalyzeIds(new Set());
-            alert(`Analisi completata: ${data.messaggio}`);
-            loadPublished(appliedFilters);
-          }
-          if (data.error) {
-            throw new Error(data.error);
-          }
+      for (let i = 0; i < total; i++) {
+        if (isAbortedRef.current) {
+          setAnalysisLogs(prev => [...prev, "🚫 Analisi interrotta dall'utente."]);
+          break;
         }
+
+        const ev = toAnalyze[i];
+        setAnalysisLogs(prev => [...prev, `[${i + 1}/${total}] Sto analizzando l'evento: '${ev.titolo}' (Target: {analysisTarget})...`]);
+
+        const payload = [{
+          id: ev.id,
+          titolo: ev.titolo,
+          descrizione: ev.descrizione,
+          immagine: ev.immagine,
+          link: ev.link,
+        }];
+
+        abortControllerRef.current = new AbortController();
+        const response = await fetch("/api/events/analyze", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-key": adminKey,
+          },
+          body: JSON.stringify({ events: payload, target: analysisTarget }),
+          signal: abortControllerRef.current.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (data.success && data.results && data.results.length > 0) {
+          const res = data.results[0];
+          if (res.error) {
+            erroriCount++;
+            setAnalysisLogs(prev => [...prev, `❌ Errore: ${res.error}`]);
+          } else {
+            successi++;
+            setAnalysisLogs(prev => [...prev, `✅ Completato con successo!`]);
+          }
+        } else {
+          erroriCount++;
+          setAnalysisLogs(prev => [...prev, `❌ Errore durante l'analisi.`]);
+        }
+      }
+
+      if (!isAbortedRef.current) {
+        setSelectedPubAnalyzeIds(new Set());
+        alert(`Analisi completata. ${successi} successi, ${erroriCount} errori.`);
+        loadPublished(appliedFilters);
       }
     } catch (e: any) {
       if (e.name !== "AbortError") {
@@ -1518,6 +1539,7 @@ export function Admin() {
                     size="sm"
                     className="h-7 text-xs bg-red-650 hover:bg-red-750"
                     onClick={() => {
+                      isAbortedRef.current = true;
                       abortControllerRef.current?.abort();
                       setAnalyzingStep("idle");
                     }}

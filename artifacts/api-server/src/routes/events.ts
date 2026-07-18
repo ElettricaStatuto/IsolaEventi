@@ -435,10 +435,6 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
     return;
   }
 
-  res.setHeader("Content-Type", "application/json-lines");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-
   const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
     ? path.resolve(process.cwd(), "../..")
     : process.cwd();
@@ -465,17 +461,7 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
     let stderrData = "";
 
     child.stdout.on("data", (chunk) => {
-      const text = chunk.toString();
-      stdoutData += text;
-      
-      // Split text by line to stream log messages immediately
-      const lines = text.split("\n");
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed && trimmed.startsWith('{"log":')) {
-          res.write(trimmed + "\n");
-        }
-      }
+      stdoutData += chunk;
     });
 
     child.stderr.on("data", (chunk) => {
@@ -545,17 +531,15 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
       }
     }
 
-    res.write(JSON.stringify({
+    res.json({
       success: true,
       results,
       errori,
       messaggio: `Analisi completata. ${results.length - errori} successi, ${errori} errori.`,
-    }) + "\n");
-    res.end();
+    });
   } catch (err) {
     req.log.error({ err }, "AI analysis endpoint failed");
-    res.write(JSON.stringify({ error: String(err) }) + "\n");
-    res.end();
+    res.status(500).json({ error: String(err) });
   }
 });
 
