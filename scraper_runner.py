@@ -177,18 +177,47 @@ def _download_image(url: str, event_id: int) -> Optional[str]:
 
 
 def main():
-    dry_run = "--dry-run" in sys.argv
-    preview_only = "--preview" in sys.argv
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--preview", action="store_true")
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--sources", type=str, default="")
+    args, unknown = parser.parse_known_args()
+
+    dry_run = args.dry_run
+    preview_only = args.preview
     nuovi = 0
     aggiornati = 0
     errori = 0
 
+    enabled_sources = set(args.sources.split(",")) if args.sources else None
+
     # --- Scrape ---
-    scrapers = [
-        ParadisolaScraper(),
-        SardegnaTurismoScraper(),
-        EventiInSardegnaScraper(),
-    ]
+    scrapers = []
+    
+    if not enabled_sources or "paradisola" in enabled_sources:
+        scrapers.append(ParadisolaScraper())
+        
+    if not enabled_sources or "sardegnaturismo" in enabled_sources:
+        scrapers.append(SardegnaTurismoScraper())
+
+    # Configurazione target per eventiinsardegna.it
+    eventiinsardegna_targets = []
+    if not enabled_sources or "eventiinsardegna_calendar" in enabled_sources:
+        eventiinsardegna_targets.append(("https://www.eventiinsardegna.it/eventi/", "events_calendar"))
+    if not enabled_sources or "eventiinsardegna_alghero" in enabled_sources:
+        eventiinsardegna_targets.append(("https://www.eventiinsardegna.it/tag/alghero/", "wordpress_tag"))
+    if not enabled_sources or "eventiinsardegna_cagliari" in enabled_sources:
+        eventiinsardegna_targets.append(("https://www.eventiinsardegna.it/tag/cagliari/", "wordpress_tag"))
+    if not enabled_sources or "eventiinsardegna_centro" in enabled_sources:
+        eventiinsardegna_targets.append(("https://www.eventiinsardegna.it/tag/eventi-centro-sardegna/", "wordpress_tag"))
+    if not enabled_sources or "eventiinsardegna_agosto" in enabled_sources:
+        eventiinsardegna_targets.append(("https://www.eventiinsardegna.it/agosto/", "wordpress_tag"))
+
+    if eventiinsardegna_targets:
+        scraper = EventiInSardegnaScraper()
+        scraper.targets = eventiinsardegna_targets
+        scrapers.append(scraper)
 
     tutti_eventi = []
     for s in scrapers:

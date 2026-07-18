@@ -31,14 +31,16 @@ class EventiInSardegnaScraper(BaseScraper):
     def scrapa_eventi(self, max_pagine: int = 5) -> List[Evento]:
         eventi = []
         
-        # Definiamo i target da scaricare
-        targets = [
+        # Definiamo i target da scaricare di default
+        default_targets = [
             ("https://www.eventiinsardegna.it/eventi/", "events_calendar"),
             ("https://www.eventiinsardegna.it/tag/alghero/", "wordpress_tag"),
             ("https://www.eventiinsardegna.it/tag/cagliari/", "wordpress_tag"),
             ("https://www.eventiinsardegna.it/tag/eventi-centro-sardegna/", "wordpress_tag"),
             ("https://www.eventiinsardegna.it/agosto/", "wordpress_tag")
         ]
+        
+        targets = getattr(self, "targets", default_targets)
         
         # Set per evitare duplicati all'interno della stessa sessione di scraping
         urls_visti = set()

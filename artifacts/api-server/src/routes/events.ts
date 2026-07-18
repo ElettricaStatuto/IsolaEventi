@@ -253,7 +253,13 @@ router.post("/events/refresh/preview", requireAdminKey, (req, res): void => {
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
 
-  const child = spawn("python", [scraperScript, "--preview"], {
+  const sources: string[] = req.body.sources || [];
+  const args = ["--preview"];
+  if (sources.length > 0) {
+    args.push("--sources", sources.join(","));
+  }
+
+  const child = spawn("python", [scraperScript, ...args], {
     cwd: workspaceRoot,
     env: { ...process.env },
   });
