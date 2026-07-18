@@ -36,7 +36,8 @@ class EventiInSardegnaScraper(BaseScraper):
             ("https://www.eventiinsardegna.it/eventi/", "events_calendar"),
             ("https://www.eventiinsardegna.it/tag/alghero/", "wordpress_tag"),
             ("https://www.eventiinsardegna.it/tag/cagliari/", "wordpress_tag"),
-            ("https://www.eventiinsardegna.it/tag/eventi-centro-sardegna/", "wordpress_tag")
+            ("https://www.eventiinsardegna.it/tag/eventi-centro-sardegna/", "wordpress_tag"),
+            ("https://www.eventiinsardegna.it/agosto/", "wordpress_tag")
         ]
         
         # Set per evitare duplicati all'interno della stessa sessione di scraping
