@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "pgKB4wzmHK5_I-tTAe_z_"
+uri = "file://TASKS.md"
+type = "text"
+title = "Task List — Sardegna Eventi"
