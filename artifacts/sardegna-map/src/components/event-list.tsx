@@ -120,26 +120,31 @@ export function EventList({
                   }}
                 >
                   <Card
-                    className={`cursor-pointer transition-all hover:border-primary/50 ${
-                      selectedEventId === evt.id
-                        ? "border-primary shadow-sm bg-primary/5"
-                        : "bg-card"
+                    className={`cursor-pointer transition-all duration-300 ${
+                      isFestival
+                        ? selectedEventId === evt.id
+                          ? "border-amber-500 shadow-md bg-amber-500/5 ring-1 ring-amber-500/30"
+                          : "border-amber-200 hover:border-amber-400 bg-amber-50/30 shadow-sm hover:shadow-md hover:-translate-y-0.5"
+                        : selectedEventId === evt.id
+                          ? "border-primary shadow-sm bg-primary/5"
+                          : "bg-card hover:border-primary/50"
                     }`}
                     onClick={() => onSelectEvent(evt.id)}
                   >
                     <CardContent className="p-4 relative">
                       {isFestival && (
-                        <div className="absolute top-4 right-4 bg-primary/10 text-primary p-1.5 rounded-md">
-                          <Flag className="w-4 h-4" />
+                        <div className="absolute top-4 right-4 bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider flex items-center gap-1 uppercase">
+                          <Flag className="w-3 h-3 text-amber-600 fill-amber-600" />
+                          Festival
                         </div>
                       )}
-                      <h3 className="font-bold text-foreground mb-2 leading-tight text-sm pr-8">
+                      <h3 className={`font-bold text-foreground mb-2 leading-tight text-sm pr-16 ${isFestival ? "text-amber-950 dark:text-amber-100" : ""}`}>
                         {evt.titolo}
                       </h3>
                       <div className="flex flex-col gap-1.5 text-xs text-muted-foreground">
                         {evt.data_inizio && (
                           <div className="flex items-center gap-1.5">
-                            <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
+                            <Calendar className={`w-3.5 h-3.5 flex-shrink-0 ${isFestival ? "text-amber-600" : ""}`} />
                             <span>
                               {format(new Date(evt.data_inizio), "dd/MM/yyyy")}
                               {evt.data_fine && evt.data_fine !== evt.data_inizio
@@ -150,21 +155,54 @@ export function EventList({
                         )}
                         {evt.luogo && (
                           <div className="flex items-center gap-1.5">
-                            <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-secondary" />
+                            <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${isFestival ? "text-amber-600" : "text-secondary"}`} />
                             <span className="font-medium">{evt.luogo}</span>
                           </div>
                         )}
                         
-                        {selectedEventId === evt.id && (
-                          <div className="flex items-center gap-3 mt-3 pt-2 border-t border-border/50">
-                            {isFestival ? (
-                              <Link href={`/festival/${evt.id}`}>
-                                <a className="flex items-center gap-1 text-primary hover:underline font-medium bg-primary/10 px-2 py-1 rounded text-xs" onClick={(e) => e.stopPropagation()}>
-                                  Vedi Programma
-                                </a>
-                              </Link>
-                            ) : (
-                              evt.link && (
+                        {isFestival ? (
+                          <div className="flex flex-col gap-2 mt-3 pt-2 border-t border-amber-200/50">
+                            <Link href={`/festival/${evt.id}`}>
+                              <a 
+                                className="flex items-center gap-1.5 text-white font-semibold bg-amber-600 hover:bg-amber-700 transition-colors w-fit px-3 py-1.5 rounded-md text-xs shadow-sm hover:shadow" 
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Flag className="w-3.5 h-3.5" />
+                                Approfondisci Programma →
+                              </a>
+                            </Link>
+                            
+                            {selectedEventId === evt.id && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const slug = evt.titolo
+                                    .toLowerCase()
+                                    .replace(/[^a-z0-9]+/g, "-")
+                                    .replace(/(^-|-$)/g, "");
+                                  const url = `${window.location.origin}/eventi/${evt.id}-${slug}`;
+                                  if (navigator.share) {
+                                    navigator.share({
+                                      title: evt.titolo,
+                                      text: evt.descrizione || "",
+                                      url: url
+                                    }).catch(() => {});
+                                  } else {
+                                    navigator.clipboard.writeText(url);
+                                    alert("Link copiato negli appunti!");
+                                  }
+                                }}
+                                className="flex items-center gap-1 text-muted-foreground hover:text-foreground text-xs bg-transparent border-none cursor-pointer mt-1"
+                              >
+                                <Share2 className="w-3.5 h-3.5" />
+                                Condividi Festival
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          selectedEventId === evt.id && (
+                            <div className="flex items-center gap-3 mt-3 pt-2 border-t border-border/50">
+                              {evt.link && (
                                 <a
                                   href={evt.link}
                                   target="_blank"
@@ -175,33 +213,33 @@ export function EventList({
                                   <ExternalLink className="w-3.5 h-3.5" />
                                   Vedi fonte
                                 </a>
-                              )
-                            )}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const slug = evt.titolo
-                                  .toLowerCase()
-                                  .replace(/[^a-z0-9]+/g, "-")
-                                  .replace(/(^-|-$)/g, "");
-                                const url = `${window.location.origin}/eventi/${evt.id}-${slug}`;
-                                if (navigator.share) {
-                                  navigator.share({
-                                    title: evt.titolo,
-                                    text: evt.descrizione || "",
-                                    url: url
-                                  }).catch(() => {});
-                                } else {
-                                  navigator.clipboard.writeText(url);
-                                  alert("Link copiato negli appunti!");
-                                }
-                              }}
-                              className="flex items-center gap-1 text-muted-foreground hover:text-foreground text-xs bg-transparent border-none cursor-pointer"
-                            >
-                              <Share2 className="w-3.5 h-3.5" />
-                              Condividi
-                            </button>
-                          </div>
+                              )}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const slug = evt.titolo
+                                    .toLowerCase()
+                                    .replace(/[^a-z0-9]+/g, "-")
+                                    .replace(/(^-|-$)/g, "");
+                                  const url = `${window.location.origin}/eventi/${evt.id}-${slug}`;
+                                  if (navigator.share) {
+                                    navigator.share({
+                                      title: evt.titolo,
+                                      text: evt.descrizione || "",
+                                      url: url
+                                    }).catch(() => {});
+                                  } else {
+                                    navigator.clipboard.writeText(url);
+                                    alert("Link copiato negli appunti!");
+                                  }
+                                }}
+                                className="flex items-center gap-1 text-muted-foreground hover:text-foreground text-xs bg-transparent border-none cursor-pointer"
+                              >
+                                <Share2 className="w-3.5 h-3.5" />
+                                Condividi
+                              </button>
+                            </div>
+                          )
                         )}
                       </div>
                     </CardContent>

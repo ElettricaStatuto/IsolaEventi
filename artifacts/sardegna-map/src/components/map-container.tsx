@@ -120,7 +120,7 @@ export function MapContainer({
         : "";
         
       const parentLink = evt.parent_id ? `<a href="/festival/${evt.parent_id}" style="font-size:11px;color:#6b21a8;text-decoration:underline;display:block;margin-top:4px;">↑ Vedi Festival Padre</a>` : '';
-      const festivalLink = isFestival ? `<a href="/festival/${evt.id}" style="font-size:12px;color:#c0661b;text-decoration:underline;font-weight:bold;display:block;margin-top:4px;background:#fef3c7;padding:4px;border-radius:4px;text-align:center;">Vedi Programma Festival</a>` : '';
+      const festivalLink = isFestival ? `<a href="/festival/${evt.id}" style="font-size:11px;color:white;font-weight:bold;display:block;margin-top:6px;background:#c0661b;padding:6px 10px;border-radius:4px;text-align:center;text-decoration:none;box-shadow: 0 1px 3px rgba(0,0,0,0.15);">🏆 Vedi Programma Festival</a>` : '';
 
       marker.bindPopup(`
         <div style="min-width:190px;font-family:sans-serif;">
