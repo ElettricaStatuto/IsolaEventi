@@ -53,7 +53,7 @@ def analyze_event(descrizione: str, image_url: str = None, target: str = "both",
         if not api_key:
             return {"testo_estratto": "Chiave API Gemini mancante.", "is_festival": False, "sotto_eventi": [], "link_organizzatore": None}
         client = genai.Client(api_key=api_key)
-        MODEL = "gemini-3-flash-preview"
+        MODEL = "gemini-2.0-flash-lite"
 
     try:
         
