@@ -822,86 +822,111 @@ export function Admin() {
                   Visualizza tutti gli eventi che hanno una locandina analizzata e le relative informazioni estratte.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-col gap-3">
-                <div className="overflow-auto border rounded-md">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted sticky top-0">
-                      <tr>
-                        <th className="p-2 text-left text-xs font-semibold">Stato</th>
-                        <th className="p-2 text-left text-xs font-semibold">Immagine</th>
-                        <th className="p-2 text-left text-xs font-semibold">Titolo</th>
-                        <th className="p-2 text-left text-xs font-semibold">Data</th>
-                        <th className="p-2 text-left text-xs font-semibold">Fonte</th>
-                        <th className="p-2 text-left text-xs font-semibold">Sotto-eventi</th>
-                        <th className="p-2 text-left text-xs font-semibold">Azione</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(() => {
-                        const analyzedPreview = previewEvents
-                          .filter((ev) => (ev as any).testo_estratto)
-                          .map((ev) => ({ ...ev, is_pending: true, id_key: `prev-${ev.titolo}` }));
-                        const analyzedPublished = publishedEvents
-                          .filter((ev) => (ev as any).testo_estratto)
-                          .map((ev) => ({ ...ev, is_pending: false, id_key: `pub-${ev.id}` }));
-                        const allAnalyzed = [...analyzedPreview, ...analyzedPublished];
+              <CardContent className="flex flex-col gap-6">
+                {(() => {
+                  const todayStr = new Date().toISOString().split("T")[0];
+                  const analyzedPreview = previewEvents
+                    .filter((ev) => (ev as any).testo_estratto)
+                    .map((ev) => ({ ...ev, is_pending: true, id_key: `prev-${ev.titolo}` }));
+                  const analyzedPublished = publishedEvents
+                    .filter((ev) => (ev as any).testo_estratto)
+                    .map((ev) => ({ ...ev, is_pending: false, id_key: `pub-${ev.id}` }));
+                  const allAnalyzed = [...analyzedPreview, ...analyzedPublished];
 
-                        if (allAnalyzed.length === 0) {
-                          return (
+                  const futureAnalyzed = allAnalyzed.filter(ev => !ev.data_inizio || ev.data_inizio >= todayStr);
+                  const pastAnalyzed = allAnalyzed.filter(ev => ev.data_inizio && ev.data_inizio < todayStr);
+
+                  const renderTable = (list: typeof allAnalyzed, emptyMessage: string) => {
+                    if (list.length === 0) {
+                      return (
+                        <div className="p-8 text-center text-muted-foreground border rounded-md text-sm bg-background">
+                          {emptyMessage}
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="overflow-auto border rounded-md bg-background">
+                        <table className="w-full text-sm">
+                          <thead className="bg-muted sticky top-0">
                             <tr>
-                              <td colSpan={8} className="p-8 text-center text-muted-foreground">
-                                Nessun evento analizzato trovato.
-                              </td>
+                              <th className="p-2 text-left text-xs font-semibold">Stato</th>
+                              <th className="p-2 text-left text-xs font-semibold">Immagine</th>
+                              <th className="p-2 text-left text-xs font-semibold">Titolo</th>
+                              <th className="p-2 text-left text-xs font-semibold">Data</th>
+                              <th className="p-2 text-left text-xs font-semibold">Fonte</th>
+                              <th className="p-2 text-left text-xs font-semibold">Sotto-eventi</th>
+                              <th className="p-2 text-left text-xs font-semibold">Azione</th>
                             </tr>
-                          );
-                        }
+                          </thead>
+                          <tbody>
+                            {list.map((ev: any) => {
+                              const img = imageUrl(ev);
+                              const subCount = ev.is_pending
+                                ? (ev.sotto_eventi?.length || 0)
+                                : publishedEvents.filter((child) => child.parent_id === ev.id).length;
 
-                        return allAnalyzed.map((ev: any) => {
-                          const img = imageUrl(ev);
-                          const subCount = ev.is_pending
-                            ? (ev.sotto_eventi?.length || 0)
-                            : publishedEvents.filter((child) => child.parent_id === ev.id).length;
+                              return (
+                                <tr key={ev.id_key} className="border-t border-border hover:bg-muted/40">
+                                  <td className="p-2">
+                                    <Badge variant={ev.is_pending ? "secondary" : "default"} className={ev.is_pending ? "bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200" : ""}>
+                                      {ev.is_pending ? "In Attesa" : "Pubblicato"}
+                                    </Badge>
+                                  </td>
+                                  <td className="p-2">
+                                    {img ? (
+                                      <img src={img} alt={ev.titolo} className="w-16 h-12 object-cover rounded border" loading="lazy" />
+                                    ) : (
+                                      <div className="w-16 h-12 bg-muted rounded border flex items-center justify-center text-xs text-muted-foreground">—</div>
+                                    )}
+                                  </td>
+                                  <td className="p-2 font-medium max-w-xs truncate">
+                                    {ev.titolo}
+                                  </td>
+                                  <td className="p-2 text-muted-foreground whitespace-nowrap">
+                                    {ev.data_inizio ? new Date(ev.data_inizio).toLocaleDateString("it-IT") : "N/D"}
+                                  </td>
+                                  <td className="p-2">
+                                    <Badge variant="outline">{ev.fonte}</Badge>
+                                  </td>
+                                  <td className="p-2">
+                                    <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-50">
+                                      {subCount} sotto-eventi
+                                    </Badge>
+                                  </td>
+                                  <td className="p-2">
+                                    <Button variant="outline" size="sm" onClick={() => openEventDetails(ev, ev.is_pending)}>
+                                      <Eye className="w-4 h-4 mr-1" /> Dettagli
+                                    </Button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  };
 
-                          return (
-                            <tr key={ev.id_key} className="border-t border-border hover:bg-muted/40">
-                              <td className="p-2">
-                                <Badge variant={ev.is_pending ? "secondary" : "default"} className={ev.is_pending ? "bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200" : ""}>
-                                  {ev.is_pending ? "In Attesa" : "Pubblicato"}
-                                </Badge>
-                              </td>
-                              <td className="p-2">
-                                {img ? (
-                                  <img src={img} alt={ev.titolo} className="w-16 h-12 object-cover rounded border" loading="lazy" />
-                                ) : (
-                                  <div className="w-16 h-12 bg-muted rounded border flex items-center justify-center text-xs text-muted-foreground">—</div>
-                                )}
-                              </td>
-                              <td className="p-2 font-medium max-w-xs truncate">
-                                {ev.titolo}
-                              </td>
-                              <td className="p-2 text-muted-foreground whitespace-nowrap">
-                                {ev.data_inizio ? new Date(ev.data_inizio).toLocaleDateString("it-IT") : "N/D"}
-                              </td>
-                              <td className="p-2">
-                                <Badge variant="outline">{ev.fonte}</Badge>
-                              </td>
-                              <td className="p-2">
-                                <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-50">
-                                  {subCount} sotto-eventi
-                                </Badge>
-                              </td>
-                              <td className="p-2">
-                                <Button variant="outline" size="sm" onClick={() => openEventDetails(ev, ev.is_pending)}>
-                                  <Eye className="w-4 h-4 mr-1" /> Dettagli
-                                </Button>
-                              </td>
-                            </tr>
-                          );
-                        });
-                      })()}
-                    </tbody>
-                  </table>
-                </div>
+                  return (
+                    <div className="flex flex-col gap-6">
+                      <div>
+                        <h3 className="font-semibold text-sm text-foreground mb-3 flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                          Eventi Futuri ({futureAnalyzed.length})
+                        </h3>
+                        {renderTable(futureAnalyzed, "Nessun evento futuro analizzato trovato.")}
+                      </div>
+
+                      <div className="pt-4 border-t border-border">
+                        <h3 className="font-semibold text-sm text-muted-foreground mb-3 flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-muted-foreground"></span>
+                          Eventi Passati ({pastAnalyzed.length})
+                        </h3>
+                        {renderTable(pastAnalyzed, "Nessun evento passato analizzato trovato.")}
+                      </div>
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           </TabsContent>
@@ -955,160 +980,194 @@ export function Admin() {
                   </div>
                 )}
 
-                <div className="overflow-auto border rounded-md">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted sticky top-0">
-                      <tr>
-                        <th className="w-10 p-2">
-                          <Checkbox
-                            checked={publishedEvents.length > 0 && selectedPubIds.size === publishedEvents.length}
-                            onCheckedChange={(v) => togglePubAll(v === true)}
-                          />
-                        </th>
-                        <th className="w-10 p-2">
-                          <Checkbox
-                            checked={publishedEvents.length > 0 && selectedPubAnalyzeIds.size === publishedEvents.length}
-                            onCheckedChange={(v) => togglePubAnalyzeAll(v === true)}
-                          />
-                        </th>
-                        <th className="p-2 text-left text-xs font-semibold">Immagine</th>
-                        <th className="p-2 text-left text-xs font-semibold">
-                          <div className="flex items-center gap-1"><Search className="w-3 h-3" /> Titolo</div>
-                        </th>
-                        <th className="p-2 text-left text-xs font-semibold">
-                          <div className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Data</div>
-                        </th>
-                        <th className="p-2 text-left text-xs font-semibold">
-                          <div className="flex items-center gap-1"><MapPin className="w-3 h-3" /> Luogo</div>
-                        </th>
-                        <th className="p-2 text-left text-xs font-semibold">
-                          <div className="flex items-center gap-1"><Globe className="w-3 h-3" /> Fonte</div>
-                        </th>
-                        <th className="p-2 text-left text-xs font-semibold">Sotto-eventi</th>
-                        <th className="p-2 text-left text-xs font-semibold">Azioni</th>
-                      </tr>
-                      <tr className="border-t border-border">
-                        <th className="p-1"></th>
-                        <th className="p-1"></th>
-                        <th className="p-1"></th>
-                        <th className="p-1">
-                          <Input
-                            placeholder="Filtra titolo…"
-                            value={filterTitolo}
-                            onChange={(e) => setFilterTitolo(e.target.value)}
-                            className="h-7 text-xs"
-                          />
-                        </th>
-                        <th className="p-1">
-                          <div className="flex gap-1">
-                            <Input type="date" value={filterDataFrom} onChange={(e) => setFilterDataFrom(e.target.value)} className="h-7 text-xs px-1" />
-                            <Input type="date" value={filterDataTo} onChange={(e) => setFilterDataTo(e.target.value)} className="h-7 text-xs px-1" />
-                          </div>
-                        </th>
-                        <th className="p-1">
-                          <Input
-                            placeholder="Filtra luogo…"
-                            value={filterLuogo}
-                            onChange={(e) => setFilterLuogo(e.target.value)}
-                            className="h-7 text-xs"
-                          />
-                        </th>
-                        <th className="p-1">
-                          <Input
-                            placeholder="Filtra fonte…"
-                            value={filterFonte}
-                            onChange={(e) => setFilterFonte(e.target.value)}
-                            className="h-7 text-xs"
-                          />
-                        </th>
-                        <th className="p-1"></th>
-                        <th className="p-1">
-                          <div className="flex gap-1">
-                            <Button size="sm" className="h-7 text-xs px-2" onClick={applyFilters}>
-                              <Search className="w-3 h-3 mr-1" /> Applica
-                            </Button>
-                            <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={clearFilters}>
-                              Azzera
-                            </Button>
-                          </div>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {publishedEvents.length === 0 ? (
-                        <tr>
-                          <td colSpan={9} className="p-8 text-center text-muted-foreground">
-                            {loadingPublished ? "Caricamento…" : "Nessun evento trovato con i filtri attuali."}
-                          </td>
-                        </tr>
-                      ) : (
-                        publishedEvents.map((ev) => {
-                          const img = imageUrl(ev);
-                          const subCount = publishedEvents.filter((child) => child.parent_id === ev.id).length;
-                          return (
-                            <tr key={ev.id} className="border-t border-border hover:bg-muted/40">
-                              <td className="p-2">
-                                <Checkbox
-                                  checked={selectedPubIds.has(ev.id)}
-                                  onCheckedChange={(v) => togglePubOne(ev.id, v === true)}
-                                />
-                              </td>
-                              <td className="p-2">
-                                <Checkbox
-                                  checked={selectedPubAnalyzeIds.has(ev.id)}
-                                  onCheckedChange={(v) => togglePubAnalyzeOne(ev.id, v === true)}
-                                />
-                              </td>
-                              <td className="p-2">
-                                {img ? (
-                                  <img src={img} alt={ev.titolo} className="w-16 h-12 object-cover rounded border" loading="lazy" />
-                                ) : (
-                                  <div className="w-16 h-12 bg-muted rounded border flex items-center justify-center text-xs text-muted-foreground">—</div>
-                                )}
-                              </td>
-                              <td className="p-2 font-medium max-w-xs truncate">
-                                {ev.link ? (
-                                  <a href={ev.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{ev.titolo}</a>
-                                ) : ev.titolo}
-                                {ev.testo_estratto && <Badge variant="outline" className="ml-2 border-green-500 text-green-500">Analizzato</Badge>}
-                              </td>
-                              <td className="p-2 text-muted-foreground whitespace-nowrap">
-                                {ev.data_inizio ?? "—"}
-                                {ev.data_fine && ev.data_fine !== ev.data_inizio ? <span className="text-xs"> → {ev.data_fine}</span> : null}
-                              </td>
-                              <td className="p-2 text-muted-foreground">
-                                {ev.luogo ?? "—"}
-                                {ev.latitudine != null && ev.longitudine != null && <span className="text-xs text-green-600 ml-1">✓</span>}
-                              </td>
-                              <td className="p-2">
-                                <Badge variant="secondary">{ev.fonte}</Badge>
-                              </td>
-                              <td className="p-2">
-                                {subCount > 0 ? (
-                                  <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-50">
-                                    {subCount} sotto-eventi
-                                  </Badge>
-                                ) : (
-                                  <span className="text-muted-foreground text-xs">—</span>
-                                )}
-                              </td>
-                              <td className="p-2">
-                                <div className="flex items-center gap-1">
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" title="Elimina" onClick={() => deleteEvent(ev.id, false)}>
-                                    <Trash2 className="w-4 h-4 text-destructive" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" title="Elimina e scarta" onClick={() => deleteEvent(ev.id, true)}>
-                                    <AlertTriangle className="w-4 h-4 text-orange-500" />
-                                  </Button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
+                {/* Unified Filters Box */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 bg-muted/40 p-3 rounded-lg border border-border">
+                  <Input
+                    placeholder="Filtra titolo…"
+                    value={filterTitolo}
+                    onChange={(e) => setFilterTitolo(e.target.value)}
+                    className="h-8 text-xs bg-background"
+                  />
+                  <div className="flex gap-1">
+                    <Input type="date" value={filterDataFrom} onChange={(e) => setFilterDataFrom(e.target.value)} className="h-8 text-xs px-1 bg-background" />
+                    <Input type="date" value={filterDataTo} onChange={(e) => setFilterDataTo(e.target.value)} className="h-8 text-xs px-1 bg-background" />
+                  </div>
+                  <Input
+                    placeholder="Filtra luogo…"
+                    value={filterLuogo}
+                    onChange={(e) => setFilterLuogo(e.target.value)}
+                    className="h-8 text-xs bg-background"
+                  />
+                  <Input
+                    placeholder="Filtra fonte…"
+                    value={filterFonte}
+                    onChange={(e) => setFilterFonte(e.target.value)}
+                    className="h-8 text-xs bg-background"
+                  />
+                  <div className="flex gap-1">
+                    <Button size="sm" className="h-8 text-xs px-2 flex-1" onClick={applyFilters}>
+                      <Search className="w-3 h-3 mr-1" /> Applica
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-8 text-xs px-2" onClick={clearFilters}>
+                      Azzera
+                    </Button>
+                  </div>
                 </div>
+
+                {(() => {
+                  const todayStr = new Date().toISOString().split("T")[0];
+                  const futurePublished = publishedEvents.filter(ev => !ev.data_inizio || ev.data_inizio >= todayStr);
+                  const pastPublished = publishedEvents.filter(ev => ev.data_inizio && ev.data_inizio < todayStr);
+
+                  const renderPublishedTable = (list: typeof publishedEvents, emptyMessage: string) => {
+                    if (list.length === 0) {
+                      return (
+                        <div className="p-8 text-center text-muted-foreground border rounded-md text-sm bg-background">
+                          {emptyMessage}
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="overflow-auto border rounded-md bg-background">
+                        <table className="w-full text-sm">
+                          <thead className="bg-muted sticky top-0">
+                            <tr>
+                              <th className="w-10 p-2">
+                                <Checkbox
+                                  checked={list.length > 0 && list.every((e) => selectedPubIds.has(e.id))}
+                                  onCheckedChange={(v) => {
+                                    const next = new Set(selectedPubIds);
+                                    list.forEach((e) => {
+                                      if (v === true) next.add(e.id);
+                                      else next.delete(e.id);
+                                    });
+                                    setSelectedPubIds(next);
+                                  }}
+                                />
+                              </th>
+                              <th className="w-10 p-2">
+                                <Checkbox
+                                  checked={list.length > 0 && list.every((e) => selectedPubAnalyzeIds.has(e.id))}
+                                  onCheckedChange={(v) => {
+                                    const next = new Set(selectedPubAnalyzeIds);
+                                    list.forEach((e) => {
+                                      if (v === true) next.add(e.id);
+                                      else next.delete(e.id);
+                                    });
+                                    setSelectedPubAnalyzeIds(next);
+                                  }}
+                                />
+                              </th>
+                              <th className="p-2 text-left text-xs font-semibold">Immagine</th>
+                              <th className="p-2 text-left text-xs font-semibold">Titolo</th>
+                              <th className="p-2 text-left text-xs font-semibold">Data</th>
+                              <th className="p-2 text-left text-xs font-semibold">Luogo</th>
+                              <th className="p-2 text-left text-xs font-semibold">Fonte</th>
+                              <th className="p-2 text-left text-xs font-semibold">Sotto-eventi</th>
+                              <th className="p-2 text-left text-xs font-semibold">Azioni</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {list.map((ev) => {
+                              const img = imageUrl(ev);
+                              const subCount = publishedEvents.filter((child) => child.parent_id === ev.id).length;
+                              return (
+                                <tr key={ev.id} className="border-t border-border hover:bg-muted/40">
+                                  <td className="p-2">
+                                    <Checkbox
+                                      checked={selectedPubIds.has(ev.id)}
+                                      onCheckedChange={(v) => {
+                                        const next = new Set(selectedPubIds);
+                                        if (v === true) next.add(ev.id);
+                                        else next.delete(ev.id);
+                                        setSelectedPubIds(next);
+                                      }}
+                                    />
+                                  </td>
+                                  <td className="p-2">
+                                    <Checkbox
+                                      checked={selectedPubAnalyzeIds.has(ev.id)}
+                                      onCheckedChange={(v) => {
+                                        const next = new Set(selectedPubAnalyzeIds);
+                                        if (v === true) next.add(ev.id);
+                                        else next.delete(ev.id);
+                                        setSelectedPubAnalyzeIds(next);
+                                      }}
+                                    />
+                                  </td>
+                                  <td className="p-2">
+                                    {img ? (
+                                      <img src={img} alt={ev.titolo} className="w-16 h-12 object-cover rounded border" loading="lazy" />
+                                    ) : (
+                                      <div className="w-16 h-12 bg-muted rounded border flex items-center justify-center text-xs text-muted-foreground">—</div>
+                                    )}
+                                  </td>
+                                  <td className="p-2 font-medium max-w-xs truncate">
+                                    {ev.link ? (
+                                      <a href={ev.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{ev.titolo}</a>
+                                    ) : ev.titolo}
+                                    {ev.testo_estratto && <Badge variant="outline" className="ml-2 border-green-500 text-green-500">Analizzato</Badge>}
+                                  </td>
+                                  <td className="p-2 text-muted-foreground whitespace-nowrap">
+                                    {ev.data_inizio ?? "—"}
+                                    {ev.data_fine && ev.data_fine !== ev.data_inizio ? <span className="text-xs"> → {ev.data_fine}</span> : null}
+                                  </td>
+                                  <td className="p-2 text-muted-foreground">
+                                    {ev.luogo ?? "—"}
+                                    {ev.latitudine != null && ev.longitudine != null && <span className="text-xs text-green-600 ml-1">✓</span>}
+                                  </td>
+                                  <td className="p-2">
+                                    <Badge variant="secondary">{ev.fonte}</Badge>
+                                  </td>
+                                  <td className="p-2">
+                                    {subCount > 0 ? (
+                                      <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-50">
+                                        {subCount} sotto-eventi
+                                      </Badge>
+                                    ) : (
+                                      <span className="text-muted-foreground text-xs">—</span>
+                                    )}
+                                  </td>
+                                  <td className="p-2">
+                                    <div className="flex items-center gap-1">
+                                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Elimina" onClick={() => deleteEvent(ev.id, false)}>
+                                        <Trash2 className="w-4 h-4 text-destructive" />
+                                      </Button>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Elimina e scarta" onClick={() => deleteEvent(ev.id, true)}>
+                                        <AlertTriangle className="w-4 h-4 text-orange-500" />
+                                      </Button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  };
+
+                  return (
+                    <div className="flex flex-col gap-6">
+                      <div>
+                        <h3 className="font-semibold text-sm text-foreground mb-3 flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                          Eventi Futuri ({futurePublished.length})
+                        </h3>
+                        {renderPublishedTable(futurePublished, "Nessun evento futuro trovato con i filtri attuali.")}
+                      </div>
+
+                      <div className="pt-4 border-t border-border">
+                        <h3 className="font-semibold text-sm text-muted-foreground mb-3 flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-muted-foreground"></span>
+                          Eventi Passati ({pastPublished.length})
+                        </h3>
+                        {renderPublishedTable(pastPublished, "Nessun evento passato trovato con i filtri attuali.")}
+                      </div>
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           </TabsContent>
