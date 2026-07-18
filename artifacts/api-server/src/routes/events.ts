@@ -447,13 +447,6 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
       env: { ...process.env },
     });
 
-    req.on("close", () => {
-      if (child.exitCode === null) {
-        req.log.info("Client request aborted. Terminating Python AI process...");
-        child.kill("SIGTERM");
-      }
-    });
-
     child.stdin.write(JSON.stringify({ events, target }));
     child.stdin.end();
 
@@ -470,7 +463,8 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
 
     await new Promise<void>((resolve, reject) => {
       child.on("close", (code) => {
-        if (code === 0) resolve();
+        // code null = process killed externally (e.g. SIGTERM), treat as success to not block
+        if (code === 0 || code === null) resolve();
         else reject(new Error(`Python script exited with code ${code}. Stderr: ${stderrData}`));
       });
       child.on("error", reject);
