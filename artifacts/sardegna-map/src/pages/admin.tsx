@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -82,9 +82,10 @@ export function Admin() {
   const [keyVerified, setKeyVerified] = useState(true);
   const [keyError, setKeyError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("scraping");
-  const [analysisTarget, setAnalysisTarget] = useState<"both" | "image" | "text" | "source_page">("both");
+  const [analysisTarget, setAnalysisTarget] = useState<"both" | "both_source" | "image" | "text" | "source_page">("both");
   const [analysisLogs, setAnalysisLogs] = useState<string[]>([]);
   const [analyzingStep, setAnalyzingStep] = useState<"idle" | "preview" | "published">("idle");
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // ── Scraping tab ──
   const [previewEvents, setPreviewEvents] = useState<EventPreview[]>([]);
@@ -375,6 +376,7 @@ export function Admin() {
         link: ev.link,
       }));
 
+      abortControllerRef.current = new AbortController();
       const response = await fetch("/api/events/analyze", {
         method: "POST",
         headers: {
@@ -382,6 +384,7 @@ export function Admin() {
           "x-admin-key": adminKey,
         },
         body: JSON.stringify({ events: payload, target: analysisTarget }),
+        signal: abortControllerRef.current.signal,
       });
 
       if (!response.body) throw new Error("No response body");
@@ -428,9 +431,12 @@ export function Admin() {
         }
       }
     } catch (e: any) {
-      setError(`Errore analisi: ${String(e.message || e)}`);
+      if (e.name !== "AbortError") {
+        setError(`Errore analisi: ${String(e.message || e)}`);
+      }
     } finally {
       setAnalyzingStep("idle");
+      abortControllerRef.current = null;
     }
   };
 
@@ -574,6 +580,7 @@ export function Admin() {
         link: ev.link,
       }));
 
+      abortControllerRef.current = new AbortController();
       const response = await fetch("/api/events/analyze", {
         method: "POST",
         headers: {
@@ -581,6 +588,7 @@ export function Admin() {
           "x-admin-key": adminKey,
         },
         body: JSON.stringify({ events: payload, target: analysisTarget }),
+        signal: abortControllerRef.current.signal,
       });
 
       if (!response.body) throw new Error("No response body");
@@ -611,9 +619,12 @@ export function Admin() {
         }
       }
     } catch (e: any) {
-      setError(`Errore analisi pubblicati: ${String(e.message || e)}`);
+      if (e.name !== "AbortError") {
+        setError(`Errore analisi pubblicati: ${String(e.message || e)}`);
+      }
     } finally {
       setAnalyzingStep("idle");
+      abortControllerRef.current = null;
     }
   };
 
@@ -843,10 +854,11 @@ export function Admin() {
                             onChange={(e) => setAnalysisTarget(e.target.value as any)}
                             className="bg-transparent border-none outline-none font-semibold text-foreground cursor-pointer text-xs"
                           >
-                            <option value="both">Locandina e Testo</option>
+                            <option value="both">Locandina + Testo Breve</option>
+                            <option value="both_source">Locandina + Pagina Fonte (Link)</option>
                             <option value="image">Solo Locandina</option>
-                            <option value="text">Solo Testo</option>
-                            <option value="source_page">Testo Pagina Fonte (Link)</option>
+                            <option value="text">Solo Testo Breve</option>
+                            <option value="source_page">Solo Pagina Fonte (Link)</option>
                           </select>
                         </div>
                         <Button
@@ -1050,10 +1062,11 @@ export function Admin() {
                             onChange={(e) => setAnalysisTarget(e.target.value as any)}
                             className="bg-transparent border-none outline-none font-semibold text-foreground cursor-pointer text-xs"
                           >
-                            <option value="both">Locandina e Testo</option>
+                            <option value="both">Locandina + Testo Breve</option>
+                            <option value="both_source">Locandina + Pagina Fonte (Link)</option>
                             <option value="image">Solo Locandina</option>
-                            <option value="text">Solo Testo</option>
-                            <option value="source_page">Testo Pagina Fonte (Link)</option>
+                            <option value="text">Solo Testo Breve</option>
+                            <option value="source_page">Solo Pagina Fonte (Link)</option>
                           </select>
                         </div>
                         <Button
@@ -1498,7 +1511,20 @@ export function Admin() {
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
                   Elaborazione in background...
                 </span>
-                <span className="font-sans">Target: {analysisTarget}</span>
+                <div className="flex items-center gap-3 font-sans">
+                  <span>Target: {analysisTarget}</span>
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    className="h-7 text-xs bg-red-650 hover:bg-red-750"
+                    onClick={() => {
+                      abortControllerRef.current?.abort();
+                      setAnalyzingStep("idle");
+                    }}
+                  >
+                    Termina
+                  </Button>
+                </div>
               </div>
             </DialogContent>
           </Dialog>

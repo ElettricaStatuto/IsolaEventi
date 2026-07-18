@@ -451,6 +451,13 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
       env: { ...process.env },
     });
 
+    req.on("close", () => {
+      if (child.exitCode === null) {
+        req.log.info("Client request aborted. Terminating Python AI process...");
+        child.kill("SIGTERM");
+      }
+    });
+
     child.stdin.write(JSON.stringify({ events, target }));
     child.stdin.end();
 

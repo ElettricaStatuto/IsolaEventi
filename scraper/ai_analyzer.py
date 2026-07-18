@@ -46,8 +46,8 @@ def analyze_event(descrizione: str, image_url: str = None, target: str = "both",
     try:
         model = genai.GenerativeModel("gemini-3.5-flash")
         
-        # Extract text from the source page link if target is source_page
-        if target == "source_page":
+        # Extract text from the source page link if target is source_page or both_source
+        if target in ("source_page", "both_source"):
             if not link or not link.startswith("http"):
                 return {
                     "testo_estratto": "Errore: nessun link valido della pagina fonte fornito per l'evento.",
@@ -117,6 +117,27 @@ def analyze_event(descrizione: str, image_url: str = None, target: str = "both",
                 "}\n\n"
                 f"TESTO ESTRATTO DALLA PAGINA FONTE:\n{descrizione}"
             )
+        elif target == "both_source":
+            prompt = (
+                "Sei un assistente AI esperto nell'estrazione e organizzazione di dati per eventi in Sardegna.\n"
+                "Ti viene fornito il testo della pagina fonte estratto dal link dell'evento e l'immagine della locandina dell'evento.\n"
+                "Il tuo compito è analizzare attentamente ENTRAMBI (testo del link e immagine della locandina) per:\n"
+                "1. Estrarre e unire le informazioni utili (date, orari, programma dettagliato, ospiti, specialità enogastronomiche, contatti, prezzi).\n"
+                "2. Identificare se l'evento è un Festival, Sagra o Festa Patronale che si articola su più giornate/date (multi-data).\n"
+                "3. Se si tratta di un evento multi-data, dividi l'evento principale in sotto-eventi giornalieri compilando l'array 'sotto_eventi' con i relativi titoli di ciascuna giornata, date e luoghi.\n"
+                "4. Trova se nel testo o sulla locandina è presente un indirizzo o link del sito web ufficiale dell'organizzatore (es. pagina Facebook, account Instagram dell'associazione o proloco, sito web dell'organizzatore). NON indicare il sito da cui è stato preso il link (es. paradisola, eventiinsardegna ecc.), ma SOLO quello del comitato organizzatore dell'evento.\n"
+                "IMPORTANTE: Produci un riassunto chiaro ed informativo nel campo 'testo_estratto' basato sia sul testo della pagina fonte che sulla locandina.\n"
+                "Rispondi ESCLUSIVAMENTE in formato JSON valido, usando esattamente questo schema:\n"
+                "{\n"
+                '  "testo_estratto": "Riassunto completo e strutturato unendo le informazioni del link e della locandina...",\n'
+                '  "is_festival": true o false,\n'
+                '  "sotto_eventi": [\n'
+                '    {"titolo": "Nome Giornata/Sotto-evento", "data_inizio": "YYYY-MM-DD", "data_fine": "YYYY-MM-DD", "luogo": "Nome luogo/paese"}\n'
+                '  ],\n'
+                '  "link_organizzatore": "URL ufficiale del sito/social dell\'organizzatore se presente nel testo o nella locandina, altrimenti null"\n'
+                "}\n\n"
+                f"TESTO ESTRATTO DALLA PAGINA FONTE:\n{descrizione}"
+            )
         else: # "both"
             prompt = (
                 "Sei un assistente AI esperto nell'estrazione e organizzazione di dati per eventi in Sardegna.\n"
@@ -142,7 +163,7 @@ def analyze_event(descrizione: str, image_url: str = None, target: str = "both",
         contents = [prompt]
         
         # Load image if requested and available
-        if target in ("both", "image") and image_url:
+        if target in ("both", "image", "both_source") and image_url:
             if image_url.startswith("http://") or image_url.startswith("https://"):
                 headers = {"User-Agent": "Mozilla/5.0"}
                 resp = requests.get(image_url, headers=headers, timeout=10)
