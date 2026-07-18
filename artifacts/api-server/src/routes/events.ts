@@ -64,6 +64,7 @@ router.get("/events", async (req, res): Promise<void> => {
 
   const conditions = [];
   conditions.push(gte(eventsTable.dataInizio, cutoffString));
+  conditions.push(isNull(eventsTable.parentId));
 
   if (date_from && date_from > cutoffString) {
     conditions.push(gte(eventsTable.dataInizio, date_from));
@@ -347,6 +348,43 @@ router.put("/events/refresh/preview/cache", requireAdminKey, (req, res): void =>
   }
 });
 
+function normalizeTitle(title: string): string {
+  if (!title) return "";
+  const stopWords = new Set(["festa", "sagra", "di", "a", "da", "in", "con", "su", "per", "tra", "fra", "il", "lo", "la", "i", "gli", "le", "un", "uno", "una", "del", "dello", "della", "dei", "degli", "delle", "al", "allo", "alla", "ai", "agli", "alle", "dal", "dallo", "dalla", "dai", "dagli", "dalle", "nel", "nello", "nella", "nei", "negli", "nelle", "sul", "sullo", "sulla", "sui", "sugli", "sulle", "col", "coi"]);
+  
+  return title
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // remove accents
+    .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, " ") // remove punctuation
+    .split(/\s+/)
+    .filter(word => word && !stopWords.has(word))
+    .join(" ")
+    .trim();
+}
+
+function areTitlesSimilar(t1: string, t2: string): boolean {
+  const n1 = normalizeTitle(t1);
+  const n2 = normalizeTitle(t2);
+  if (!n1 || !n2) return false;
+  if (n1 === n2) return true;
+  
+  const words1 = new Set(n1.split(" "));
+  const words2 = new Set(n2.split(" "));
+  
+  let intersectionCount = 0;
+  for (const w of words1) {
+    if (words2.has(w)) {
+      intersectionCount++;
+    }
+  }
+  
+  const unionSize = words1.size + words2.size - intersectionCount;
+  if (unionSize === 0) return false;
+  
+  const jaccard = intersectionCount / unionSize;
+  return jaccard >= 0.70;
+}
+
 // Human-in-the-loop: approve selected events into the database
 router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> => {
   req.log.info("Starting manual approval of selected events");
@@ -362,24 +400,57 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
   let aggiornati = 0;
   let errori = 0;
 
-  for (const ev of events as any[]) {
-    try {
-      const [existing] = await db
-        .select({ id: eventsTable.id })
-        .from(eventsTable)
-        .where(
-          and(
-            eq(eventsTable.titolo, ev.titolo),
-            isNull(eventsTable.parentId)
-          )
-        )
-        .limit(1);
+  try {
+    // Carica tutti gli eventi principali esistenti in memoria per la deduplica sfocata
+    const existingEvents = await db
+      .select({ id: eventsTable.id, titolo: eventsTable.titolo })
+      .from(eventsTable)
+      .where(isNull(eventsTable.parentId));
 
-      let { dataInizio, dataFine } = getFestivalDateRange(ev.data_inizio, ev.data_fine, ev.sotto_eventi || []);
+    for (const ev of events as any[]) {
+      try {
+        const match = existingEvents.find(e => areTitlesSimilar(ev.titolo, e.titolo));
+        const existingId = match?.id;
 
-      if (existing) {
-        await db.update(eventsTable)
-          .set({
+        let { dataInizio, dataFine } = getFestivalDateRange(ev.data_inizio, ev.data_fine, ev.sotto_eventi || []);
+
+        if (existingId) {
+          await db.update(eventsTable)
+            .set({
+              dataInizio: dataInizio,
+              dataFine: dataFine,
+              luogo: ev.luogo,
+              latitudine: ev.latitudine,
+              longitudine: ev.longitudine,
+              link: ev.link,
+              descrizione: ev.descrizione,
+              immagine: ev.immagine,
+              testoEstratto: ev.testo_estratto || null,
+              linkOrganizzatore: ev.link_organizzatore || null,
+              aggiornatoIl: new Date(),
+            })
+            .where(eq(eventsTable.id, existingId));
+
+          // If it is a festival, let's create the sub-events
+          if (ev.is_festival && ev.sotto_eventi && ev.sotto_eventi.length > 0) {
+            // Delete old sub-events to avoid duplicate entries
+            await db.delete(eventsTable).where(eq(eventsTable.parentId, existingId));
+            for (const se of ev.sotto_eventi) {
+              await db.insert(eventsTable).values({
+                titolo: `${ev.titolo} - ${se.titolo}`,
+                dataInizio: se.data_inizio,
+                dataFine: se.data_fine || se.data_inizio,
+                luogo: se.luogo || ev.luogo,
+                parentId: existingId,
+                fonte: ev.fonte || "",
+                linkOrganizzatore: ev.link_organizzatore || null,
+              });
+            }
+          }
+          aggiornati++;
+        } else {
+          const [inserted] = await db.insert(eventsTable).values({
+            titolo: ev.titolo,
             dataInizio: dataInizio,
             dataFine: dataFine,
             luogo: ev.luogo,
@@ -388,65 +459,40 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
             link: ev.link,
             descrizione: ev.descrizione,
             immagine: ev.immagine,
+            fonte: ev.fonte || "",
             testoEstratto: ev.testo_estratto || null,
             linkOrganizzatore: ev.link_organizzatore || null,
-            aggiornatoIl: new Date(),
-          })
-          .where(eq(eventsTable.id, existing.id));
+          }).returning({ id: eventsTable.id });
 
-        // If it is a festival, let's create the sub-events
-        if (ev.is_festival && ev.sotto_eventi && ev.sotto_eventi.length > 0) {
-          // Delete old sub-events to avoid duplicate entries
-          await db.delete(eventsTable).where(eq(eventsTable.parentId, existing.id));
-          for (const se of ev.sotto_eventi) {
-            await db.insert(eventsTable).values({
-              titolo: `${ev.titolo} - ${se.titolo}`,
-              dataInizio: se.data_inizio,
-              dataFine: se.data_fine || se.data_inizio,
-              luogo: se.luogo || ev.luogo,
-              parentId: existing.id,
-              fonte: ev.fonte || "",
-              linkOrganizzatore: ev.link_organizzatore || null,
-            });
-          }
-        }
-        aggiornati++;
-      } else {
-        const [inserted] = await db.insert(eventsTable).values({
-          titolo: ev.titolo,
-          dataInizio: dataInizio,
-          dataFine: dataFine,
-          luogo: ev.luogo,
-          latitudine: ev.latitudine,
-          longitudine: ev.longitudine,
-          link: ev.link,
-          descrizione: ev.descrizione,
-          immagine: ev.immagine,
-          fonte: ev.fonte || "",
-          testoEstratto: ev.testo_estratto || null,
-          linkOrganizzatore: ev.link_organizzatore || null,
-        }).returning({ id: eventsTable.id });
+          const parentId = inserted?.id;
+          if (parentId) {
+            // Aggiungi l'evento appena inserito in memoria così se nello stesso batch c'è un duplicato viene fuso!
+            existingEvents.push({ id: parentId, titolo: ev.titolo });
 
-        const parentId = inserted?.id;
-        if (parentId && ev.is_festival && ev.sotto_eventi && ev.sotto_eventi.length > 0) {
-          for (const se of ev.sotto_eventi) {
-            await db.insert(eventsTable).values({
-              titolo: `${ev.titolo} - ${se.titolo}`,
-              dataInizio: se.data_inizio,
-              dataFine: se.data_fine || se.data_inizio,
-              luogo: se.luogo || ev.luogo,
-              parentId,
-              fonte: ev.fonte || "",
-              linkOrganizzatore: ev.link_organizzatore || null,
-            });
+            if (ev.is_festival && ev.sotto_eventi && ev.sotto_eventi.length > 0) {
+              for (const se of ev.sotto_eventi) {
+                await db.insert(eventsTable).values({
+                  titolo: `${ev.titolo} - ${se.titolo}`,
+                  dataInizio: se.data_inizio,
+                  dataFine: se.data_fine || se.data_inizio,
+                  luogo: se.luogo || ev.luogo,
+                  parentId,
+                  fonte: ev.fonte || "",
+                  linkOrganizzatore: ev.link_organizzatore || null,
+                });
+              }
+            }
           }
+          nuovi++;
         }
-        nuovi++;
+      } catch (e) {
+        req.log.error({ err: e, event: ev.titolo }, "Approval insert/update failed");
+        errori++;
       }
-    } catch (e) {
-      req.log.error({ err: e, event: ev.titolo }, "Approval insert/update failed");
-      errori++;
     }
+  } catch (err) {
+    req.log.error({ err }, "Failed to fetch existing events for duplicate checking");
+    errori = events.length;
   }
 
   res.json(ApproveEventsResponse.parse({

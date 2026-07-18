@@ -30,6 +30,34 @@ from scraper.models import SottoEvento
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
+def normalize_title(title: str) -> str:
+    if not title:
+        return ""
+    import unicodedata
+    title = title.lower()
+    title = "".join(c for c in unicodedata.normalize('NFD', title) if unicodedata.category(c) != 'Mn')
+    title = re.sub(r"[.,\/#!$%\^&\*;:{}=\-_`~()]", " ", title)
+    words = title.split()
+    stop_words = {"festa", "sagra", "di", "a", "da", "in", "con", "su", "per", "tra", "fra", "il", "lo", "la", "i", "gli", "le", "un", "uno", "una", "del", "dello", "della", "dei", "degli", "delle", "al", "allo", "alla", "ai", "agli", "alle", "dal", "dallo", "dalla", "dai", "dagli", "dalle", "nel", "nello", "nella", "nei", "negli", "nelle", "sul", "sullo", "sulla", "sui", "sugli", "sulle", "col", "coi"}
+    filtered = [w for w in words if w not in stop_words]
+    return " ".join(filtered)
+
+def are_titles_similar(t1: str, t2: str) -> bool:
+    n1 = normalize_title(t1)
+    n2 = normalize_title(t2)
+    if not n1 or not n2:
+        return False
+    if n1 == n2:
+        return True
+    words1 = set(n1.split())
+    words2 = set(n2.split())
+    intersection = words1.intersection(words2)
+    union = words1.union(words2)
+    if not union:
+        return False
+    jaccard = len(intersection) / len(union)
+    return jaccard >= 0.70
+
 DATABASE_URL = os.environ.get("DATABASE_URL")
 def emit_log(msg: str):
     print(json.dumps({"log": msg}), flush=True)
@@ -250,19 +278,21 @@ def main():
 
     # We need to know which ones are completely new to avoid re-analyzing
     cur = conn.cursor()
+    cur.execute("SELECT id, titolo FROM events WHERE parent_id IS NULL")
+    existing_events = list(cur.fetchall())
     
     for ev in filtrati:
         data_inizio = _parse_mixed_date(ev.data_inizio)
         if data_inizio and data_inizio < cutoff_str:
             continue # ignore events older than 3 months
             
-        cur.execute(
-            "SELECT id FROM events WHERE titolo = %s AND parent_id IS NULL LIMIT 1",
-            (ev.titolo,),
-        )
-        row = cur.fetchone()
+        found_id = None
+        for db_id, db_title in existing_events:
+            if are_titles_similar(ev.titolo, db_title):
+                found_id = db_id
+                break
         
-        is_new = row is None
+        is_new = found_id is None
         
         if is_new:
             # L'analisi AI è stata disabilitata in fase di scraping per permettere
@@ -285,7 +315,7 @@ def main():
             "lat": lat,
             "lon": lon,
             "is_new": is_new,
-            "row_id": row[0] if row else None
+            "row_id": found_id
         })
 
     cur.close()
@@ -389,6 +419,7 @@ def main():
                     ),
                 )
                 event_id = cur.fetchone()[0]
+                existing_events.append((event_id, ev.titolo))
                 nuovi += 1
                 
                 # Se è un festival, salva i sotto-eventi
