@@ -257,8 +257,8 @@ def main():
             continue # ignore events older than 3 months
             
         cur.execute(
-            "SELECT id FROM events WHERE titolo = %s AND fonte = %s LIMIT 1",
-            (ev.titolo, ev.fonte or ""),
+            "SELECT id FROM events WHERE titolo = %s AND parent_id IS NULL LIMIT 1",
+            (ev.titolo,),
         )
         row = cur.fetchone()
         

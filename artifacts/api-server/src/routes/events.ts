@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, gte, lte, ilike, sql, eq } from "drizzle-orm";
+import { and, gte, lte, ilike, sql, eq, isNull } from "drizzle-orm";
 import { db, eventsTable, rejectedEventsTable } from "@workspace/db";
 import {
   ListEventsQueryParams,
@@ -369,8 +369,8 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
         .from(eventsTable)
         .where(
           and(
-            sql`${eventsTable.titolo} = ${ev.titolo}`,
-            sql`${eventsTable.fonte} = ${ev.fonte || ""}`
+            eq(eventsTable.titolo, ev.titolo),
+            isNull(eventsTable.parentId)
           )
         )
         .limit(1);
