@@ -11,6 +11,7 @@ Struttura HTML (The Events Calendar / WordPress):
 """
 import logging
 import re
+from datetime import datetime
 from typing import List, Optional
 from urllib.parse import urljoin
 
@@ -29,32 +30,111 @@ class EventiInSardegnaScraper(BaseScraper):
 
     def scrapa_eventi(self, max_pagine: int = 5) -> List[Evento]:
         eventi = []
-        for pagina in range(1, max_pagine + 1):
-            # La paginazione di The Events Calendar usa ?eventDate=YYYY-MM
-            # Ma la pagina /eventi/ elenca già eventi futuri.
-            # Per le pagine successive proviamo ?tribe_paged={n} o ?paged={n}
-            url = URL_EVENTI if pagina == 1 else f"{URL_EVENTI}?tribe_paged={pagina}"
-            soup = self.get_pagina(url)
-            if soup is None:
-                break
+        
+        # Definiamo i target da scaricare
+        targets = [
+            ("https://www.eventiinsardegna.it/eventi/", "events_calendar"),
+            ("https://www.eventiinsardegna.it/tag/alghero/", "wordpress_tag"),
+            ("https://www.eventiinsardegna.it/tag/cagliari/", "wordpress_tag"),
+            ("https://www.eventiinsardegna.it/tag/eventi-centro-sardegna/", "wordpress_tag")
+        ]
+        
+        # Set per evitare duplicati all'interno della stessa sessione di scraping
+        urls_visti = set()
 
-            articles = soup.find_all("article", class_="tribe-events-calendar-list__event")
-            if not articles:
-                logger.info(f"[{self.nome_fonte}] Nessun articolo a pagina {pagina}, stop.")
-                break
+        for base_url, mode in targets:
+            logger.info(f"[{self.nome_fonte}] Avvio scraping target: {base_url} ({mode})")
+            
+            for pagina in range(1, max_pagine + 1):
+                if mode == "events_calendar":
+                    url = base_url if pagina == 1 else f"{base_url}?tribe_paged={pagina}"
+                else: # wordpress_tag
+                    url = base_url if pagina == 1 else f"{base_url}page/{pagina}/"
+                
+                soup = self.get_pagina(url)
+                if soup is None:
+                    break
 
-            nuovi = 0
-            for article in articles:
-                evento = self._parse_article(article)
-                if evento:
-                    eventi.append(evento)
-                    nuovi += 1
+                nuovi = 0
+                if mode == "events_calendar":
+                    articles = soup.find_all("article", class_="tribe-events-calendar-list__event")
+                    for article in articles:
+                        evento = self._parse_article(article)
+                        if evento and evento.url not in urls_visti:
+                            eventi.append(evento)
+                            urls_visti.add(evento.url)
+                            nuovi += 1
+                else: # wordpress_tag
+                    posts = soup.find_all(class_="bs-blog-post")
+                    for post in posts:
+                        evento = self._parse_wordpress_post(post)
+                        if evento and evento.url not in urls_visti:
+                            eventi.append(evento)
+                            urls_visti.add(evento.url)
+                            nuovi += 1
 
-            logger.info(f"[{self.nome_fonte}] Pagina {pagina}: {nuovi} eventi")
-            if nuovi == 0:
-                break
+                logger.info(f"[{self.nome_fonte}] Target {base_url} - Pagina {pagina}: {nuovi} eventi")
+                if nuovi == 0:
+                    break
 
         return eventi
+
+    def _parse_wordpress_post(self, post) -> Optional[Evento]:
+        title_tag = post.select_one("h4.title a")
+        if not title_tag:
+            return None
+            
+        titolo = title_tag.get_text(strip=True)
+        url = title_tag.get("href")
+        if not titolo or not url:
+            return None
+            
+        url = urljoin(self.url_base, url)
+        
+        # Estrazione immagine (cerchiamo background-image nel div.bs-blog-thumb)
+        immagine = None
+        thumb_div = post.select_one(".bs-blog-thumb")
+        if thumb_div:
+            style = thumb_div.get("style", "")
+            img_match = re.search(r"url\(['\"]?([^'\")]+)['\"]?\)", style)
+            if img_match:
+                immagine = img_match.group(1)
+                
+        # Descrizione
+        desc_tag = post.select_one("p")
+        descrizione = None
+        if desc_tag:
+            descrizione = desc_tag.get_text(separator=" ", strip=True)[:400]
+            
+        # Estrazione date dal tag time
+        data_inizio = None
+        time_tag = post.select_one("time")
+        if time_tag:
+            raw_time = time_tag.get_text(strip=True)
+            # Formato GG/MM/AAAA
+            date_match = re.match(r"(\d{2})/(\d{2})/(\d{4})", raw_time)
+            if date_match:
+                d, m, y = date_match.groups()
+                data_inizio = f"{y}-{m}-{d}"
+            else:
+                # Formato YYYY-MM-DD
+                iso_match = re.match(r"(\d{4})-(\d{2})-(\d{2})", raw_time)
+                if iso_match:
+                    data_inizio = iso_match.group(0)
+                    
+        if not data_inizio:
+            data_inizio = datetime.now().strftime("%Y-%m-%d")
+
+        return Evento(
+            titolo=titolo,
+            data_inizio=data_inizio,
+            data_fine=data_inizio,
+            luogo=None,
+            url=url,
+            descrizione=descrizione,
+            immagine=immagine,
+            fonte=self.nome_fonte,
+        )
 
     def _parse_article(self, article) -> Optional[Evento]:
         # --- Titolo & URL ---
