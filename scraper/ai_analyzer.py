@@ -47,7 +47,7 @@ def analyze_event(descrizione: str, image_url: str = None, target: str = "both",
                 base_url="https://production-modelfarm.replit.com"
             )
         )
-        MODEL = "gemini-3-flash-preview"
+        MODEL = "gemini-2.0-flash-lite"
     else:
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
