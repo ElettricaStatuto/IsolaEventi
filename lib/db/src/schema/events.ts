@@ -1,4 +1,4 @@
-import { pgTable, serial, text, date, real, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, date, real, timestamp, integer, AnyPgColumn } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -11,9 +11,12 @@ export const eventsTable = pgTable("events", {
   latitudine: real("latitudine"),
   longitudine: real("longitudine"),
   link: text("link"),
+  linkOrganizzatore: text("link_organizzatore"),
   descrizione: text("descrizione"),
   immagine: text("immagine"),
   fonte: text("fonte").notNull().default(""),
+  testoEstratto: text("testo_estratto"),
+  parentId: integer("parent_id").references((): AnyPgColumn => eventsTable.id, { onDelete: "cascade" }),
   aggiornatoIl: timestamp("aggiornato_il", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -1,9 +1,11 @@
 import { useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MapPin, Calendar, ExternalLink, Loader2 } from "lucide-react";
+import { MapPin, Calendar, ExternalLink, Loader2, Flag, Share2, Globe } from "lucide-react";
 import { format } from "date-fns";
 import type { Event } from "@workspace/api-client-react";
+import { Link } from "wouter";
+import { Helmet } from "react-helmet-async";
 
 interface EventListProps {
   events: Event[];
@@ -31,8 +33,52 @@ export function EventList({
     }
   }, [selectedEventId]);
 
+  const selectedEvent = events.find((e) => e.id === selectedEventId);
+
+  const jsonLd = selectedEvent ? {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    "name": selectedEvent.titolo,
+    "description": selectedEvent.descrizione || selectedEvent.testo_estratto || "",
+    "startDate": selectedEvent.data_inizio,
+    ...(selectedEvent.data_fine ? { "endDate": selectedEvent.data_fine } : {}),
+    "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+    "eventStatus": "https://schema.org/EventScheduled",
+    "location": {
+      "@type": "Place",
+      "name": selectedEvent.luogo || "Sardegna",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": selectedEvent.luogo || "Sardegna",
+        "addressRegion": "Sardegna",
+        "addressCountry": "IT"
+      },
+      ...(selectedEvent.latitudine && selectedEvent.longitudine ? {
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": selectedEvent.latitudine,
+          "longitude": selectedEvent.longitudine
+        }
+      } : {})
+    },
+    ...(selectedEvent.immagine ? { "image": [selectedEvent.immagine.startsWith("http") ? selectedEvent.immagine : `https://sardegnaeventi.it/api/event-images/${selectedEvent.immagine}`] } : {})
+  } : null;
+
   return (
     <div className="flex-1 bg-card rounded-xl shadow-sm border border-border overflow-hidden flex flex-col min-h-0">
+      {selectedEvent && (
+        <Helmet>
+          <title>{`${selectedEvent.titolo} - Sardegna Eventi`}</title>
+          <meta name="description" content={selectedEvent.descrizione?.slice(0, 155) || `Dettagli per ${selectedEvent.titolo}`} />
+          <meta property="og:title" content={selectedEvent.titolo} />
+          <meta property="og:description" content={selectedEvent.descrizione?.slice(0, 155)} />
+          {selectedEvent.immagine && <meta property="og:image" content={selectedEvent.immagine} />}
+          <script type="application/ld+json">
+            {JSON.stringify(jsonLd)}
+          </script>
+        </Helmet>
+      )}
+
       <div className="px-3 py-2.5 border-b border-border bg-muted/30 flex-shrink-0">
         <p className="text-sm font-medium text-foreground">
           {isLoading ? "Caricamento..." : `${events.length} event${events.length === 1 ? "o" : "i"} trovati`}
@@ -58,61 +104,149 @@ export function EventList({
           )}
           {!isLoading &&
             !isError &&
-            events.map((evt) => (
-              <div
-                key={evt.id}
-                ref={(el) => {
-                  if (el) cardRefs.current.set(evt.id, el);
-                  else cardRefs.current.delete(evt.id);
-                }}
-              >
-                <Card
-                  className={`cursor-pointer transition-all hover:border-primary/50 ${
-                    selectedEventId === evt.id
-                      ? "border-primary shadow-sm bg-primary/5"
-                      : "bg-card"
-                  }`}
-                  onClick={() => onSelectEvent(evt.id)}
+            events.map((evt) => {
+              const isFestival = events.some(e => e.parent_id === evt.id);
+              
+              // Nascondi i sotto-eventi dalla lista principale per non creare confusione
+              // (verranno visti nella pagina del festival o sulla mappa)
+              if (evt.parent_id) return null;
+
+              return (
+                <div
+                  key={evt.id}
+                  ref={(el) => {
+                    if (el) cardRefs.current.set(evt.id, el);
+                    else cardRefs.current.delete(evt.id);
+                  }}
                 >
-                  <CardContent className="p-4">
-                    <h3 className="font-bold text-foreground mb-2 leading-tight text-sm">
-                      {evt.titolo}
-                    </h3>
-                    <div className="flex flex-col gap-1.5 text-xs text-muted-foreground">
-                      {evt.data_inizio && (
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
-                          <span>
-                            {format(new Date(evt.data_inizio), "dd/MM/yyyy")}
-                            {evt.data_fine && evt.data_fine !== evt.data_inizio
-                              ? ` – ${format(new Date(evt.data_fine), "dd/MM/yyyy")}`
-                              : ""}
-                          </span>
+                  <Card
+                    className={`cursor-pointer transition-all duration-300 ${
+                      isFestival
+                        ? selectedEventId === evt.id
+                          ? "border-amber-500 shadow-md bg-amber-500/5 ring-1 ring-amber-500/30"
+                          : "border-amber-200 hover:border-amber-400 bg-amber-50/30 shadow-sm hover:shadow-md hover:-translate-y-0.5"
+                        : selectedEventId === evt.id
+                          ? "border-primary shadow-sm bg-primary/5"
+                          : "bg-card hover:border-primary/50"
+                    }`}
+                    onClick={() => onSelectEvent(evt.id)}
+                  >
+                    <CardContent className="p-4 relative">
+                      {isFestival && (
+                        <div className="absolute top-4 right-4 bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider flex items-center gap-1 uppercase">
+                          <Flag className="w-3 h-3 text-amber-600 fill-amber-600" />
+                          Festival
                         </div>
                       )}
-                      {evt.luogo && (
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-secondary" />
-                          <span className="font-medium">{evt.luogo}</span>
-                        </div>
-                      )}
-                      {evt.link && (
-                        <a
-                          href={evt.link}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center gap-1 text-primary hover:underline mt-0.5"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          Vedi fonte
-                        </a>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            ))}
+                      <h3 className={`font-bold text-foreground mb-2 leading-tight text-sm pr-16 ${isFestival ? "text-amber-950 dark:text-amber-100" : ""}`}>
+                        {evt.titolo}
+                      </h3>
+                      <div className="flex flex-col gap-1.5 text-xs text-muted-foreground">
+                        {evt.data_inizio && (
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className={`w-3.5 h-3.5 flex-shrink-0 ${isFestival ? "text-amber-600" : ""}`} />
+                            <span>
+                              {format(new Date(evt.data_inizio), "dd/MM/yyyy")}
+                              {evt.data_fine && evt.data_fine !== evt.data_inizio
+                                ? ` - ${format(new Date(evt.data_fine), "dd/MM/yyyy")}`
+                                : ""}
+                            </span>
+                          </div>
+                        )}
+                        {evt.luogo && (
+                          <div className="flex items-center gap-1.5">
+                            <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${isFestival ? "text-amber-600" : "text-secondary"}`} />
+                            <span className="font-medium">{evt.luogo}</span>
+                          </div>
+                        )}
+                        
+                        {isFestival ? (
+                          <div className="flex flex-col gap-2 mt-3 pt-2 border-t border-amber-200/50">
+                            <Link href={`/festival/${evt.id}`}>
+                              <a 
+                                className="flex items-center gap-1.5 text-white font-semibold bg-amber-600 hover:bg-amber-700 transition-colors w-fit px-3 py-1.5 rounded-md text-xs shadow-sm hover:shadow" 
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Flag className="w-3.5 h-3.5" />
+                                Approfondisci Programma →
+                              </a>
+                            </Link>
+                            
+                            {selectedEventId === evt.id && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const slug = evt.titolo
+                                    .toLowerCase()
+                                    .replace(/[^a-z0-9]+/g, "-")
+                                    .replace(/(^-|-$)/g, "");
+                                  const url = `${window.location.origin}/eventi/${evt.id}-${slug}`;
+                                  if (navigator.share) {
+                                    navigator.share({
+                                      title: evt.titolo,
+                                      text: evt.descrizione || "",
+                                      url: url
+                                    }).catch(() => {});
+                                  } else {
+                                    navigator.clipboard.writeText(url);
+                                    alert("Link copiato negli appunti!");
+                                  }
+                                }}
+                                className="flex items-center gap-1 text-muted-foreground hover:text-foreground text-xs bg-transparent border-none cursor-pointer mt-1"
+                              >
+                                <Share2 className="w-3.5 h-3.5" />
+                                Condividi Festival
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          selectedEventId === evt.id && (
+                            <div className="flex items-center gap-3 mt-3 pt-2 border-t border-border/50">
+                              {evt.link_organizzatore && (
+                                <a
+                                  href={evt.link_organizzatore}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="flex items-center gap-1 text-amber-600 hover:underline text-xs font-semibold"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Globe className="w-3.5 h-3.5" />
+                                  Sito Organizzatore
+                                </a>
+                              )}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const slug = evt.titolo
+                                    .toLowerCase()
+                                    .replace(/[^a-z0-9]+/g, "-")
+                                    .replace(/(^-|-$)/g, "");
+                                  const url = `${window.location.origin}/eventi/${evt.id}-${slug}`;
+                                  if (navigator.share) {
+                                    navigator.share({
+                                      title: evt.titolo,
+                                      text: evt.descrizione || "",
+                                      url: url
+                                    }).catch(() => {});
+                                  } else {
+                                    navigator.clipboard.writeText(url);
+                                    alert("Link copiato negli appunti!");
+                                  }
+                                }}
+                                className="flex items-center gap-1 text-muted-foreground hover:text-foreground text-xs bg-transparent border-none cursor-pointer"
+                              >
+                                <Share2 className="w-3.5 h-3.5" />
+                                Condividi
+                              </button>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              );
+            })}
         </div>
       </ScrollArea>
     </div>

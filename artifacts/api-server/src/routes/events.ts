@@ -14,7 +14,7 @@ import {
   ListRejectedEventsResponse,
   RestoreRejectedEventParams,
 } from "@workspace/api-zod";
-import { execFile } from "child_process";
+import { execFile, spawn } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import { logger } from "../lib/logger";
@@ -33,8 +33,20 @@ router.get("/events", async (req, res): Promise<void> => {
 
   const { date_from, date_to, luogo, titolo, fonte } = parsed.data;
 
+  // Filtro eventi più vecchi di 3 mesi
+  const cutoffDate = new Date();
+  cutoffDate.setMonth(cutoffDate.getMonth() - 3);
+  const cutoffString = cutoffDate.toISOString().split("T")[0];
+
   const conditions = [];
-  if (date_from) conditions.push(gte(eventsTable.dataInizio, date_from));
+  conditions.push(gte(eventsTable.dataInizio, cutoffString));
+
+  if (date_from && date_from > cutoffString) {
+    conditions.push(gte(eventsTable.dataInizio, date_from));
+  } else if (date_from) {
+    // If date_from is provided but older than cutoff, we still rely on cutoff
+  }
+  
   if (date_to) conditions.push(lte(eventsTable.dataInizio, date_to));
   if (luogo) conditions.push(ilike(eventsTable.luogo, `%${luogo}%`));
   if (titolo) conditions.push(ilike(eventsTable.titolo, `%${titolo}%`));
@@ -58,6 +70,8 @@ router.get("/events", async (req, res): Promise<void> => {
     descrizione: r.descrizione,
     immagine: r.immagine,
     fonte: r.fonte,
+    testo_estratto: r.testoEstratto,
+    parent_id: r.parentId,
     aggiornato_il: r.aggiornatoIl.toISOString(),
   }));
 
@@ -115,6 +129,38 @@ router.get("/events/stats", async (_req, res): Promise<void> => {
   res.json(GetEventStatsResponse.parse(stats));
 });
 
+router.get("/sitemap.xml", async (req, res): Promise<void> => {
+  res.setHeader("Content-Type", "application/xml");
+  try {
+    const rows = await db.select({ id: eventsTable.id, titolo: eventsTable.titolo }).from(eventsTable);
+    const baseUrl = process.env.FRONTEND_URL || "https://sardegnaeventi.it";
+    
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+    xml += `  <url><loc>${baseUrl}/</loc><priority>1.0</priority></url>\n`;
+    xml += `  <url><loc>${baseUrl}/stats</loc><priority>0.5</priority></url>\n`;
+    
+    for (const r of rows) {
+      const slug = r.titolo
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+      xml += `  <url><loc>${baseUrl}/eventi/${r.id}-${slug}</loc><priority>0.8</priority></url>\n`;
+    }
+    
+    xml += `</urlset>`;
+    res.send(xml);
+  } catch (e) {
+    res.status(500).send("Error generating sitemap");
+  }
+});
+
+router.get("/robots.txt", (req, res): void => {
+  res.setHeader("Content-Type", "text/plain");
+  const baseUrl = process.env.FRONTEND_URL || "https://sardegnaeventi.it";
+  res.send(`User-agent: *\nAllow: /\nSitemap: ${baseUrl}/sitemap.xml\n`);
+});
+
 router.post("/events/refresh", requireAdminKey, async (req, res): Promise<void> => {
   req.log.info("Starting events refresh via Python scraper");
 
@@ -125,7 +171,7 @@ router.post("/events/refresh", requireAdminKey, async (req, res): Promise<void> 
   const scraperScript = path.resolve(workspaceRoot, "scraper_runner.py");
 
   try {
-    const { stdout, stderr } = await execFileAsync("python3", [scraperScript], {
+    const { stdout, stderr } = await execFileAsync("python", [scraperScript], {
       timeout: 300000,
       env: { ...process.env },
       cwd: workspaceRoot,
@@ -166,58 +212,108 @@ router.post("/events/refresh", requireAdminKey, async (req, res): Promise<void> 
   }
 });
 
+import fs from "fs";
+
 // Human-in-the-loop: preview events without writing to DB
-router.post("/events/refresh/preview", requireAdminKey, async (req, res): Promise<void> => {
-  req.log.info("Starting scraper preview (dry-run)");
+router.post("/events/refresh/preview", requireAdminKey, (req, res): void => {
+  req.log.info("Starting scraper preview (dry-run) with streaming");
 
   const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
     ? path.resolve(process.cwd(), "../..")
     : process.cwd();
 
   const scraperScript = path.resolve(workspaceRoot, "scraper_runner.py");
+  const cacheFile = path.resolve(workspaceRoot, "preview_cache.json");
 
-  try {
-    const { stdout, stderr } = await execFileAsync(
-      "python3",
-      [scraperScript, "--preview"],
-      { timeout: 300000, env: { ...process.env }, cwd: workspaceRoot }
-    );
+  res.setHeader("Content-Type", "application/json-lines");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
 
-    req.log.info({ stdout: stdout.slice(0, 500) }, "Preview output");
-    if (stderr) req.log.warn({ stderr: stderr.slice(0, 200) }, "Preview stderr");
+  const child = spawn("python", [scraperScript, "--preview"], {
+    cwd: workspaceRoot,
+    env: { ...process.env },
+  });
 
-    const jsonMatch = stdout.match(/\{.*"nuovi".*\}/);
-    if (!jsonMatch) {
-      res.json(PreviewEventsResponse.parse({
-        success: false,
-        nuovi: 0,
-        aggiornati: 0,
-        errori: 1,
-        messaggio: "No preview output from scraper",
-        events: [],
-      }));
-      return;
+  let outputBuffer = "";
+
+  child.stdout.on("data", (data) => {
+    outputBuffer += data.toString();
+    res.write(data);
+  });
+
+  child.stderr.on("data", (data) => {
+    req.log.warn({ stderr: data.toString() }, "Preview stderr");
+  });
+
+  child.on("close", (code) => {
+    if (code !== 0) {
+      req.log.error({ code }, "Preview failed");
+      res.write(JSON.stringify({ success: false, nuovi: 0, aggiornati: 0, errori: 1, messaggio: `Process exited with code ${code}`, events: [] }) + "\n");
+    } else {
+      // Parse output buffer to find the final events payload and cache it
+      try {
+        const lines = outputBuffer.split("\n");
+        for (let i = lines.length - 1; i >= 0; i--) {
+          const line = lines[i].trim();
+          if (line.startsWith("{") && line.includes('"events"')) {
+            const parsed = JSON.parse(line);
+            if (parsed.events) {
+              fs.writeFileSync(cacheFile, JSON.stringify(parsed.events, null, 2), "utf8");
+              break;
+            }
+          }
+        }
+      } catch (e) {
+        req.log.error({ err: e }, "Failed to parse/save preview cache");
+      }
     }
+    res.end();
+  });
 
-    const parsed = JSON.parse(jsonMatch[0]);
-    res.json(PreviewEventsResponse.parse({
-      success: parsed.success ?? true,
-      nuovi: parsed.nuovi ?? 0,
-      aggiornati: parsed.aggiornati ?? 0,
-      errori: parsed.errori ?? 0,
-      messaggio: parsed.messaggio || `Preview: ${parsed.nuovi ?? 0} eventi trovati`,
-      events: parsed.events || [],
-    }));
+  child.on("error", (err) => {
+    req.log.error({ err }, "Preview process error");
+    res.write(JSON.stringify({ success: false, nuovi: 0, aggiornati: 0, errori: 1, messaggio: String(err), events: [] }) + "\n");
+    res.end();
+  });
+});
+
+router.get("/events/refresh/preview/cache", requireAdminKey, (req, res): void => {
+  const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
+    ? path.resolve(process.cwd(), "../..")
+    : process.cwd();
+  const cacheFile = path.resolve(workspaceRoot, "preview_cache.json");
+  
+  try {
+    if (fs.existsSync(cacheFile)) {
+      const data = fs.readFileSync(cacheFile, "utf8");
+      const events = JSON.parse(data);
+      res.json({ success: true, events });
+    } else {
+      res.json({ success: true, events: [] });
+    }
   } catch (err) {
-    req.log.error({ err }, "Preview failed");
-    res.json(PreviewEventsResponse.parse({
-      success: false,
-      nuovi: 0,
-      aggiornati: 0,
-      errori: 1,
-      messaggio: String(err),
-      events: [],
-    }));
+    req.log.error({ err }, "Failed to read preview cache");
+    res.json({ success: false, events: [], messaggio: String(err) });
+  }
+});
+
+router.put("/events/refresh/preview/cache", requireAdminKey, (req, res): void => {
+  const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
+    ? path.resolve(process.cwd(), "../..")
+    : process.cwd();
+  const cacheFile = path.resolve(workspaceRoot, "preview_cache.json");
+  
+  try {
+    const { events } = req.body;
+    if (Array.isArray(events)) {
+      fs.writeFileSync(cacheFile, JSON.stringify(events, null, 2), "utf8");
+      res.json({ success: true });
+    } else {
+      res.status(400).json({ error: "Invalid events array" });
+    }
+  } catch (err) {
+    req.log.error({ err }, "Failed to write preview cache");
+    res.status(500).json({ error: String(err) });
   }
 });
 
@@ -236,7 +332,7 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
   let aggiornati = 0;
   let errori = 0;
 
-  for (const ev of events) {
+  for (const ev of events as any[]) {
     try {
       const [existing] = await db
         .select({ id: eventsTable.id })
@@ -260,12 +356,31 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
             link: ev.link,
             descrizione: ev.descrizione,
             immagine: ev.immagine,
+            testoEstratto: ev.testo_estratto || null,
+            linkOrganizzatore: ev.link_organizzatore || null,
             aggiornatoIl: new Date(),
           })
           .where(eq(eventsTable.id, existing.id));
+
+        // If it is a festival, let's create the sub-events
+        if (ev.is_festival && ev.sotto_eventi && ev.sotto_eventi.length > 0) {
+          // Delete old sub-events to avoid duplicate entries
+          await db.delete(eventsTable).where(eq(eventsTable.parentId, existing.id));
+          for (const se of ev.sotto_eventi) {
+            await db.insert(eventsTable).values({
+              titolo: `${ev.titolo} - ${se.titolo}`,
+              dataInizio: se.data_inizio,
+              dataFine: se.data_fine || se.data_inizio,
+              luogo: se.luogo || ev.luogo,
+              parentId: existing.id,
+              fonte: ev.fonte || "",
+              linkOrganizzatore: ev.link_organizzatore || null,
+            });
+          }
+        }
         aggiornati++;
       } else {
-        await db.insert(eventsTable).values({
+        const [inserted] = await db.insert(eventsTable).values({
           titolo: ev.titolo,
           dataInizio: ev.data_inizio,
           dataFine: ev.data_fine,
@@ -276,7 +391,24 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
           descrizione: ev.descrizione,
           immagine: ev.immagine,
           fonte: ev.fonte || "",
-        });
+          testoEstratto: ev.testo_estratto || null,
+          linkOrganizzatore: ev.link_organizzatore || null,
+        }).returning({ id: eventsTable.id });
+
+        const parentId = inserted?.id;
+        if (parentId && ev.is_festival && ev.sotto_eventi && ev.sotto_eventi.length > 0) {
+          for (const se of ev.sotto_eventi) {
+            await db.insert(eventsTable).values({
+              titolo: `${ev.titolo} - ${se.titolo}`,
+              dataInizio: se.data_inizio,
+              dataFine: se.data_fine || se.data_inizio,
+              luogo: se.luogo || ev.luogo,
+              parentId,
+              fonte: ev.fonte || "",
+              linkOrganizzatore: ev.link_organizzatore || null,
+            });
+          }
+        }
         nuovi++;
       }
     } catch (e) {
@@ -292,6 +424,117 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
     errori,
     messaggio: `Pubblicati: ${nuovi} nuovi, ${aggiornati} aggiornati`,
   }));
+});
+
+router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> => {
+  req.log.info("Starting on-demand AI analysis for events");
+
+  const { events, target } = req.body;
+  if (!events || !Array.isArray(events) || events.length === 0) {
+    res.status(400).json({ error: "No events provided" });
+    return;
+  }
+
+  const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
+    ? path.resolve(process.cwd(), "../..")
+    : process.cwd();
+
+  const aiScript = path.resolve(workspaceRoot, "scraper/run_ai.py");
+
+  try {
+    const child = spawn("python", [aiScript], {
+      cwd: workspaceRoot,
+      env: { ...process.env },
+    });
+
+    child.stdin.write(JSON.stringify({ events, target }));
+    child.stdin.end();
+
+    let stdoutData = "";
+    let stderrData = "";
+
+    child.stdout.on("data", (chunk) => {
+      stdoutData += chunk;
+    });
+
+    child.stderr.on("data", (chunk) => {
+      stderrData += chunk;
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      child.on("close", (code) => {
+        // code null = process killed externally (e.g. SIGTERM), treat as success to not block
+        if (code === 0 || code === null) resolve();
+        else reject(new Error(`Python script exited with code ${code}. Stderr: ${stderrData}`));
+      });
+      child.on("error", reject);
+    });
+
+    let results = [];
+    try {
+      const nonLogLines = stdoutData.split("\n")
+        .map(l => l.trim())
+        .filter(l => l && !l.startsWith('{"log":'))
+        .join("");
+      results = JSON.parse(nonLogLines);
+    } catch (e) {
+      throw new Error(`Failed to parse Python output: ${stdoutData}`);
+    }
+
+    let errori = 0;
+    for (const r of results) {
+      if (r.error) {
+        errori++;
+        req.log.error({ err: r.error, event_id: r.id, tmp_id: r.tmp_id }, "AI analysis failed for event");
+      } else if (r.id) {
+        // If it has a real DB ID, update the DB directly
+        try {
+          await db.update(eventsTable)
+            .set({
+              testoEstratto: r.testo_estratto,
+              linkOrganizzatore: r.link_organizzatore || null,
+              aggiornatoIl: new Date(),
+            })
+            .where(eq(eventsTable.id, r.id));
+            
+          // We can also insert sotto_eventi if it's a festival, but since this
+          // event is already published, we should create the sub-events in the DB
+          if (r.is_festival && r.sotto_eventi && r.sotto_eventi.length > 0) {
+            // First fetch the parent event to copy its location and source
+            const [parent] = await db.select().from(eventsTable).where(eq(eventsTable.id, r.id));
+            if (parent) {
+              // Delete old sub-events to prevent duplicates
+              await db.delete(eventsTable).where(eq(eventsTable.parentId, parent.id));
+              for (const se of r.sotto_eventi) {
+                await db.insert(eventsTable).values({
+                  titolo: `${parent.titolo} - ${se.titolo}`,
+                  dataInizio: se.data_inizio,
+                  dataFine: se.data_fine || se.data_inizio,
+                  luogo: se.luogo || parent.luogo,
+                  parentId: parent.id,
+                  fonte: parent.fonte,
+                  linkOrganizzatore: r.link_organizzatore || null,
+                });
+              }
+            }
+          }
+        } catch (e) {
+          req.log.error({ err: e, event_id: r.id }, "Failed to save AI results to DB");
+          errori++;
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      results,
+      errori,
+      messaggio: `Analisi completata. ${results.length - errori} successi, ${errori} errori.`,
+    });
+  } catch (err) {
+    req.log.error({ err }, "AI analysis endpoint failed");
+    res.status(500).json({ error: String(err) });
+  }
 });
 
 router.delete("/events/:id", requireAdminKey, async (req, res): Promise<void> => {
@@ -399,6 +642,8 @@ router.get("/events/:id", async (req, res): Promise<void> => {
       descrizione: row.descrizione,
       immagine: row.immagine,
       fonte: row.fonte,
+      testo_estratto: row.testoEstratto,
+      parent_id: row.parentId,
       aggiornato_il: row.aggiornatoIl.toISOString(),
     })
   );

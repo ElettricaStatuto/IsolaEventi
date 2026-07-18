@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useRoute, useLocation } from "wouter";
 import {
   useListEvents,
   getListEventsQueryKey,
@@ -12,7 +13,8 @@ import { MapContainer } from "../components/map-container";
 
 export function Home() {
   const queryClient = useQueryClient();
-  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+  const [match, params] = useRoute("/eventi/:idAndSlug");
+  const [, setLocation] = useLocation();
   const [showEventList, setShowEventList] = useState(true);
 
   // Listen for global "toggle-map-view" event from the nav "Mappa" button
@@ -29,11 +31,23 @@ export function Home() {
     isError,
   } = useListEvents({}, { query: { queryKey: getListEventsQueryKey({}) } });
 
+  // Derive selectedEventId from URL
+  const selectedEventId = params?.idAndSlug ? parseInt(params.idAndSlug.split("-")[0], 10) : null;
+
   // Client-side date range filtering
   const { filteredEvents, dateRange, setDateRange } = useEventsFilter(events);
 
   const handleSelectEvent = (id: number) => {
-    setSelectedEventId(id);
+    const ev = events.find((e) => e.id === id);
+    if (ev) {
+      const slug = ev.titolo
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+      setLocation(`/eventi/${id}-${slug}`);
+    } else {
+      setLocation("/");
+    }
   };
 
   return (

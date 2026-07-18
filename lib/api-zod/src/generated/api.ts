@@ -39,7 +39,11 @@ export const ListEventsResponseItem = zod.object({
   "descrizione": zod.string().nullish(),
   "immagine": zod.string().nullish(),
   "fonte": zod.string(),
-  "aggiornato_il": zod.string().optional()
+  "aggiornato_il": zod.string().optional(),
+  "parent_id": zod.number().nullish(),
+  "testo_estratto": zod.string().nullish(),
+  "is_festival": zod.boolean().nullish(),
+  "link_organizzatore": zod.string().nullish()
 })
 export const ListEventsResponse = zod.array(ListEventsResponseItem)
 
@@ -90,7 +94,11 @@ export const PreviewEventsResponse = zod.object({
   "descrizione": zod.string().nullish(),
   "immagine": zod.string().nullish(),
   "fonte": zod.string(),
-  "is_new": zod.boolean().optional()
+  "is_new": zod.boolean().optional(),
+  "parent_id": zod.number().nullish(),
+  "testo_estratto": zod.string().nullish(),
+  "is_festival": zod.boolean().nullish(),
+  "link_organizzatore": zod.string().nullish()
 }))
 })
 
@@ -136,7 +144,11 @@ export const ApproveEventsBody = zod.object({
   "descrizione": zod.string().nullish(),
   "immagine": zod.string().nullish(),
   "fonte": zod.string(),
-  "is_new": zod.boolean().optional()
+  "is_new": zod.boolean().optional(),
+  "parent_id": zod.number().nullish(),
+  "testo_estratto": zod.string().nullish(),
+  "is_festival": zod.boolean().nullish(),
+  "link_organizzatore": zod.string().nullish()
 }))
 })
 
@@ -168,7 +180,11 @@ export const GetEventResponse = zod.object({
   "descrizione": zod.string().nullish(),
   "immagine": zod.string().nullish(),
   "fonte": zod.string(),
-  "aggiornato_il": zod.string().optional()
+  "aggiornato_il": zod.string().optional(),
+  "parent_id": zod.number().nullish(),
+  "testo_estratto": zod.string().nullish(),
+  "is_festival": zod.boolean().nullish(),
+  "link_organizzatore": zod.string().nullish()
 })
 
 
