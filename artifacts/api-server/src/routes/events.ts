@@ -435,6 +435,10 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
     return;
   }
 
+  res.setHeader("Content-Type", "application/json-lines");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
   const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
     ? path.resolve(process.cwd(), "../..")
     : process.cwd();
@@ -454,7 +458,17 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
     let stderrData = "";
 
     child.stdout.on("data", (chunk) => {
-      stdoutData += chunk;
+      const text = chunk.toString();
+      stdoutData += text;
+      
+      // Split text by line to stream log messages immediately
+      const lines = text.split("\n");
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed && trimmed.startsWith('{"log":')) {
+          res.write(trimmed + "\n");
+        }
+      }
     });
 
     child.stderr.on("data", (chunk) => {
@@ -471,7 +485,11 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
 
     let results = [];
     try {
-      results = JSON.parse(stdoutData);
+      const nonLogLines = stdoutData.split("\n")
+        .map(l => l.trim())
+        .filter(l => l && !l.startsWith('{"log":'))
+        .join("");
+      results = JSON.parse(nonLogLines);
     } catch (e) {
       throw new Error(`Failed to parse Python output: ${stdoutData}`);
     }
@@ -520,15 +538,17 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
       }
     }
 
-    res.json({
+    res.write(JSON.stringify({
       success: true,
       results,
       errori,
       messaggio: `Analisi completata. ${results.length - errori} successi, ${errori} errori.`,
-    });
+    }) + "\n");
+    res.end();
   } catch (err) {
     req.log.error({ err }, "AI analysis endpoint failed");
-    res.status(500).json({ error: String(err) });
+    res.write(JSON.stringify({ error: String(err) }) + "\n");
+    res.end();
   }
 });
 

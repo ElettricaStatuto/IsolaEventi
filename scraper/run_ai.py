@@ -23,8 +23,12 @@ def main():
             target = "both"
 
         results = []
+        total = len(events)
         
-        for ev in events:
+        for idx, ev in enumerate(events, 1):
+            log_msg = f"[{idx}/{total}] Sto analizzando l'evento: '{ev.get('titolo')}' (Target: {target})"
+            print(json.dumps({"log": log_msg}), flush=True)
+            
             text = ev.get("descrizione") or ev.get("titolo") or ""
             image_url = ev.get("immagine")
             link = ev.get("link")

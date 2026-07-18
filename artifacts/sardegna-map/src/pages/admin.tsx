@@ -7,9 +7,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Loader2, CheckCircle2, XCircle, ShieldCheck, ArrowLeft, Eye, Database,
-  Trash2, RotateCcw, AlertTriangle, Calendar, MapPin, Globe, Search, RefreshCw, Clock
+  Trash2, RotateCcw, AlertTriangle, Calendar, MapPin, Globe, Search, RefreshCw, Clock, Terminal
 } from "lucide-react";
 
 const LS_KEY = "sardegna_admin_key";
@@ -82,6 +83,8 @@ export function Admin() {
   const [keyError, setKeyError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("scraping");
   const [analysisTarget, setAnalysisTarget] = useState<"both" | "image" | "text" | "source_page">("both");
+  const [analysisLogs, setAnalysisLogs] = useState<string[]>([]);
+  const [analyzingStep, setAnalyzingStep] = useState<"idle" | "preview" | "published">("idle");
 
   // ── Scraping tab ──
   const [previewEvents, setPreviewEvents] = useState<EventPreview[]>([]);
@@ -360,7 +363,8 @@ export function Admin() {
       return;
     }
 
-    setAnalyzingPreview(true);
+    setAnalyzingStep("preview");
+    setAnalysisLogs([]);
     setError(null);
     try {
       const payload = toAnalyze.map((ev) => ({
@@ -371,32 +375,62 @@ export function Admin() {
         link: ev.link,
       }));
 
-      const data = await fetchJson<any>("/api/events/analyze", "POST", { events: payload, target: analysisTarget }, adminKey);
-      if (data.success) {
-        setPreviewEvents((prev) => {
-          const next = [...prev];
-          for (const res of data.results) {
-            if (!res.error && res.tmp_id != null) {
-              const idx = parseInt(res.tmp_id, 10);
-              next[idx] = {
-                ...next[idx],
-                testo_estratto: res.testo_estratto,
-                is_festival: res.is_festival,
-                sotto_eventi: res.sotto_eventi,
-                link_organizzatore: res.link_organizzatore,
-              };
-            }
+      const response = await fetch("/api/events/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey,
+        },
+        body: JSON.stringify({ events: payload, target: analysisTarget }),
+      });
+
+      if (!response.body) throw new Error("No response body");
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const data = JSON.parse(line);
+          if (data.log) {
+            setAnalysisLogs(prev => [...prev, data.log]);
           }
-          updatePreviewCache(next);
-          return next;
-        });
-        setSelectedAnalyzeIds(new Set());
-        alert(`Analisi completata: ${data.messaggio}`);
+          if (data.success) {
+            setPreviewEvents((prev) => {
+              const next = [...prev];
+              for (const res of data.results) {
+                if (!res.error && res.tmp_id != null) {
+                  const idx = parseInt(res.tmp_id, 10);
+                  next[idx] = {
+                    ...next[idx],
+                    testo_estratto: res.testo_estratto,
+                    is_festival: res.is_festival,
+                    sotto_eventi: res.sotto_eventi,
+                    link_organizzatore: res.link_organizzatore,
+                  };
+                }
+              }
+              updatePreviewCache(next);
+              return next;
+            });
+            setSelectedAnalyzeIds(new Set());
+            alert(`Analisi completata: ${data.messaggio}`);
+          }
+          if (data.error) {
+            throw new Error(data.error);
+          }
+        }
       }
-    } catch (e) {
-      setError(`Errore analisi: ${String(e)}`);
+    } catch (e: any) {
+      setError(`Errore analisi: ${String(e.message || e)}`);
     } finally {
-      setAnalyzingPreview(false);
+      setAnalyzingStep("idle");
     }
   };
 
@@ -524,11 +558,12 @@ export function Admin() {
 
   const handleAnalyzePublished = async () => {
     if (selectedPubAnalyzeIds.size === 0) {
-      setError("Seleziona almeno un evento pubblicato per l'analisi locandina.");
+      setError("Seleziona almeno un evento pubblicato per l'analisi.");
       return;
     }
     const toAnalyze = publishedEvents.filter(ev => selectedPubAnalyzeIds.has(ev.id));
-    setAnalyzingPublished(true);
+    setAnalyzingStep("published");
+    setAnalysisLogs([]);
     setError(null);
     try {
       const payload = toAnalyze.map((ev) => ({
@@ -538,16 +573,47 @@ export function Admin() {
         immagine: ev.immagine,
         link: ev.link,
       }));
-      const data = await fetchJson<any>("/api/events/analyze", "POST", { events: payload, target: analysisTarget }, adminKey);
-      if (data.success) {
-        setSelectedPubAnalyzeIds(new Set());
-        alert(`Analisi completata: ${data.messaggio}`);
-        loadPublished(appliedFilters);
+
+      const response = await fetch("/api/events/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey,
+        },
+        body: JSON.stringify({ events: payload, target: analysisTarget }),
+      });
+
+      if (!response.body) throw new Error("No response body");
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const data = JSON.parse(line);
+          if (data.log) {
+            setAnalysisLogs(prev => [...prev, data.log]);
+          }
+          if (data.success) {
+            setSelectedPubAnalyzeIds(new Set());
+            alert(`Analisi completata: ${data.messaggio}`);
+            loadPublished(appliedFilters);
+          }
+          if (data.error) {
+            throw new Error(data.error);
+          }
+        }
       }
-    } catch (e) {
-      setError(`Errore analisi pubblicati: ${String(e)}`);
+    } catch (e: any) {
+      setError(`Errore analisi pubblicati: ${String(e.message || e)}`);
     } finally {
-      setAnalyzingPublished(false);
+      setAnalyzingStep("idle");
     }
   };
 
@@ -786,9 +852,9 @@ export function Admin() {
                         <Button
                           variant="secondary"
                           onClick={handleAnalyzePreview}
-                          disabled={analyzingPreview || selectedAnalyzeIds.size === 0}
+                          disabled={analyzingStep !== "idle" || selectedAnalyzeIds.size === 0}
                         >
-                          {analyzingPreview && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                          {analyzingStep === "preview" && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                           Analizza ({selectedAnalyzeIds.size})
                         </Button>
                         <Button
@@ -994,9 +1060,9 @@ export function Admin() {
                           variant="secondary"
                           size="sm"
                           onClick={handleAnalyzePublished}
-                          disabled={analyzingPublished}
+                          disabled={analyzingStep !== "idle"}
                         >
-                          {analyzingPublished && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                          {analyzingStep === "published" && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                           Analizza ({selectedPubAnalyzeIds.size})
                         </Button>
                       </>
@@ -1401,6 +1467,41 @@ export function Admin() {
               <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setError(null)}>Chiudi</Button>
             </CardContent>
           </Card>
+        )}
+
+        {/* Streaming analysis terminal logs dialog */}
+        {analyzingStep !== "idle" && (
+          <Dialog open={true} onOpenChange={() => {}}>
+            <DialogContent className="sm:max-w-2xl bg-slate-950 text-slate-100 border-slate-800 font-mono">
+              <DialogHeader>
+                <DialogTitle className="text-slate-200 flex items-center gap-2">
+                  <Terminal className="w-5 h-5 text-emerald-400 animate-pulse" />
+                  Console di Analisi AI in Corso
+                </DialogTitle>
+                <DialogDescription className="text-slate-400">
+                  Sto processando gli eventi selezionati tramite modelli generativi Gemini.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="bg-slate-900/90 border border-slate-800 rounded p-4 h-64 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent flex flex-col gap-1 text-xs">
+                {analysisLogs.map((log, i) => (
+                  <div key={i} className="text-emerald-400 flex items-start gap-1">
+                    <span className="text-emerald-600 select-none">&gt;</span>
+                    <span>{log}</span>
+                  </div>
+                ))}
+                {analysisLogs.length === 0 && (
+                  <div className="text-slate-500 italic">Inizializzazione sessione di analisi...</div>
+                )}
+              </div>
+              <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-800/80 pt-3">
+                <span className="flex items-center gap-1.5 font-sans">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                  Elaborazione in background...
+                </span>
+                <span className="font-sans">Target: {analysisTarget}</span>
+              </div>
+            </DialogContent>
+          </Dialog>
         )}
 
         <p className="text-center text-xs text-muted-foreground mt-2">
