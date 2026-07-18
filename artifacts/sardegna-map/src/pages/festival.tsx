@@ -64,7 +64,7 @@ export function FestivalPage() {
           <div className="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-xl ring-1 ring-border">
             {festival.immagine ? (
               <img 
-                src={`/api/images/${festival.immagine}`} 
+                src={festival.immagine.startsWith("http") ? festival.immagine : `/api/event-images/${festival.immagine}`} 
                 alt={festival.titolo}
                 className="absolute inset-0 w-full h-full object-cover"
               />
