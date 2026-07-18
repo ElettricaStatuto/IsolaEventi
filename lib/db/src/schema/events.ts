@@ -11,6 +11,7 @@ export const eventsTable = pgTable("events", {
   latitudine: real("latitudine"),
   longitudine: real("longitudine"),
   link: text("link"),
+  linkOrganizzatore: text("link_organizzatore"),
   descrizione: text("descrizione"),
   immagine: text("immagine"),
   fonte: text("fonte").notNull().default(""),

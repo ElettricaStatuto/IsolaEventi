@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MapPin, Calendar, ExternalLink, Loader2, Flag, Share2 } from "lucide-react";
+import { MapPin, Calendar, ExternalLink, Loader2, Flag, Share2, Globe } from "lucide-react";
 import { format } from "date-fns";
 import type { Event } from "@workspace/api-client-react";
 import { Link } from "wouter";
@@ -202,16 +202,16 @@ export function EventList({
                         ) : (
                           selectedEventId === evt.id && (
                             <div className="flex items-center gap-3 mt-3 pt-2 border-t border-border/50">
-                              {evt.link && (
+                              {evt.link_organizzatore && (
                                 <a
-                                  href={evt.link}
+                                  href={evt.link_organizzatore}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="flex items-center gap-1 text-primary hover:underline text-xs"
+                                  className="flex items-center gap-1 text-amber-600 hover:underline text-xs font-semibold"
                                   onClick={(e) => e.stopPropagation()}
                                 >
-                                  <ExternalLink className="w-3.5 h-3.5" />
-                                  Vedi fonte
+                                  <Globe className="w-3.5 h-3.5" />
+                                  Sito Organizzatore
                                 </a>
                               )}
                               <button

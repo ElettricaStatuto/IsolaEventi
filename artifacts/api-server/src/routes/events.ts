@@ -356,12 +356,31 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
             link: ev.link,
             descrizione: ev.descrizione,
             immagine: ev.immagine,
+            testoEstratto: ev.testo_estratto || null,
+            linkOrganizzatore: ev.link_organizzatore || null,
             aggiornatoIl: new Date(),
           })
           .where(eq(eventsTable.id, existing.id));
+
+        // If it is a festival, let's create the sub-events
+        if (ev.is_festival && ev.sotto_eventi && ev.sotto_eventi.length > 0) {
+          // Delete old sub-events to avoid duplicate entries
+          await db.delete(eventsTable).where(eq(eventsTable.parentId, existing.id));
+          for (const se of ev.sotto_eventi) {
+            await db.insert(eventsTable).values({
+              titolo: `${ev.titolo} - ${se.titolo}`,
+              dataInizio: se.data_inizio,
+              dataFine: se.data_fine || se.data_inizio,
+              luogo: se.luogo || ev.luogo,
+              parentId: existing.id,
+              fonte: ev.fonte || "",
+              linkOrganizzatore: ev.link_organizzatore || null,
+            });
+          }
+        }
         aggiornati++;
       } else {
-        await db.insert(eventsTable).values({
+        const [inserted] = await db.insert(eventsTable).values({
           titolo: ev.titolo,
           dataInizio: ev.data_inizio,
           dataFine: ev.data_fine,
@@ -372,7 +391,24 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
           descrizione: ev.descrizione,
           immagine: ev.immagine,
           fonte: ev.fonte || "",
-        });
+          testoEstratto: ev.testo_estratto || null,
+          linkOrganizzatore: ev.link_organizzatore || null,
+        }).returning({ id: eventsTable.id });
+
+        const parentId = inserted?.id;
+        if (parentId && ev.is_festival && ev.sotto_eventi && ev.sotto_eventi.length > 0) {
+          for (const se of ev.sotto_eventi) {
+            await db.insert(eventsTable).values({
+              titolo: `${ev.titolo} - ${se.titolo}`,
+              dataInizio: se.data_inizio,
+              dataFine: se.data_fine || se.data_inizio,
+              luogo: se.luogo || ev.luogo,
+              parentId,
+              fonte: ev.fonte || "",
+              linkOrganizzatore: ev.link_organizzatore || null,
+            });
+          }
+        }
         nuovi++;
       }
     } catch (e) {
@@ -381,7 +417,7 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
     }
   }
 
-  res.json(ApproveEventsResponse.parse({
+  res.json(ApproveEventsResult.parse({
     success: true,
     nuovi,
     aggiornati,
@@ -393,7 +429,7 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
 router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> => {
   req.log.info("Starting on-demand AI analysis for events");
 
-  const { events } = req.body;
+  const { events, target } = req.body;
   if (!events || !Array.isArray(events) || events.length === 0) {
     res.status(400).json({ error: "No events provided" });
     return;
@@ -411,7 +447,7 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
       env: { ...process.env },
     });
 
-    child.stdin.write(JSON.stringify(events));
+    child.stdin.write(JSON.stringify({ events, target }));
     child.stdin.end();
 
     let stdoutData = "";
@@ -451,6 +487,7 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
           await db.update(eventsTable)
             .set({
               testoEstratto: r.testo_estratto,
+              linkOrganizzatore: r.link_organizzatore || null,
               aggiornatoIl: new Date(),
             })
             .where(eq(eventsTable.id, r.id));
@@ -461,6 +498,8 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
             // First fetch the parent event to copy its location and source
             const [parent] = await db.select().from(eventsTable).where(eq(eventsTable.id, r.id));
             if (parent) {
+              // Delete old sub-events to prevent duplicates
+              await db.delete(eventsTable).where(eq(eventsTable.parentId, parent.id));
               for (const se of r.sotto_eventi) {
                 await db.insert(eventsTable).values({
                   titolo: `${parent.titolo} - ${se.titolo}`,
@@ -469,6 +508,7 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
                   luogo: se.luogo || parent.luogo,
                   parentId: parent.id,
                   fonte: parent.fonte,
+                  linkOrganizzatore: r.link_organizzatore || null,
                 });
               }
             }

@@ -127,7 +127,7 @@ export function MapContainer({
           <strong style="font-size:13px;line-height:1.35;display:block;margin-bottom:5px;">${evt.titolo}</strong>
           ${dateStr ? `<div style="font-size:11px;color:#666;margin-bottom:3px;">${dateStr}</div>` : ""}
           ${evt.luogo ? `<div style="font-size:11px;font-weight:600;margin-bottom:5px;">${evt.luogo}</div>` : ""}
-          ${evt.link && !isFestival ? `<a href="${evt.link}" target="_blank" rel="noreferrer" style="font-size:11px;color:#c0661b;text-decoration:underline;">Vedi fonte →</a>` : ""}
+          ${(evt as any).link_organizzatore ? `<a href="${(evt as any).link_organizzatore}" target="_blank" rel="noreferrer" style="font-size:11px;color:#d97706;font-weight:bold;text-decoration:underline;display:block;margin-top:4px;">Sito Organizzatore →</a>` : ""}
           ${parentLink}
           ${festivalLink}
         </div>

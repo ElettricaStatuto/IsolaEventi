@@ -36,6 +36,8 @@ export interface Event {
   testo_estratto?: string | null;
   /** @nullable */
   is_festival?: boolean | null;
+  /** @nullable */
+  link_organizzatore?: string | null;
 }
 
 export type EventStatsLuoghiItem = {
@@ -85,6 +87,8 @@ export interface EventPreview {
   testo_estratto?: string | null;
   /** @nullable */
   is_festival?: boolean | null;
+  /** @nullable */
+  link_organizzatore?: string | null;
 }
 
 export interface RefreshPreviewResult {

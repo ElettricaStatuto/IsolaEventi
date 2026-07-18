@@ -14,21 +14,33 @@ def main():
             print(json.dumps([]))
             return
             
-        events = json.loads(input_data)
+        payload = json.loads(input_data)
+        if isinstance(payload, dict):
+            events = payload.get("events", [])
+            target = payload.get("target", "both")
+        else:
+            events = payload
+            target = "both"
+
         results = []
         
         for ev in events:
             text = ev.get("descrizione") or ev.get("titolo") or ""
             image_url = ev.get("immagine")
+            link = ev.get("link")
             
             try:
-                ai_data = analyze_event(text, image_url)
+                # Add link to context for source page extraction if target is source_page
+                ai_data = analyze_event(text, image_url, target=target, link=link)
+                
+                # If we parsed a source page or both, let's verify if we need to pass the link
                 results.append({
                     "id": ev.get("id"), # Can be null if preview
                     "tmp_id": ev.get("tmp_id"), # Unique frontend identifier for previews
                     "testo_estratto": ai_data.get("testo_estratto"),
                     "is_festival": ai_data.get("is_festival", False),
-                    "sotto_eventi": ai_data.get("sotto_eventi", [])
+                    "sotto_eventi": ai_data.get("sotto_eventi", []),
+                    "link_organizzatore": ai_data.get("link_organizzatore")
                 })
             except Exception as e:
                 # Append error info but continue to next event

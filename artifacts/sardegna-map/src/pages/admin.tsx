@@ -30,6 +30,7 @@ interface EventPreview {
   testo_estratto?: string | null;
   is_festival?: boolean | null;
   sotto_eventi?: any[];
+  link_organizzatore?: string | null;
 }
 
 interface DbEvent {
@@ -47,6 +48,7 @@ interface DbEvent {
   aggiornato_il: string;
   testo_estratto?: string | null;
   parent_id?: number | null;
+  linkOrganizzatore?: string | null;
 }
 
 interface RejectedEvent {
@@ -79,6 +81,7 @@ export function Admin() {
   const [keyVerified, setKeyVerified] = useState(true);
   const [keyError, setKeyError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("scraping");
+  const [analysisTarget, setAnalysisTarget] = useState<"both" | "image" | "text" | "source_page">("both");
 
   // ── Scraping tab ──
   const [previewEvents, setPreviewEvents] = useState<EventPreview[]>([]);
@@ -365,9 +368,10 @@ export function Admin() {
         titolo: ev.titolo,
         descrizione: ev.descrizione,
         immagine: ev.immagine,
+        link: ev.link,
       }));
 
-      const data = await fetchJson<any>("/api/events/analyze", "POST", { events: payload }, adminKey);
+      const data = await fetchJson<any>("/api/events/analyze", "POST", { events: payload, target: analysisTarget }, adminKey);
       if (data.success) {
         setPreviewEvents((prev) => {
           const next = [...prev];
@@ -378,7 +382,8 @@ export function Admin() {
                 ...next[idx],
                 testo_estratto: res.testo_estratto,
                 is_festival: res.is_festival,
-                sotto_eventi: res.sotto_eventi
+                sotto_eventi: res.sotto_eventi,
+                link_organizzatore: res.link_organizzatore,
               };
             }
           }
@@ -531,8 +536,9 @@ export function Admin() {
         titolo: ev.titolo,
         descrizione: ev.descrizione,
         immagine: ev.immagine,
+        link: ev.link,
       }));
-      const data = await fetchJson<any>("/api/events/analyze", "POST", { events: payload }, adminKey);
+      const data = await fetchJson<any>("/api/events/analyze", "POST", { events: payload, target: analysisTarget }, adminKey);
       if (data.success) {
         setSelectedPubAnalyzeIds(new Set());
         alert(`Analisi completata: ${data.messaggio}`);
@@ -764,13 +770,26 @@ export function Admin() {
 
                       <div className="flex justify-end gap-3 pt-2">
                         <Button variant="outline" onClick={() => setScrapingStep("input")}>Annulla</Button>
+                        <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1 bg-background text-xs">
+                          <span className="text-muted-foreground text-xs">Analizza:</span>
+                          <select 
+                            value={analysisTarget} 
+                            onChange={(e) => setAnalysisTarget(e.target.value as any)}
+                            className="bg-transparent border-none outline-none font-semibold text-foreground cursor-pointer text-xs"
+                          >
+                            <option value="both">Locandina e Testo</option>
+                            <option value="image">Solo Locandina</option>
+                            <option value="text">Solo Testo</option>
+                            <option value="source_page">Testo Pagina Fonte (Link)</option>
+                          </select>
+                        </div>
                         <Button
                           variant="secondary"
                           onClick={handleAnalyzePreview}
                           disabled={analyzingPreview || selectedAnalyzeIds.size === 0}
                         >
                           {analyzingPreview && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                          Analizza Locandine ({selectedAnalyzeIds.size})
+                          Analizza ({selectedAnalyzeIds.size})
                         </Button>
                         <Button
                           onClick={handleApprove}
@@ -957,15 +976,30 @@ export function Admin() {
                     )}
                     <div className="flex-1"></div>
                     {selectedPubAnalyzeIds.size > 0 && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={handleAnalyzePublished}
-                        disabled={analyzingPublished}
-                      >
-                        {analyzingPublished && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                        Analizza Locandine ({selectedPubAnalyzeIds.size})
-                      </Button>
+                      <>
+                        <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1 bg-background text-xs">
+                          <span className="text-muted-foreground text-xs">Analizza:</span>
+                          <select 
+                            value={analysisTarget} 
+                            onChange={(e) => setAnalysisTarget(e.target.value as any)}
+                            className="bg-transparent border-none outline-none font-semibold text-foreground cursor-pointer text-xs"
+                          >
+                            <option value="both">Locandina e Testo</option>
+                            <option value="image">Solo Locandina</option>
+                            <option value="text">Solo Testo</option>
+                            <option value="source_page">Testo Pagina Fonte (Link)</option>
+                          </select>
+                        </div>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={handleAnalyzePublished}
+                          disabled={analyzingPublished}
+                        >
+                          {analyzingPublished && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                          Analizza ({selectedPubAnalyzeIds.size})
+                        </Button>
+                      </>
                     )}
                     {selectedPubIds.size > 0 && (
                       <>
@@ -1288,9 +1322,27 @@ export function Admin() {
                       className="w-full sm:w-48 h-36 object-cover rounded-md border"
                     />
                   )}
-                  <div className="flex-1">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Descrizione Originale</h4>
-                    <p className="text-sm text-foreground line-clamp-6">{inspectingEvent.descrizione || "Nessuna descrizione fornita."}</p>
+                  <div className="flex-1 flex flex-col gap-3">
+                    <div>
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Descrizione Originale</h4>
+                      <p className="text-sm text-foreground line-clamp-4">{inspectingEvent.descrizione || "Nessuna descrizione fornita."}</p>
+                    </div>
+                    {inspectingEvent.link && (
+                      <div>
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Sito Fonte (Riservato Admin)</h4>
+                        <a href={inspectingEvent.link} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1 w-fit">
+                          <Globe className="w-3.5 h-3.5" /> Apri Sito Fonte
+                        </a>
+                      </div>
+                    )}
+                    {inspectingEvent.link_organizzatore && (
+                      <div>
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Sito Organizzatore</h4>
+                        <a href={inspectingEvent.link_organizzatore} target="_blank" rel="noopener noreferrer" className="text-xs text-amber-600 hover:underline flex items-center gap-1 w-fit font-medium">
+                          <Globe className="w-3.5 h-3.5" /> Apri Sito Organizzatore
+                        </a>
+                      </div>
+                    )}
                   </div>
                 </div>
 

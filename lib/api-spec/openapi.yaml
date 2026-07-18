@@ -269,6 +269,8 @@ components:
           type: ["string", "null"]
         is_festival:
           type: ["boolean", "null"]
+        link_organizzatore:
+          type: ["string", "null"]
 
     EventStats:
       type: object
@@ -357,6 +359,8 @@ components:
           type: ["string", "null"]
         is_festival:
           type: ["boolean", "null"]
+        link_organizzatore:
+          type: ["string", "null"]
 
     ApproveEventsBody:
       type: object
