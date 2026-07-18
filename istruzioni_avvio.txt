@@ -1,0 +1,41 @@
+========================================================================
+           ISTRUZIONI PER AVVIARE E ACCEDERE A ISOLA EVENTI
+========================================================================
+
+Segui questi passaggi ogni volta che desideri avviare l'applicazione
+sul tuo computer.
+
+------------------------------------------------------------------------
+FASE 1: Avviare i server tramite il terminale (Riga di comando)
+------------------------------------------------------------------------
+
+1. Apri il terminale "PowerShell" oppure il "Prompt dei comandi" (CMD).
+2. Spostati nella cartella del progetto eseguendo il comando:
+   cd C:\Users\chess\Desktop\IsolaEventi
+
+3. Digita il seguente comando per avviare sia il backend che il frontend:
+   cmd /c pnpm dev
+
+   (Nota: questo comando specifico evita i blocchi di sicurezza di PowerShell)
+
+4. Lascia la finestra del terminale APERTA. Se chiudi la finestra,
+   il sito smetterà di funzionare.
+
+
+------------------------------------------------------------------------
+FASE 2: Accedere al sito tramite il Browser (Chrome, Edge, Firefox, ecc.)
+------------------------------------------------------------------------
+
+Una volta che il terminale mostra che i server sono pronti, apri il
+browser e digita una di queste barre degli indirizzi in alto:
+
+1. Per vedere la Mappa degli eventi (Interfaccia Utente):
+   http://localhost:5173
+
+2. Per accedere all'Area Amministratore (Gestione eventi, scrapers e AI):
+   http://localhost:5173/admin
+
+   (Nota: per usare le funzioni di amministrazione dovrai inserire la 
+   chiave segreta impostata nel file .env, ad esempio: supersecretadmin123)
+
+========================================================================

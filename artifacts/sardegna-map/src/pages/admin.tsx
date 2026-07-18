@@ -984,6 +984,7 @@ export function Admin() {
                         <th className="p-2 text-left text-xs font-semibold">
                           <div className="flex items-center gap-1"><Globe className="w-3 h-3" /> Fonte</div>
                         </th>
+                        <th className="p-2 text-left text-xs font-semibold">Sotto-eventi</th>
                         <th className="p-2 text-left text-xs font-semibold">Azioni</th>
                       </tr>
                       <tr className="border-t border-border">
@@ -1020,6 +1021,7 @@ export function Admin() {
                             className="h-7 text-xs"
                           />
                         </th>
+                        <th className="p-1"></th>
                         <th className="p-1">
                           <div className="flex gap-1">
                             <Button size="sm" className="h-7 text-xs px-2" onClick={applyFilters}>
@@ -1035,13 +1037,14 @@ export function Admin() {
                     <tbody>
                       {publishedEvents.length === 0 ? (
                         <tr>
-                          <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                          <td colSpan={9} className="p-8 text-center text-muted-foreground">
                             {loadingPublished ? "Caricamento…" : "Nessun evento trovato con i filtri attuali."}
                           </td>
                         </tr>
                       ) : (
                         publishedEvents.map((ev) => {
                           const img = imageUrl(ev);
+                          const subCount = publishedEvents.filter((child) => child.parent_id === ev.id).length;
                           return (
                             <tr key={ev.id} className="border-t border-border hover:bg-muted/40">
                               <td className="p-2">
@@ -1079,6 +1082,15 @@ export function Admin() {
                               </td>
                               <td className="p-2">
                                 <Badge variant="secondary">{ev.fonte}</Badge>
+                              </td>
+                              <td className="p-2">
+                                {subCount > 0 ? (
+                                  <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-50">
+                                    {subCount} sotto-eventi
+                                  </Badge>
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">—</span>
+                                )}
                               </td>
                               <td className="p-2">
                                 <div className="flex items-center gap-1">

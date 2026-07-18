@@ -129,6 +129,38 @@ router.get("/events/stats", async (_req, res): Promise<void> => {
   res.json(GetEventStatsResponse.parse(stats));
 });
 
+router.get("/sitemap.xml", async (req, res): Promise<void> => {
+  res.setHeader("Content-Type", "application/xml");
+  try {
+    const rows = await db.select({ id: eventsTable.id, titolo: eventsTable.titolo }).from(eventsTable);
+    const baseUrl = process.env.FRONTEND_URL || "https://sardegnaeventi.it";
+    
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+    xml += `  <url><loc>${baseUrl}/</loc><priority>1.0</priority></url>\n`;
+    xml += `  <url><loc>${baseUrl}/stats</loc><priority>0.5</priority></url>\n`;
+    
+    for (const r of rows) {
+      const slug = r.titolo
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+      xml += `  <url><loc>${baseUrl}/eventi/${r.id}-${slug}</loc><priority>0.8</priority></url>\n`;
+    }
+    
+    xml += `</urlset>`;
+    res.send(xml);
+  } catch (e) {
+    res.status(500).send("Error generating sitemap");
+  }
+});
+
+router.get("/robots.txt", (req, res): void => {
+  res.setHeader("Content-Type", "text/plain");
+  const baseUrl = process.env.FRONTEND_URL || "https://sardegnaeventi.it";
+  res.send(`User-agent: *\nAllow: /\nSitemap: ${baseUrl}/sitemap.xml\n`);
+});
+
 router.post("/events/refresh", requireAdminKey, async (req, res): Promise<void> => {
   req.log.info("Starting events refresh via Python scraper");
 

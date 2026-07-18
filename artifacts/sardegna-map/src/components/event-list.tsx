@@ -1,10 +1,11 @@
 import { useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MapPin, Calendar, ExternalLink, Loader2, Flag } from "lucide-react";
+import { MapPin, Calendar, ExternalLink, Loader2, Flag, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import type { Event } from "@workspace/api-client-react";
 import { Link } from "wouter";
+import { Helmet } from "react-helmet-async";
 
 interface EventListProps {
   events: Event[];
@@ -32,8 +33,52 @@ export function EventList({
     }
   }, [selectedEventId]);
 
+  const selectedEvent = events.find((e) => e.id === selectedEventId);
+
+  const jsonLd = selectedEvent ? {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    "name": selectedEvent.titolo,
+    "description": selectedEvent.descrizione || selectedEvent.testo_estratto || "",
+    "startDate": selectedEvent.data_inizio,
+    ...(selectedEvent.data_fine ? { "endDate": selectedEvent.data_fine } : {}),
+    "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+    "eventStatus": "https://schema.org/EventScheduled",
+    "location": {
+      "@type": "Place",
+      "name": selectedEvent.luogo || "Sardegna",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": selectedEvent.luogo || "Sardegna",
+        "addressRegion": "Sardegna",
+        "addressCountry": "IT"
+      },
+      ...(selectedEvent.latitudine && selectedEvent.longitudine ? {
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": selectedEvent.latitudine,
+          "longitude": selectedEvent.longitudine
+        }
+      } : {})
+    },
+    ...(selectedEvent.immagine ? { "image": [selectedEvent.immagine.startsWith("http") ? selectedEvent.immagine : `https://sardegnaeventi.it/api/event-images/${selectedEvent.immagine}`] } : {})
+  } : null;
+
   return (
     <div className="flex-1 bg-card rounded-xl shadow-sm border border-border overflow-hidden flex flex-col min-h-0">
+      {selectedEvent && (
+        <Helmet>
+          <title>{`${selectedEvent.titolo} - Sardegna Eventi`}</title>
+          <meta name="description" content={selectedEvent.descrizione?.slice(0, 155) || `Dettagli per ${selectedEvent.titolo}`} />
+          <meta property="og:title" content={selectedEvent.titolo} />
+          <meta property="og:description" content={selectedEvent.descrizione?.slice(0, 155)} />
+          {selectedEvent.immagine && <meta property="og:image" content={selectedEvent.immagine} />}
+          <script type="application/ld+json">
+            {JSON.stringify(jsonLd)}
+          </script>
+        </Helmet>
+      )}
+
       <div className="px-3 py-2.5 border-b border-border bg-muted/30 flex-shrink-0">
         <p className="text-sm font-medium text-foreground">
           {isLoading ? "Caricamento..." : `${events.length} event${events.length === 1 ? "o" : "i"} trovati`}
@@ -110,25 +155,53 @@ export function EventList({
                           </div>
                         )}
                         
-                        {isFestival ? (
-                           <Link href={`/festival/${evt.id}`}>
-                             <a className="flex items-center gap-1 text-primary hover:underline mt-2 font-medium bg-primary/5 w-fit px-2 py-1 rounded-md" onClick={(e) => e.stopPropagation()}>
-                               Vedi Programma Festival
-                             </a>
-                           </Link>
-                        ) : (
-                          evt.link && (
-                            <a
-                              href={evt.link}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="flex items-center gap-1 text-primary hover:underline mt-0.5"
-                              onClick={(e) => e.stopPropagation()}
+                        {selectedEventId === evt.id && (
+                          <div className="flex items-center gap-3 mt-3 pt-2 border-t border-border/50">
+                            {isFestival ? (
+                              <Link href={`/festival/${evt.id}`}>
+                                <a className="flex items-center gap-1 text-primary hover:underline font-medium bg-primary/10 px-2 py-1 rounded text-xs" onClick={(e) => e.stopPropagation()}>
+                                  Vedi Programma
+                                </a>
+                              </Link>
+                            ) : (
+                              evt.link && (
+                                <a
+                                  href={evt.link}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="flex items-center gap-1 text-primary hover:underline text-xs"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                  Vedi fonte
+                                </a>
+                              )
+                            )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const slug = evt.titolo
+                                  .toLowerCase()
+                                  .replace(/[^a-z0-9]+/g, "-")
+                                  .replace(/(^-|-$)/g, "");
+                                const url = `${window.location.origin}/eventi/${evt.id}-${slug}`;
+                                if (navigator.share) {
+                                  navigator.share({
+                                    title: evt.titolo,
+                                    text: evt.descrizione || "",
+                                    url: url
+                                  }).catch(() => {});
+                                } else {
+                                  navigator.clipboard.writeText(url);
+                                  alert("Link copiato negli appunti!");
+                                }
+                              }}
+                              className="flex items-center gap-1 text-muted-foreground hover:text-foreground text-xs bg-transparent border-none cursor-pointer"
                             >
-                              <ExternalLink className="w-3.5 h-3.5" />
-                              Vedi fonte
-                            </a>
-                          )
+                              <Share2 className="w-3.5 h-3.5" />
+                              Condividi
+                            </button>
+                          </div>
                         )}
                       </div>
                     </CardContent>
