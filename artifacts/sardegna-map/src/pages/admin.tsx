@@ -957,57 +957,111 @@ export function Admin() {
                                 <th className="px-4 py-3">Fonte</th>
                                 <th className="px-4 py-3 text-right">Azioni</th>
                               </tr>
+                              <tr className="border-t border-border bg-muted/40">
+                                <th colSpan={3} className="p-1"></th>
+                                <th className="p-1">
+                                  <Input 
+                                    placeholder="Filtra titolo…" 
+                                    value={prevFilterTitolo} 
+                                    onChange={(e) => setPrevFilterTitolo(e.target.value)} 
+                                    className="h-7 text-xs bg-background" 
+                                  />
+                                </th>
+                                <th className="p-1">
+                                  <div className="flex gap-1 items-center">
+                                    <Input 
+                                      type="date" 
+                                      value={prevFilterDataFrom} 
+                                      onChange={(e) => setPrevFilterDataFrom(e.target.value)} 
+                                      className="h-7 text-xs px-1 bg-background" 
+                                    />
+                                    <span className="text-muted-foreground text-xs">-</span>
+                                    <Input 
+                                      type="date" 
+                                      value={prevFilterDataTo} 
+                                      onChange={(e) => setPrevFilterDataTo(e.target.value)} 
+                                      className="h-7 text-xs px-1 bg-background" 
+                                    />
+                                  </div>
+                                </th>
+                                <th className="p-1">
+                                  <Input 
+                                    placeholder="Filtra fonte…" 
+                                    value={prevFilterFonte} 
+                                    onChange={(e) => setPrevFilterFonte(e.target.value)} 
+                                    className="h-7 text-xs bg-background" 
+                                  />
+                                </th>
+                                <th className="p-1">
+                                  <div className="flex gap-1 justify-end">
+                                    <Button size="sm" className="h-7 text-xs px-2 shrink-0" onClick={applyPrevFilters}>
+                                      <Search className="w-3 h-3 mr-1" /> Filtra
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="h-7 text-xs px-2 shrink-0" onClick={clearPrevFilters}>
+                                      Azzera
+                                    </Button>
+                                  </div>
+                                </th>
+                              </tr>
                             </thead>
                             <tbody>
-                              {previewEvents.map((ev, i) => (
-                                <tr key={i} className="border-b border-border hover:bg-muted/50">
-                                  <td className="px-4 py-3">
-                                    <Checkbox
-                                      checked={selectedApproveIds.has(i)}
-                                      onCheckedChange={(v) => toggleApproveOne(i, v === true)}
-                                      aria-label={`Approva ${ev.titolo}`}
-                                    />
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    <Checkbox
-                                      checked={selectedAnalyzeIds.has(i)}
-                                      onCheckedChange={(v) => toggleAnalyzeOne(i, v === true)}
-                                      aria-label={`Analizza ${ev.titolo}`}
-                                    />
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    {ev.immagine ? (
-                                      <img
-                                        src={ev.immagine}
-                                        alt={ev.titolo}
-                                        className="w-16 h-16 object-cover rounded-md border border-border"
-                                        loading="lazy"
-                                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                                      />
-                                    ) : (
-                                      <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center text-xs text-muted-foreground">
-                                        N/D
-                                      </div>
-                                    )}
-                                  </td>
-                                  <td className="px-4 py-3 font-medium">
-                                    {ev.titolo}
-                                    {ev.is_new && <Badge variant="default" className="ml-2 bg-blue-600 text-white">Nuovo</Badge>}
-                                    {ev.testo_estratto && <Badge variant="outline" className="ml-2 border-green-500 text-green-500">Analizzato</Badge>}
-                                  </td>
-                                  <td className="px-4 py-3 whitespace-nowrap">
-                                    {ev.data_inizio ? new Date(ev.data_inizio).toLocaleDateString("it-IT") : "N/D"}
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    <Badge variant="outline" className="bg-background">{ev.fonte}</Badge>
-                                  </td>
-                                  <td className="px-4 py-3 text-right">
-                                    <Button variant="ghost" size="icon" onClick={() => deletePreviewEvent(i)} title="Cestina evento">
-                                      <Trash2 className="w-4 h-4 text-red-500" />
-                                    </Button>
+                              {filteredPreviewEvents.length === 0 ? (
+                                <tr>
+                                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                                    Nessun evento in attesa corrisponde ai filtri impostati.
                                   </td>
                                 </tr>
-                              ))}
+                              ) : (
+                                filteredPreviewEvents.map(({ ev, i }) => (
+                                  <tr key={i} className="border-b border-border hover:bg-muted/50">
+                                    <td className="px-4 py-3">
+                                      <Checkbox
+                                        checked={selectedApproveIds.has(i)}
+                                        onCheckedChange={(v) => toggleApproveOne(i, v === true)}
+                                        aria-label={`Approva ${ev.titolo}`}
+                                      />
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <Checkbox
+                                        checked={selectedAnalyzeIds.has(i)}
+                                        onCheckedChange={(v) => toggleAnalyzeOne(i, v === true)}
+                                        aria-label={`Analizza ${ev.titolo}`}
+                                      />
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      {ev.immagine ? (
+                                        <img
+                                          src={ev.immagine}
+                                          alt={ev.titolo}
+                                          className="w-16 h-16 object-cover rounded-md border border-border"
+                                          loading="lazy"
+                                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                        />
+                                      ) : (
+                                        <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center text-xs text-muted-foreground">
+                                          N/D
+                                        </div>
+                                      )}
+                                    </td>
+                                    <td className="px-4 py-3 font-medium">
+                                      {ev.titolo}
+                                      {ev.is_new && <Badge variant="default" className="ml-2 bg-blue-600 text-white">Nuovo</Badge>}
+                                      {ev.testo_estratto && <Badge variant="outline" className="ml-2 border-green-500 text-green-500">Analizzato</Badge>}
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap">
+                                      {ev.data_inizio ? new Date(ev.data_inizio).toLocaleDateString("it-IT") : "N/D"}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <Badge variant="outline" className="bg-background">{ev.fonte}</Badge>
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                      <Button variant="ghost" size="icon" onClick={() => deletePreviewEvent(i)} title="Cestina evento">
+                                        <Trash2 className="w-4 h-4 text-red-500" />
+                                      </Button>
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
                             </tbody>
                           </table>
                         </ScrollArea>
