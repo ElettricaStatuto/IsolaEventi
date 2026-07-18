@@ -332,7 +332,7 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
   let aggiornati = 0;
   let errori = 0;
 
-  for (const ev of events) {
+  for (const ev of events as any[]) {
     try {
       const [existing] = await db
         .select({ id: eventsTable.id })
@@ -417,7 +417,7 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
     }
   }
 
-  res.json(ApproveEventsResult.parse({
+  res.json(ApproveEventsResponse.parse({
     success: true,
     nuovi,
     aggiornati,
