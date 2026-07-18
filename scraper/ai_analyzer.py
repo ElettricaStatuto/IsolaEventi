@@ -35,16 +35,27 @@ def extract_text_from_url(url: str) -> str:
     except Exception as e:
         return f"Errore estrazione testo da pagina fonte: {e}"
 
-def analyze_event(descrizione: str, image_url: str = None, target: str = "both", link: str = None) -> dict:
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        return {"testo_estratto": "Chiave API Gemini mancante.", "is_festival": False, "sotto_eventi": [], "link_organizzatore": None}
-
+def analyze_event(descrizione: str, image_url: str = None, target: str = "both", link: str = None, use_proxy: bool = False) -> dict:
     from google import genai
-    client = genai.Client(api_key=api_key)
+    from google.genai import types
+
+    if use_proxy:
+        api_key = os.environ.get("REPLIT_API_KEY")
+        client = genai.Client(
+            api_key=api_key,
+            http_options=types.HttpOptions(
+                base_url="https://production-modelfarm.replit.com"
+            )
+        )
+        MODEL = "gemini-3-flash-preview"
+    else:
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            return {"testo_estratto": "Chiave API Gemini mancante.", "is_festival": False, "sotto_eventi": [], "link_organizzatore": None}
+        client = genai.Client(api_key=api_key)
+        MODEL = "gemini-3-flash-preview"
 
     try:
-        MODEL = "gemini-3-flash-preview"
         
         # Extract text from the source page link if target is source_page or both_source
         if target in ("source_page", "both_source"):

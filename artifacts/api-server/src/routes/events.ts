@@ -24,6 +24,30 @@ const execFileAsync = promisify(execFile);
 
 const router: IRouter = Router();
 
+function getFestivalDateRange(parentInizio: string | null, parentFine: string | null, sottoEventi: any[]) {
+  let minDate = parentInizio;
+  let maxDate = parentFine || parentInizio;
+
+  const dates = sottoEventi
+    .flatMap((se) => [se.data_inizio, se.data_fine || se.data_inizio])
+    .filter((d): d is string => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d));
+
+  if (dates.length > 0) {
+    dates.sort();
+    const minSotto = dates[0];
+    const maxSotto = dates[dates.length - 1];
+
+    if (!minDate || minSotto < minDate) {
+      minDate = minSotto;
+    }
+    if (!maxDate || maxSotto > maxDate) {
+      maxDate = maxSotto;
+    }
+  }
+
+  return { dataInizio: minDate, dataFine: maxDate };
+}
+
 router.get("/events", async (req, res): Promise<void> => {
   const parsed = ListEventsQueryParams.safeParse(req.query);
   if (!parsed.success) {
@@ -345,11 +369,13 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
         )
         .limit(1);
 
+      let { dataInizio, dataFine } = getFestivalDateRange(ev.data_inizio, ev.data_fine, ev.sotto_eventi || []);
+
       if (existing) {
         await db.update(eventsTable)
           .set({
-            dataInizio: ev.data_inizio,
-            dataFine: ev.data_fine,
+            dataInizio: dataInizio,
+            dataFine: dataFine,
             luogo: ev.luogo,
             latitudine: ev.latitudine,
             longitudine: ev.longitudine,
@@ -382,8 +408,8 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
       } else {
         const [inserted] = await db.insert(eventsTable).values({
           titolo: ev.titolo,
-          dataInizio: ev.data_inizio,
-          dataFine: ev.data_fine,
+          dataInizio: dataInizio,
+          dataFine: dataFine,
           luogo: ev.luogo,
           latitudine: ev.latitudine,
           longitudine: ev.longitudine,
@@ -429,7 +455,7 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
 router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> => {
   req.log.info("Starting on-demand AI analysis for events");
 
-  const { events, target } = req.body;
+  const { events, target, use_proxy } = req.body;
   if (!events || !Array.isArray(events) || events.length === 0) {
     res.status(400).json({ error: "No events provided" });
     return;
@@ -447,7 +473,7 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
       env: { ...process.env },
     });
 
-    child.stdin.write(JSON.stringify({ events, target }));
+    child.stdin.write(JSON.stringify({ events, target, use_proxy }));
     child.stdin.end();
 
     let stdoutData = "";
@@ -489,20 +515,24 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
       } else if (r.id) {
         // If it has a real DB ID, update the DB directly
         try {
-          await db.update(eventsTable)
-            .set({
-              testoEstratto: r.testo_estratto,
-              linkOrganizzatore: r.link_organizzatore || null,
-              aggiornatoIl: new Date(),
-            })
-            .where(eq(eventsTable.id, r.id));
-            
-          // We can also insert sotto_eventi if it's a festival, but since this
-          // event is already published, we should create the sub-events in the DB
-          if (r.is_festival && r.sotto_eventi && r.sotto_eventi.length > 0) {
-            // First fetch the parent event to copy its location and source
-            const [parent] = await db.select().from(eventsTable).where(eq(eventsTable.id, r.id));
-            if (parent) {
+          // First fetch the parent event to check current dates and details
+          const [parent] = await db.select().from(eventsTable).where(eq(eventsTable.id, r.id));
+          if (parent) {
+            let { dataInizio, dataFine } = getFestivalDateRange(parent.dataInizio, parent.dataFine, r.sotto_eventi || []);
+
+            await db.update(eventsTable)
+              .set({
+                testoEstratto: r.testo_estratto,
+                linkOrganizzatore: r.link_organizzatore || null,
+                dataInizio: dataInizio,
+                dataFine: dataFine,
+                aggiornatoIl: new Date(),
+              })
+              .where(eq(eventsTable.id, r.id));
+              
+            // We can also insert sotto_eventi if it's a festival, but since this
+            // event is already published, we should create the sub-events in the DB
+            if (r.is_festival && r.sotto_eventi && r.sotto_eventi.length > 0) {
               // Delete old sub-events to prevent duplicates
               await db.delete(eventsTable).where(eq(eventsTable.parentId, parent.id));
               for (const se of r.sotto_eventi) {

@@ -18,9 +18,11 @@ def main():
         if isinstance(payload, dict):
             events = payload.get("events", [])
             target = payload.get("target", "both")
+            use_proxy = payload.get("use_proxy", False)
         else:
             events = payload
             target = "both"
+            use_proxy = False
 
         results = []
         total = len(events)
@@ -35,7 +37,7 @@ def main():
             
             try:
                 # Add link to context for source page extraction if target is source_page
-                ai_data = analyze_event(text, image_url, target=target, link=link)
+                ai_data = analyze_event(text, image_url, target=target, link=link, use_proxy=use_proxy)
                 
                 # If we parsed a source page or both, let's verify if we need to pass the link
                 results.append({

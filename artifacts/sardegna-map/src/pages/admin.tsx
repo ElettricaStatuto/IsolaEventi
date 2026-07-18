@@ -83,6 +83,7 @@ export function Admin() {
   const [keyError, setKeyError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("scraping");
   const [analysisTarget, setAnalysisTarget] = useState<"both" | "both_source" | "image" | "text" | "source_page">("both");
+  const [aiProvider, setAiProvider] = useState<"direct" | "replit">("direct");
   const [analysisLogs, setAnalysisLogs] = useState<string[]>([]);
   const [analyzingStep, setAnalyzingStep] = useState<"idle" | "preview" | "published">("idle");
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -400,7 +401,7 @@ export function Admin() {
             "Content-Type": "application/json",
             "x-admin-key": adminKey,
           },
-          body: JSON.stringify({ events: payload, target: analysisTarget }),
+          body: JSON.stringify({ events: payload, target: analysisTarget, use_proxy: aiProvider === "replit" }),
           signal: abortControllerRef.current.signal,
         });
 
@@ -615,7 +616,7 @@ export function Admin() {
             "Content-Type": "application/json",
             "x-admin-key": adminKey,
           },
-          body: JSON.stringify({ events: payload, target: analysisTarget }),
+          body: JSON.stringify({ events: payload, target: analysisTarget, use_proxy: aiProvider === "replit" }),
           signal: abortControllerRef.current.signal,
         });
 
@@ -895,6 +896,17 @@ export function Admin() {
                       <div className="flex justify-end gap-3 pt-2">
                         <Button variant="outline" onClick={() => setScrapingStep("input")}>Annulla</Button>
                         <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1 bg-background text-xs">
+                          <span className="text-muted-foreground text-xs">Provider:</span>
+                          <select 
+                            value={aiProvider} 
+                            onChange={(e) => setAiProvider(e.target.value as any)}
+                            className="bg-transparent border-none outline-none font-semibold text-foreground cursor-pointer text-xs"
+                          >
+                            <option value="direct">Chiave Diretta</option>
+                            <option value="replit">Proxy Replit</option>
+                          </select>
+                        </div>
+                        <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1 bg-background text-xs">
                           <span className="text-muted-foreground text-xs">Analizza:</span>
                           <select 
                             value={analysisTarget} 
@@ -1102,6 +1114,17 @@ export function Admin() {
                     <div className="flex-1"></div>
                     {selectedPubAnalyzeIds.size > 0 && (
                       <>
+                        <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1 bg-background text-xs">
+                          <span className="text-muted-foreground text-xs">Provider:</span>
+                          <select 
+                            value={aiProvider} 
+                            onChange={(e) => setAiProvider(e.target.value as any)}
+                            className="bg-transparent border-none outline-none font-semibold text-foreground cursor-pointer text-xs"
+                          >
+                            <option value="direct">Chiave Diretta</option>
+                            <option value="replit">Proxy Replit</option>
+                          </select>
+                        </div>
                         <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1 bg-background text-xs">
                           <span className="text-muted-foreground text-xs">Analizza:</span>
                           <select 

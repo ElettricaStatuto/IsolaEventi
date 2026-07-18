@@ -7,33 +7,53 @@ export function useEventsFilter(events: Event[] = []) {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   const filteredEvents = useMemo(() => {
-    const todayStr = new Date().toLocaleDateString("en-CA");
+    // 1. Filter by date if range is selected
+    let list = events;
+    if (dateRange?.from) {
+      const from = startOfDay(dateRange.from);
+      const to = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
 
-    // Filter out past events that are NOT festivals
-    const baseList = events.filter((evt) => {
-      const isPast = evt.data_fine
-        ? evt.data_fine < todayStr
-        : (evt.data_inizio ? evt.data_inizio < todayStr : false);
+      list = events.filter((evt) => {
+        if (!evt.data_inizio) return true;
+        const evtStart = parseISO(evt.data_inizio);
+        const evtEnd = evt.data_fine ? parseISO(evt.data_fine) : evtStart;
+        return evtStart <= to && evtEnd >= from;
+      });
+    }
 
-      if (isPast) {
-        // Keep only if it is a festival (has children connected to it)
-        const hasChildren = events.some((e) => e.parent_id === evt.id);
-        return hasChildren;
+    // 2. Sort events: future events first (ascending by start date), then past events (descending by start date)
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const localTodayStr = `${year}-${month}-${day}`;
+
+    return [...list].sort((a, b) => {
+      const getIsPast = (evt: Event) => {
+        if (!evt.data_inizio) return false;
+        // Event is past only if its end date is past, or if there's no end date, its start date is past
+        const compareDate = evt.data_fine || evt.data_inizio;
+        return compareDate < localTodayStr;
+      };
+
+      const isPastA = getIsPast(a);
+      const isPastB = getIsPast(b);
+
+      if (isPastA !== isPastB) {
+        return isPastA ? 1 : -1; // Future first, past second
       }
-      return true;
-    });
 
-    if (!dateRange?.from) return baseList;
-
-    const from = startOfDay(dateRange.from);
-    const to = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
-
-    return baseList.filter((evt) => {
-      if (!evt.data_inizio) return true;
-      const evtStart = parseISO(evt.data_inizio);
-      const evtEnd = evt.data_fine ? parseISO(evt.data_fine) : evtStart;
-      // Include event if it overlaps with selected range
-      return evtStart <= to && evtEnd >= from;
+      if (!isPastA) {
+        // Both are future: sort by data_inizio ascending
+        if (!a.data_inizio) return 1;
+        if (!b.data_inizio) return -1;
+        return a.data_inizio.localeCompare(b.data_inizio);
+      } else {
+        // Both are past: sort by data_inizio descending
+        if (!a.data_inizio) return 1;
+        if (!b.data_inizio) return -1;
+        return b.data_inizio.localeCompare(a.data_inizio);
+      }
     });
   }, [events, dateRange]);
 

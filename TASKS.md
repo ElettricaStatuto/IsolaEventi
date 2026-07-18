@@ -15,8 +15,6 @@ Ogni task deve avere:
 
 | ID | Stato | Descrizione | Priorità | Note |
 |---|---|---|---|---|
-| T001 | TODO | Sostituire il filtro "past" rimosso con un ordinamento: eventi futuri prima, poi quelli passati | ALTA | Attualmente la home mostra tutti gli eventi senza ordinamento |
-| T002 | TODO | Aggiungere supporto provider AI switchable (chiave diretta vs proxy Replit) | MEDIA | Vedi `ai_analyzer.py` — serve flag nel body della richiesta e UI admin |
 | T003 | TODO | | | |
 | T004 | TODO | | | |
 | T005 | TODO | | | |
@@ -25,7 +23,8 @@ Ogni task deve avere:
 
 | ID | Stato | Descrizione | Completato il |
 |---|---|---|---|
-| - | - | - | - |
+| T001 | DONE | Sostituire il filtro "past" rimosso con un ordinamento: eventi futuri prima, poi quelli passati | 2026-07-18 |
+| T002 | DONE | Aggiungere supporto provider AI switchable (chiave diretta vs proxy Replit) | 2026-07-18 |
 
 ## Idee / backlog (non ancora task concreti)
 
