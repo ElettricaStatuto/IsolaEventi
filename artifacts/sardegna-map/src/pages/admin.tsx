@@ -405,7 +405,12 @@ export function Admin() {
         });
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+          let errMsg = `HTTP ${response.status}`;
+          try {
+            const errData = await response.json();
+            if (errData && errData.error) errMsg = errData.error;
+          } catch {}
+          throw new Error(errMsg);
         }
 
         const data = await response.json();
@@ -593,7 +598,7 @@ export function Admin() {
         }
 
         const ev = toAnalyze[i];
-        setAnalysisLogs(prev => [...prev, `[${i + 1}/${total}] Sto analizzando l'evento: '${ev.titolo}' (Target: {analysisTarget})...`]);
+        setAnalysisLogs(prev => [...prev, `[${i + 1}/${total}] Sto analizzando l'evento: '${ev.titolo}' (Target: ${analysisTarget})...`]);
 
         const payload = [{
           id: ev.id,
@@ -615,7 +620,12 @@ export function Admin() {
         });
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+          let errMsg = `HTTP ${response.status}`;
+          try {
+            const errData = await response.json();
+            if (errData && errData.error) errMsg = errData.error;
+          } catch {}
+          throw new Error(errMsg);
         }
 
         const data = await response.json();
