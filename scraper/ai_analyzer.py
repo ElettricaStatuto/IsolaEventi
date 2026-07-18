@@ -47,13 +47,13 @@ def analyze_event(descrizione: str, image_url: str = None, target: str = "both",
                 base_url="https://production-modelfarm.replit.com"
             )
         )
-        MODEL = "gemini-2.0-flash-lite"
+        MODEL = "gemini-2.5-flash-lite"
     else:
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             return {"testo_estratto": "Chiave API Gemini mancante.", "is_festival": False, "sotto_eventi": [], "link_organizzatore": None}
         client = genai.Client(api_key=api_key)
-        MODEL = "gemini-2.0-flash-lite"
+        MODEL = "gemini-2.5-flash-lite"
 
     try:
         
