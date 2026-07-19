@@ -46,7 +46,9 @@ def main():
                     "testo_estratto": ai_data.get("testo_estratto"),
                     "is_festival": ai_data.get("is_festival", False),
                     "sotto_eventi": ai_data.get("sotto_eventi", []),
-                    "link_organizzatore": ai_data.get("link_organizzatore")
+                    "link_organizzatore": ai_data.get("link_organizzatore"),
+                    "tags": ai_data.get("tags", []),
+                    "dettagli_extra": ai_data.get("dettagli_extra", {})
                 })
             except Exception as e:
                 # Append error info but continue to next event

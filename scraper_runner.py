@@ -160,7 +160,7 @@ def _load_rejected(conn) -> set[tuple[str, str]]:
     return {(r[0], r[1]) for r in rows}
 
 
-def _upsert_festival_parent(conn, festival_name: str, fonte: str, eventi: list) -> int:
+def _upsert_festival_parent(festival_name: str, fonte: str, eventi: list) -> int:
     """Crea (o aggiorna) l'evento padre di un festival nel DB.
     Calcola data_inizio e data_fine come min/max dei figli.
     Restituisce l'ID dell'evento padre.
@@ -178,6 +178,7 @@ def _upsert_festival_parent(conn, festival_name: str, fonte: str, eventi: list) 
     # Prova a trovare il luogo più comune tra i figli (primo disponibile)
     luogo = next((ev.luogo for ev in eventi if ev.luogo), None)
     
+    conn = psycopg2.connect(DATABASE_URL)
     cur = conn.cursor()
     
     # Cerca se esiste già un evento padre con questo titolo e fonte
@@ -210,6 +211,7 @@ def _upsert_festival_parent(conn, festival_name: str, fonte: str, eventi: list) 
     
     conn.commit()
     cur.close()
+    conn.close()
     return parent_id
 
 
@@ -309,7 +311,6 @@ def main():
     # Mappa scraper → parent_id festival (per i festival scrapers)
     festival_parent_ids: dict[str, int] = {}
 
-    conn_pre = psycopg2.connect(DATABASE_URL)
     for s in scrapers:
         try:
             emit_log(f"Inizio scraping da: {s.nome_fonte}...")
@@ -318,7 +319,7 @@ def main():
 
             # Se lo scraper è un festival, crea/aggiorna il padre e segna tutti i figli
             if getattr(s, 'festival_name', None):
-                parent_id = _upsert_festival_parent(conn_pre, s.festival_name, s.nome_fonte, eventi)
+                parent_id = _upsert_festival_parent(s.festival_name, s.nome_fonte, eventi)
                 festival_parent_ids[s.nome_fonte] = parent_id
                 emit_log(f"Festival padre '{s.festival_name}' (id={parent_id}): {len(eventi)} concerti come figli.")
                 for ev in eventi:
@@ -329,7 +330,6 @@ def main():
             emit_log(f"Errore scraping {s.nome_fonte}: {e}")
             logger.error(f"Scraper {s.nome_fonte} failed: {e}")
             errori += 1
-    conn_pre.close()
 
     conn = psycopg2.connect(DATABASE_URL)
     rejected_set = _load_rejected(conn)
@@ -413,7 +413,9 @@ def main():
                 "testo_estratto": ev.testo_estratto,
                 "is_festival": ev.is_festival,
                 "parent_id": getattr(ev, 'parent_id', None),
-                "sotto_eventi": [se.__dict__ for se in ev.sotto_eventi]
+                "sotto_eventi": [se.__dict__ for se in ev.sotto_eventi],
+                "tags": getattr(ev, 'tags', []),
+                "dettagli_extra": getattr(ev, 'dettagli_extra', {})
             })
         conn.close()
         result = {
@@ -465,7 +467,7 @@ def main():
                     UPDATE events
                     SET data_inizio=%s, data_fine=%s, luogo=%s,
                         latitudine=%s, longitudine=%s, link=%s,
-                        descrizione=%s, immagine=%s, testo_estratto=%s, aggiornato_il=now()
+                        descrizione=%s, immagine=%s, testo_estratto=%s, tags=%s, dettagli_extra=%s, aggiornato_il=now()
                     WHERE id=%s
                     """,
                     (
@@ -473,6 +475,8 @@ def main():
                         lat, lon, ev.url, ev.descrizione,
                         image_filename or ev.immagine,
                         ev.testo_estratto,
+                        json.dumps(getattr(ev, 'tags', [])) if getattr(ev, 'tags', []) else None,
+                        json.dumps(getattr(ev, 'dettagli_extra', {})) if getattr(ev, 'dettagli_extra', {}) else None,
                         event_id,
                     ),
                 )
@@ -482,14 +486,17 @@ def main():
                     """
                     INSERT INTO events
                         (titolo, data_inizio, data_fine, luogo, latitudine, longitudine,
-                         link, descrizione, immagine, fonte, testo_estratto, parent_id, aggiornato_il)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
+                         link, descrizione, immagine, fonte, testo_estratto, tags, dettagli_extra, parent_id, aggiornato_il)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
                     RETURNING id
                     """,
                     (
                         ev.titolo, data_inizio, data_fine, ev.luogo,
                         lat, lon, ev.url, ev.descrizione, None, ev.fonte or "",
-                        ev.testo_estratto, getattr(ev, 'parent_id', None),
+                        ev.testo_estratto,
+                        json.dumps(getattr(ev, 'tags', [])) if getattr(ev, 'tags', []) else None,
+                        json.dumps(getattr(ev, 'dettagli_extra', {})) if getattr(ev, 'dettagli_extra', {}) else None,
+                        getattr(ev, 'parent_id', None),
                     ),
                 )
                 event_id = cur.fetchone()[0]

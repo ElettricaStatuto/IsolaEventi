@@ -9,6 +9,11 @@ export interface HealthStatus {
   status: string;
 }
 
+/**
+ * @nullable
+ */
+export type EventDettagliExtra = { [key: string]: unknown } | null;
+
 export interface Event {
   id: number;
   titolo: string;
@@ -38,6 +43,10 @@ export interface Event {
   is_festival?: boolean | null;
   /** @nullable */
   link_organizzatore?: string | null;
+  /** @nullable */
+  tags?: string[] | null;
+  /** @nullable */
+  dettagli_extra?: EventDettagliExtra;
 }
 
 export type EventStatsLuoghiItem = {
@@ -60,6 +69,11 @@ export interface RefreshResult {
   /** @nullable */
   messaggio?: string | null;
 }
+
+/**
+ * @nullable
+ */
+export type EventPreviewDettagliExtra = { [key: string]: unknown } | null;
 
 export interface EventPreview {
   titolo: string;
@@ -89,6 +103,10 @@ export interface EventPreview {
   is_festival?: boolean | null;
   /** @nullable */
   link_organizzatore?: string | null;
+  /** @nullable */
+  tags?: string[] | null;
+  /** @nullable */
+  dettagli_extra?: EventPreviewDettagliExtra;
 }
 
 export interface RefreshPreviewResult {
@@ -159,6 +177,11 @@ export type DeleteEventBody = {
 };
 
 export type DeleteEvent200 = {
+  success?: boolean;
+  message?: string;
+};
+
+export type UpdateEvent200 = {
   success?: boolean;
   message?: string;
 };

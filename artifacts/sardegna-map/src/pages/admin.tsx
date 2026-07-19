@@ -77,6 +77,36 @@ async function fetchJson<T>(url: string, method: string, body?: unknown, key?: s
   return resp.json();
 }
 
+const AutoResizeTextarea = ({ value, onChange, className, ...props }: any) => {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  const resize = () => {
+    if (ref.current) {
+      ref.current.style.height = "auto";
+      ref.current.style.height = `${ref.current.scrollHeight}px`;
+    }
+  };
+
+  useEffect(() => {
+    resize();
+  }, [value]);
+
+  return (
+    <textarea
+      ref={ref}
+      value={value}
+      onChange={(e) => {
+        onChange(e);
+        resize();
+      }}
+      className={className}
+      rows={1}
+      style={{ overflow: "hidden", resize: "none" }}
+      {...props}
+    />
+  );
+};
+
 export function Admin() {
   const [adminKey, setAdminKey] = useState("bypass");
   const [keyVerified, setKeyVerified] = useState(true);
@@ -141,6 +171,13 @@ export function Admin() {
   const [selectedPubAnalyzeIds, setSelectedPubAnalyzeIds] = useState<Set<number>>(new Set());
   const [analyzingPublished, setAnalyzingPublished] = useState(false);
   const [inspectingEvent, setInspectingEvent] = useState<any | null>(null);
+  const [isEditingEvent, setIsEditingEvent] = useState(false);
+  const [editingTags, setEditingTags] = useState<string[]>([]);
+  const [editingDettagli, setEditingDettagli] = useState<Record<string, string>>({});
+  const [newDettaglioKey, setNewDettaglioKey] = useState("");
+  const [newDettaglioValue, setNewDettaglioValue] = useState("");
+  const [newTagValue, setNewTagValue] = useState("");
+  const [savingEvent, setSavingEvent] = useState(false);
   const [filterTitolo, setFilterTitolo] = useState("");
   const [filterDataFrom, setFilterDataFrom] = useState("");
   const [filterDataTo, setFilterDataTo] = useState("");
@@ -691,6 +728,133 @@ export function Admin() {
       is_pending: isPending,
       sub_events_list: subEvents,
     });
+    setIsEditingEvent(false);
+    setEditingTags(ev.tags || []);
+    setEditingDettagli(ev.dettagli_extra || {});
+    setNewDettaglioKey("");
+    setNewDettaglioValue("");
+    setNewTagValue("");
+  };
+
+  const handleSaveEventDetails = async () => {
+    if (!inspectingEvent) return;
+    setSavingEvent(true);
+    setError(null);
+    try {
+      if (inspectingEvent.is_pending) {
+        // Se è in attesa (preview), aggiorniamo solo la cache locale
+        const nextEvents = [...previewEvents];
+        const idxStr = inspectingEvent.tmp_id;
+        const idx = typeof inspectingEvent.idx === 'number' ? inspectingEvent.idx : parseInt(idxStr, 10);
+        if (!isNaN(idx) && nextEvents[idx]) {
+          nextEvents[idx] = {
+            ...nextEvents[idx],
+            tags: editingTags,
+            dettagli_extra: editingDettagli,
+          };
+          setPreviewEvents(nextEvents);
+          updatePreviewCache(nextEvents);
+          setInspectingEvent({ ...inspectingEvent, tags: editingTags, dettagli_extra: editingDettagli });
+          setIsEditingEvent(false);
+        } else {
+          throw new Error("Evento non trovato in preview");
+        }
+      } else {
+        // Se è pubblicato, inviamo PUT
+        const payload = { ...inspectingEvent, tags: editingTags, dettagli_extra: editingDettagli };
+        await fetchJson(`/api/events/${inspectingEvent.id}`, "PUT", payload, adminKey);
+        loadPublished(appliedFilters);
+        setInspectingEvent({ ...inspectingEvent, tags: editingTags, dettagli_extra: editingDettagli });
+        setIsEditingEvent(false);
+      }
+    } catch (e) {
+      setError(`Errore salvataggio: ${String(e)}`);
+    } finally {
+      setSavingEvent(false);
+    }
+  };
+
+  const handleAnalyzeSingleFromModal = async () => {
+    if (!inspectingEvent) return;
+    setAnalyzingStep(inspectingEvent.is_pending ? "preview" : "published");
+    setAnalysisLogs([]);
+    setError(null);
+    isAbortedRef.current = false;
+
+    try {
+      setAnalysisLogs([`Sto analizzando l'evento: '${inspectingEvent.titolo}' (Target: ${analysisTarget})...`]);
+
+      const tmpId = inspectingEvent.is_pending 
+        ? (inspectingEvent.tmp_id || (typeof inspectingEvent.idx === 'number' ? inspectingEvent.idx.toString() : "0"))
+        : undefined;
+
+      const payload = [{
+        tmp_id: tmpId,
+        id: inspectingEvent.is_pending ? undefined : inspectingEvent.id,
+        titolo: inspectingEvent.titolo,
+        descrizione: inspectingEvent.descrizione,
+        immagine: inspectingEvent.immagine,
+        link: inspectingEvent.link,
+      }];
+
+      abortControllerRef.current = new AbortController();
+      const response = await fetch("/api/events/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
+        body: JSON.stringify({ events: payload, target: analysisTarget, use_proxy: aiProvider === "replit" }),
+        signal: abortControllerRef.current.signal,
+      });
+
+      if (!response.ok) {
+        let errMsg = `HTTP ${response.status}`;
+        try { const errData = await response.json(); if (errData?.error) errMsg = errData.error; } catch {}
+        throw new Error(errMsg);
+      }
+
+      const data = await response.json();
+      if (data.success && data.results && data.results.length > 0) {
+        const res = data.results[0];
+        if (res.error) {
+          setAnalysisLogs(prev => [...prev, `❌ Errore: ${res.error}`]);
+        } else {
+          setAnalysisLogs(prev => [...prev, `✅ Completato con successo!`]);
+          
+          const updatedEvent = {
+            ...inspectingEvent,
+            testo_estratto: res.testo_estratto,
+            is_festival: res.is_festival,
+            sub_events_list: res.sotto_eventi || inspectingEvent.sub_events_list,
+            link_organizzatore: res.link_organizzatore,
+            tags: res.tags,
+            dettagli_extra: res.dettagli_extra,
+          };
+          setInspectingEvent(updatedEvent);
+          setEditingTags(res.tags || []);
+          setEditingDettagli(res.dettagli_extra || {});
+          
+          if (inspectingEvent.is_pending) {
+            const nextEvents = [...previewEvents];
+            const idx = parseInt(tmpId!, 10);
+            if (!isNaN(idx) && nextEvents[idx]) {
+               nextEvents[idx] = { ...nextEvents[idx], ...updatedEvent };
+               setPreviewEvents(nextEvents);
+               updatePreviewCache(nextEvents);
+            }
+          } else {
+            loadPublished(appliedFilters);
+          }
+        }
+      } else {
+         setAnalysisLogs(prev => [...prev, `❌ Errore durante l'analisi.`]);
+      }
+    } catch (e: any) {
+      if (e.name !== "AbortError") {
+        setError(`Errore analisi: ${String(e.message || e)}`);
+      }
+    } finally {
+      setAnalyzingStep("idle");
+      abortControllerRef.current = null;
+    }
   };
 
   // ── Rejected data & handlers ──
@@ -1022,9 +1186,14 @@ export function Admin() {
                                       <Badge variant="outline" className="bg-background">{ev.fonte}</Badge>
                                     </td>
                                     <td className="px-4 py-3 text-right">
-                                      <Button variant="ghost" size="icon" onClick={() => deletePreviewEvent(i)} title="Cestina evento">
-                                        <Trash2 className="w-4 h-4 text-red-500" />
-                                      </Button>
+                                      <div className="flex items-center justify-end gap-1">
+                                        <Button variant="ghost" size="sm" onClick={() => openEventDetails(ev, true)} title="Vedi dettagli" className="h-8 px-2 text-xs">
+                                          <Eye className="w-4 h-4 mr-1" /> Dettagli
+                                        </Button>
+                                        <Button variant="ghost" size="icon" onClick={() => deletePreviewEvent(i)} title="Cestina evento">
+                                          <Trash2 className="w-4 h-4 text-red-500" />
+                                        </Button>
+                                      </div>
                                     </td>
                                   </tr>
                                 ))
@@ -1455,6 +1624,9 @@ export function Admin() {
                                   </td>
                                   <td className="p-2">
                                     <div className="flex items-center gap-1">
+                                      <Button variant="ghost" size="sm" onClick={() => openEventDetails(ev, false)} title="Vedi dettagli" className="h-7 px-2 text-xs">
+                                        <Eye className="w-4 h-4 mr-1" /> Dettagli
+                                      </Button>
                                       <Button variant="ghost" size="icon" className="h-7 w-7" title="Elimina" onClick={() => deleteEvent(ev.id, false)}>
                                         <Trash2 className="w-4 h-4 text-destructive" />
                                       </Button>
@@ -1583,20 +1755,28 @@ export function Admin() {
             <Card className="w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl relative bg-card">
               <CardHeader className="pb-3 border-b border-border">
                 <div className="flex items-start justify-between">
-                  <div>
+                  <div className="w-full mr-4">
                     <div className="flex items-center gap-2">
                       <Badge variant={inspectingEvent.is_pending ? "secondary" : "default"} className={inspectingEvent.is_pending ? "bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200" : ""}>
                         {inspectingEvent.is_pending ? "In Attesa" : "Pubblicato"}
                       </Badge>
                       <Badge variant="outline">{inspectingEvent.fonte}</Badge>
                     </div>
-                    <CardTitle className="text-lg font-bold mt-1">{inspectingEvent.titolo}</CardTitle>
-                    <CardDescription>
+                    {isEditingEvent ? (
+                      <Input 
+                        value={inspectingEvent.titolo} 
+                        onChange={e => setInspectingEvent({...inspectingEvent, titolo: e.target.value})}
+                        className="text-lg font-bold mt-2 font-sans h-12 px-3"
+                      />
+                    ) : (
+                      <CardTitle className="text-lg font-bold mt-1">{inspectingEvent.titolo}</CardTitle>
+                    )}
+                    <CardDescription className="mt-1">
                       {inspectingEvent.data_inizio ? new Date(inspectingEvent.data_inizio).toLocaleDateString("it-IT") : "N/D"}
                       {inspectingEvent.data_fine && inspectingEvent.data_fine !== inspectingEvent.data_inizio ? ` - ${new Date(inspectingEvent.data_fine).toLocaleDateString("it-IT")}` : ""}
                     </CardDescription>
                   </div>
-                  <Button variant="ghost" onClick={() => setInspectingEvent(null)} className="h-8 w-8 p-0">
+                  <Button variant="ghost" onClick={() => setInspectingEvent(null)} className="h-8 w-8 p-0 shrink-0">
                     <XCircle className="w-6 h-6 text-muted-foreground" />
                   </Button>
                 </div>
@@ -1613,9 +1793,17 @@ export function Admin() {
                     />
                   )}
                   <div className="flex-1 flex flex-col gap-3">
-                    <div>
+                    <div className="flex-1">
                       <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Descrizione Originale</h4>
-                      <p className="text-sm text-foreground line-clamp-4">{inspectingEvent.descrizione || "Nessuna descrizione fornita."}</p>
+                      {isEditingEvent ? (
+                        <AutoResizeTextarea 
+                          value={inspectingEvent.descrizione || ""} 
+                          onChange={(e: any) => setInspectingEvent({...inspectingEvent, descrizione: e.target.value})}
+                          className="w-full min-h-[144px] text-sm bg-background border border-input rounded-md p-3 leading-relaxed"
+                        />
+                      ) : (
+                        <p className="text-sm text-foreground line-clamp-6 leading-relaxed">{inspectingEvent.descrizione || "Nessuna descrizione fornita."}</p>
+                      )}
                     </div>
                     {inspectingEvent.link && (
                       <div>
@@ -1625,12 +1813,21 @@ export function Admin() {
                         </a>
                       </div>
                     )}
-                    {inspectingEvent.link_organizzatore && (
+                    {(isEditingEvent || inspectingEvent.link_organizzatore) && (
                       <div>
                         <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Sito Organizzatore</h4>
-                        <a href={inspectingEvent.link_organizzatore} target="_blank" rel="noopener noreferrer" className="text-xs text-amber-600 hover:underline flex items-center gap-1 w-fit font-medium">
-                          <Globe className="w-3.5 h-3.5" /> Apri Sito Organizzatore
-                        </a>
+                        {isEditingEvent ? (
+                          <Input 
+                            value={inspectingEvent.link_organizzatore || ""} 
+                            onChange={e => setInspectingEvent({...inspectingEvent, link_organizzatore: e.target.value})}
+                            className="h-10 text-xs font-mono px-3"
+                            placeholder="https://..."
+                          />
+                        ) : (
+                          <a href={inspectingEvent.link_organizzatore} target="_blank" rel="noopener noreferrer" className="text-xs text-amber-600 hover:underline flex items-center gap-1 w-fit font-medium">
+                            <Globe className="w-3.5 h-3.5" /> Apri Sito Organizzatore
+                          </a>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1639,8 +1836,108 @@ export function Admin() {
                 {/* Extracted Text */}
                 <div>
                   <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Testo Estratto dalla Locandina</h4>
-                  <div className="bg-muted p-4 rounded-md font-mono text-xs max-h-48 overflow-y-auto border whitespace-pre-wrap">
-                    {inspectingEvent.testo_estratto || "Nessun testo estratto."}
+                  {isEditingEvent ? (
+                    <AutoResizeTextarea 
+                      value={inspectingEvent.testo_estratto || ""} 
+                      onChange={(e: any) => setInspectingEvent({...inspectingEvent, testo_estratto: e.target.value})}
+                      className="w-full bg-muted p-4 rounded-md font-mono text-xs border min-h-48 focus:outline-none leading-relaxed"
+                    />
+                  ) : (
+                    <div className="bg-muted p-4 rounded-md font-mono text-xs max-h-64 overflow-y-auto border whitespace-pre-wrap leading-relaxed">
+                      {inspectingEvent.testo_estratto || "Nessun testo estratto."}
+                    </div>
+                  )}
+                </div>
+
+                {/* Tags & Dettagli Extra */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-border pt-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tags</h4>
+                    </div>
+                    {isEditingEvent ? (
+                      <div className="flex flex-col gap-2">
+                        <div className="flex flex-wrap gap-2">
+                          {editingTags.map((tag, i) => (
+                            <Badge key={i} variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-200">
+                              {tag}
+                              <button onClick={() => setEditingTags(prev => prev.filter((_, idx) => idx !== i))} className="ml-1 hover:text-red-500">
+                                <XCircle className="w-3 h-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                        <div className="flex gap-2 mt-2">
+                          <Input value={newTagValue} onChange={e => setNewTagValue(e.target.value)} placeholder="Nuovo tag..." className="h-10 text-sm" />
+                          <Button size="sm" variant="secondary" className="h-10 px-4" onClick={() => {
+                            if (newTagValue.trim()) {
+                              setEditingTags(prev => [...prev, newTagValue.trim()]);
+                              setNewTagValue("");
+                            }
+                          }}>Aggiungi</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {inspectingEvent.tags && inspectingEvent.tags.length > 0 ? inspectingEvent.tags.map((tag: string, i: number) => (
+                          <Badge key={i} variant="secondary" className="bg-blue-50 text-blue-700">{tag}</Badge>
+                        )) : <span className="text-sm text-muted-foreground italic">Nessun tag</span>}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Dettagli Extra</h4>
+                    {isEditingEvent ? (
+                      <div className="flex flex-col gap-3">
+                        {Object.entries(editingDettagli).map(([key, value]) => (
+                          <div key={key} className="flex gap-2 items-start">
+                            <Input value={key} disabled className="h-10 text-sm w-1/3 bg-muted font-semibold mt-0.5" />
+                            {String(value).length > 60 || key.toLowerCase().includes('bio') ? (
+                              <AutoResizeTextarea 
+                                value={value as string} 
+                                onChange={(e: any) => setEditingDettagli(prev => ({ ...prev, [key]: e.target.value }))} 
+                                className="text-sm bg-background border border-input rounded-md p-3 flex-1 min-h-[120px] leading-relaxed" 
+                              />
+                            ) : (
+                              <Input 
+                                value={value as string} 
+                                onChange={e => setEditingDettagli(prev => ({ ...prev, [key]: e.target.value }))} 
+                                className="h-10 text-sm flex-1 mt-0.5 px-3" 
+                              />
+                            )}
+                            <Button size="icon" variant="ghost" className="h-10 w-10 mt-0.5 text-destructive" onClick={() => {
+                              const next = { ...editingDettagli };
+                              delete next[key];
+                              setEditingDettagli(next);
+                            }}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        <div className="flex gap-2 items-center mt-3 border-t border-border pt-3">
+                          <Input value={newDettaglioKey} onChange={e => setNewDettaglioKey(e.target.value)} placeholder="Es. Artisti" className="h-10 text-sm w-1/3" />
+                          <Input value={newDettaglioValue} onChange={e => setNewDettaglioValue(e.target.value)} placeholder="Valore" className="h-10 text-sm flex-1" />
+                          <Button size="sm" variant="secondary" className="h-10 px-4" onClick={() => {
+                            if (newDettaglioKey.trim() && newDettaglioValue.trim()) {
+                              setEditingDettagli(prev => ({ ...prev, [newDettaglioKey.trim()]: newDettaglioValue.trim() }));
+                              setNewDettaglioKey("");
+                              setNewDettaglioValue("");
+                            }
+                          }}>Add</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        {inspectingEvent.dettagli_extra && Object.keys(inspectingEvent.dettagli_extra).length > 0 ? (
+                          Object.entries(inspectingEvent.dettagli_extra).map(([key, value]) => (
+                            <div key={key} className="bg-muted/50 p-2 rounded border border-border/50 text-sm">
+                              <span className="font-semibold text-foreground capitalize mr-2">{key.replace(/_/g, ' ')}:</span>
+                              <span className="text-muted-foreground">{String(value)}</span>
+                            </div>
+                          ))
+                        ) : <span className="text-sm text-muted-foreground italic">Nessun dettaglio extra</span>}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1675,8 +1972,56 @@ export function Admin() {
                 </div>
               </CardContent>
               
-              <div className="p-4 border-t border-border flex justify-end">
-                <Button onClick={() => setInspectingEvent(null)}>Chiudi</Button>
+              <div className="p-4 border-t border-border flex items-center justify-between gap-3 bg-muted/20">
+                {!isEditingEvent ? (
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1 bg-background text-xs">
+                      <span className="text-muted-foreground">Analizza:</span>
+                      <select 
+                        value={analysisTarget} 
+                        onChange={(e) => setAnalysisTarget(e.target.value as any)}
+                        className="bg-transparent border-none outline-none font-semibold text-foreground cursor-pointer text-xs"
+                      >
+                        <option value="both">Locandina + Testo</option>
+                        <option value="both_source">Locandina + Fonte</option>
+                        <option value="image">Solo Locandina</option>
+                        <option value="text">Solo Testo</option>
+                        <option value="source_page">Solo Fonte</option>
+                      </select>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleAnalyzeSingleFromModal}
+                      disabled={analyzingStep !== "idle"}
+                    >
+                      {(analyzingStep === "preview" || analyzingStep === "published") ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Eye className="w-4 h-4 mr-1" />}
+                      Analizza
+                    </Button>
+                  </div>
+                ) : (
+                  <div></div>
+                )}
+                
+                <div className="flex justify-end gap-3">
+                  {isEditingEvent ? (
+                    <>
+                      <Button variant="outline" onClick={() => {
+                        setIsEditingEvent(false);
+                        setEditingTags(inspectingEvent.tags || []);
+                        setEditingDettagli(inspectingEvent.dettagli_extra || {});
+                      }}>Annulla</Button>
+                      <Button onClick={handleSaveEventDetails} disabled={savingEvent}>
+                        {savingEvent && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Salva Modifiche
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button variant="secondary" onClick={() => setIsEditingEvent(true)}>Modifica Dettagli</Button>
+                      <Button onClick={() => setInspectingEvent(null)}>Chiudi</Button>
+                    </>
+                  )}
+                </div>
               </div>
             </Card>
           </div>

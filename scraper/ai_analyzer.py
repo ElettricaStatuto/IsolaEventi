@@ -47,13 +47,13 @@ def analyze_event(descrizione: str, image_url: str = None, target: str = "both",
                 base_url="https://production-modelfarm.replit.com"
             )
         )
-        MODEL = "gemini-2.5-flash"
+        MODEL = "gemini-3.1-flash-lite"
     else:
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             return {"testo_estratto": "Chiave API Gemini mancante.", "is_festival": False, "sotto_eventi": [], "link_organizzatore": None}
         client = genai.Client(api_key=api_key)
-        MODEL = "gemini-2.5-flash"
+        MODEL = "gemini-3.1-flash-lite"
 
     try:
         
@@ -69,107 +69,51 @@ def analyze_event(descrizione: str, image_url: str = None, target: str = "both",
             descrizione = extract_text_from_url(link)
             
         # Define prompt based on the chosen target
+        base_instructions = """Sei un assistente AI esperto nell'estrazione e organizzazione di dati per eventi in Sardegna.
+Analizza attentamente i dati forniti per:
+1. Estrarre e organizzare le informazioni utili (date, orari, programma, ospiti, specialità enogastronomiche, contatti, prezzi).
+2. Identificare se l'evento è un Festival, Sagra o Festa Patronale che si articola su più giornate/date (multi-data).
+3. Se si tratta di un evento multi-data, dividi l'evento principale in sotto-eventi giornalieri compilando l'array 'sotto_eventi' con i relativi titoli di ciascuna giornata, date e luoghi.
+4. Trova se è presente un indirizzo o link del sito web ufficiale dell'organizzatore (es. pagina Facebook, account Instagram dell'associazione o proloco, sito web dell'organizzatore). NON indicare il sito da cui è stato preso il link (es. paradisola, eventiinsardegna ecc.), ma SOLO quello del comitato organizzatore dell'evento.
+5. Seleziona i TAG (categorie) per l'evento. Devi scegliere:
+   - ESATTAMENTE 1 "Tag Primario" da questa lista: ["Musica", "Teatro", "Cinema", "Arte e Mostre", "Enogastronomia", "Folklore e Tradizione", "Letteratura e Incontri", "Sport", "Bambini e Famiglie", "Altro"]
+   - DA 0 A 2 "Tag Secondari" (più specifici) da questa lista: ["Musica Elettronica", "Jazz", "Musica Classica", "Rock/Pop", "DJ Set", "Danza", "Stand-up Comedy", "Cinema d'Autore", "Documentario", "Cortometraggio", "Degustazione", "Mercato", "Escursione", "Festa Patronale", "Fotografia", "Workshop", "Festival"]
+   Inserisci tutti i tag scelti (primario + eventuali secondari) nell'array 'tags'.
+6. Cerca di estrarre dei dettagli extra specifici in base al tipo di evento. Usa la tua base di conoscenza per arricchire questi dettagli SOLO SE sei assolutamente certo delle informazioni (es. se conosci l'artista, aggiungi una breve biografia). Se non sei sicuro, ometti il campo. Ecco cosa cercare in base all'evento:
+   - Se Musica: "genere_musicale", "artisti_principali", "strumenti", "bio_artista"
+   - Se Cinema: "regista", "cast_principale", "genere_film", "anno_uscita", "durata", "tema_trattato"
+   - Se Teatro: "compagnia_teatrale", "regista", "attori_principali", "autore_testo"
+   - Se Arte/Mostre: "artisti_esposti", "curatore", "tipologia_opere"
+   - Se Enogastronomia: "prodotti_tipici", "attivita_previste", "tradizione_legata"
+   - Se Letteratura: "autori_relatori", "titolo_libro", "argomento_principale"
+   Inserisci tutti i dettagli trovati in un oggetto JSON chiamato "dettagli_extra".
+7. Produci un riassunto chiaro ed informativo nel campo 'testo_estratto' basato sui dati forniti, arricchito possibilmente con le informazioni scoperte.
+
+Rispondi ESCLUSIVAMENTE in formato JSON valido, usando esattamente questo schema:
+{
+  "testo_estratto": "Riassunto completo...",
+  "is_festival": true o false,
+  "sotto_eventi": [
+    {"titolo": "Nome Giornata", "data_inizio": "YYYY-MM-DD", "data_fine": "YYYY-MM-DD", "luogo": "Nome luogo"}
+  ],
+  "link_organizzatore": "URL ufficiale o null",
+  "tags": ["Tag1", "Tag2"],
+  "dettagli_extra": {
+     "chiave": "valore"
+  }
+}
+"""
+        
         if target == "image":
-            prompt = (
-                "Sei un assistente AI esperto nell'estrazione dati da locandine di eventi in Sardegna.\n"
-                "Analizza attentamente l'IMMAGINE DELLA LOCANDINA allegata per:\n"
-                "1. Estrarre tutte le informazioni utili (date, orari, programma, ospiti, specialità enogastronomiche, contatti, prezzi).\n"
-                "2. Identificare se l'evento è un Festival, Sagra o Festa Patronale che si articola su più giornate/date (multi-data).\n"
-                "3. Se si tratta di un evento multi-data, dividi l'evento principale in sotto-eventi giornalieri compilando l'array 'sotto_eventi' con i relativi titoli di ciascuna giornata, date e luoghi.\n"
-                "4. Trova se sulla locandina è presente un indirizzo o link del sito web ufficiale dell'organizzatore (es. pagina Facebook, account Instagram dell'associazione o proloco, sito web dell'organizzatore). NON indicare il sito da cui è stato preso il link (es. paradisola, eventiinsardegna ecc.), ma SOLO quello del comitato organizzatore dell'evento.\n"
-                "IMPORTANTE: Il tuo riassunto nel campo 'testo_estratto' deve basarsi ESCLUSIVAMENTE sulle informazioni lette visivamente nella locandina.\n"
-                "Rispondi ESCLUSIVAMENTE in formato JSON valido, usando esattamente questo schema:\n"
-                "{\n"
-                '  "testo_estratto": "Riassunto completo estratto unicamente dalla locandina...",\n'
-                '  "is_festival": true o false,\n'
-                '  "sotto_eventi": [\n'
-                '    {"titolo": "Nome Giornata/Sotto-evento", "data_inizio": "YYYY-MM-DD", "data_fine": "YYYY-MM-DD", "luogo": "Nome luogo/paese"}\n'
-                '  ],\n'
-                '  "link_organizzatore": "URL ufficiale del sito/social dell\'organizzatore se presente nella locandina, altrimenti null"\n'
-                "}\n"
-            )
+            prompt = base_instructions + "\nAnalizza attentamente l'IMMAGINE DELLA LOCANDINA allegata per estrarre le informazioni richieste."
         elif target == "text":
-            prompt = (
-                "Sei un assistente AI esperto nell'estrazione e organizzazione di dati per eventi in Sardegna.\n"
-                "Analizza attentamente il TESTO DELLA DESCRIZIONE fornito dal sito web per:\n"
-                "1. Estrarre e organizzare le informazioni utili (date, orari, programma, ospiti, specialità enogastronomiche, contatti, prezzi).\n"
-                "2. Identificare se l'evento è un Festival, Sagra o Festa Patronale che si articola su più giornate/date (multi-data).\n"
-                "3. Se si tratta di un evento multi-data, dividi l'evento principale in sotto-eventi giornalieri compilando l'array 'sotto_eventi' con i relativi titoli di ciascuna giornata, date e luoghi.\n"
-                "4. Trova se nel testo è presente un indirizzo o link del sito web ufficiale dell'organizzatore (es. pagina Facebook, account Instagram dell'associazione o proloco, sito web dell'organizzatore). NON indicare il sito da cui è stato preso il link (es. paradisola, eventiinsardegna ecc.), ma SOLO quello del comitato organizzatore dell'evento.\n"
-                "IMPORTANTE: Il tuo riassunto nel campo 'testo_estratto' deve basarsi ESCLUSIVAMENTE sul testo fornito.\n"
-                "Rispondi ESCLUSIVAMENTE in formato JSON valido, usando esattamente questo schema:\n"
-                "{\n"
-                '  "testo_estratto": "Riassunto completo estratto dal testo del sito...",\n'
-                '  "is_festival": true o false,\n'
-                '  "sotto_eventi": [\n'
-                '    {"titolo": "Nome Giornata/Sotto-evento", "data_inizio": "YYYY-MM-DD", "data_fine": "YYYY-MM-DD", "luogo": "Nome luogo/paese"}\n'
-                '  ],\n'
-                '  "link_organizzatore": "URL ufficiale del sito/social dell\'organizzatore se presente nel testo, altrimenti null"\n'
-                "}\n\n"
-                f"TESTO DELLA DESCRIZIONE:\n{descrizione}"
-            )
+            prompt = base_instructions + f"\nAnalizza attentamente il TESTO DELLA DESCRIZIONE fornito dal sito web:\n{descrizione}"
         elif target == "source_page":
-            prompt = (
-                "Sei un assistente AI esperto nell'estrazione e organizzazione di dati per eventi in Sardegna.\n"
-                "Analizza attentamente il TESTO DELLA PAGINA FONTE estratto dal link dell'evento per:\n"
-                "1. Estrarre e organizzare le informazioni utili (date, orari, programma dettagliato, ospiti, specialità enogastronomiche, contatti, prezzi).\n"
-                "2. Identificare se l'evento è un Festival, Sagra o Festa Patronale che si articola su più giornate/date (multi-data).\n"
-                "3. Se si tratta di un evento multi-data, dividi l'evento principale in sotto-eventi giornalieri compilando l'array 'sotto_eventi' con i relativi titoli di ciascuna giornata, date e luoghi.\n"
-                "4. Trova se nel testo è presente un indirizzo o link del sito web ufficiale dell'organizzatore (es. pagina Facebook, account Instagram dell'associazione o proloco, sito web dell'organizzatore). NON indicare il sito da cui è stato preso il link (es. paradisola, eventiinsardegna ecc.), ma SOLO quello del comitato organizzatore dell'evento.\n"
-                "IMPORTANTE: Il tuo riassunto nel campo 'testo_estratto' deve basarsi ESCLUSIVAMENTE sul testo della pagina fonte fornito.\n"
-                "Rispondi ESCLUSIVAMENTE in formato JSON valido, usando esattamente questo schema:\n"
-                "{\n"
-                '  "testo_estratto": "Riassunto completo e dettagliato estratto dalla pagina fonte...",\n'
-                '  "is_festival": true o false,\n'
-                '  "sotto_eventi": [\n'
-                '    {"titolo": "Nome Giornata/Sotto-evento", "data_inizio": "YYYY-MM-DD", "data_fine": "YYYY-MM-DD", "luogo": "Nome luogo/paese"}\n'
-                '  ],\n'
-                '  "link_organizzatore": "URL ufficiale del sito/social dell\'organizzatore se presente nella pagina, altrimenti null"\n'
-                "}\n\n"
-                f"TESTO ESTRATTO DALLA PAGINA FONTE:\n{descrizione}"
-            )
+            prompt = base_instructions + f"\nAnalizza attentamente il TESTO DELLA PAGINA FONTE estratto dal link dell'evento:\n{descrizione}"
         elif target == "both_source":
-            prompt = (
-                "Sei un assistente AI esperto nell'estrazione e organizzazione di dati per eventi in Sardegna.\n"
-                "Ti viene fornito il testo della pagina fonte estratto dal link dell'evento e l'immagine della locandina dell'evento.\n"
-                "Il tuo compito è analizzare attentamente ENTRAMBI (testo del link e immagine della locandina) per:\n"
-                "1. Estrarre e unire le informazioni utili (date, orari, programma dettagliato, ospiti, specialità enogastronomiche, contatti, prezzi).\n"
-                "2. Identificare se l'evento è un Festival, Sagra o Festa Patronale che si articola su più giornate/date (multi-data).\n"
-                "3. Se si tratta di un evento multi-data, dividi l'evento principale in sotto-eventi giornalieri compilando l'array 'sotto_eventi' con i relativi titoli di ciascuna giornata, date e luoghi.\n"
-                "4. Trova se nel testo o sulla locandina è presente un indirizzo o link del sito web ufficiale dell'organizzatore (es. pagina Facebook, account Instagram dell'associazione o proloco, sito web dell'organizzatore). NON indicare il sito da cui è stato preso il link (es. paradisola, eventiinsardegna ecc.), ma SOLO quello del comitato organizzatore dell'evento.\n"
-                "IMPORTANTE: Produci un riassunto chiaro ed informativo nel campo 'testo_estratto' basato sia sul testo della pagina fonte che sulla locandina.\n"
-                "Rispondi ESCLUSIVAMENTE in formato JSON valido, usando esattamente questo schema:\n"
-                "{\n"
-                '  "testo_estratto": "Riassunto completo e strutturato unendo le informazioni del link e della locandina...",\n'
-                '  "is_festival": true o false,\n'
-                '  "sotto_eventi": [\n'
-                '    {"titolo": "Nome Giornata/Sotto-evento", "data_inizio": "YYYY-MM-DD", "data_fine": "YYYY-MM-DD", "luogo": "Nome luogo/paese"}\n'
-                '  ],\n'
-                '  "link_organizzatore": "URL ufficiale del sito/social dell\'organizzatore se presente nel testo o nella locandina, altrimenti null"\n'
-                "}\n\n"
-                f"TESTO ESTRATTO DALLA PAGINA FONTE:\n{descrizione}"
-            )
+            prompt = base_instructions + f"\nAnalizza attentamente il TESTO DELLA PAGINA FONTE e l'IMMAGINE DELLA LOCANDINA allegata:\n{descrizione}"
         else: # "both"
-            prompt = (
-                "Sei un assistente AI esperto nell'estrazione e organizzazione di dati per eventi in Sardegna.\n"
-                "Ti viene fornito il testo della descrizione estratto dal sito dell'evento e, se disponibile, la locandina/immagine dell'evento.\n"
-                "Il tuo compito è analizzare attentamente ENTRAMBI (testo del sito e immagine della locandina) per:\n"
-                "1. Estrarre e unire le informazioni utili (date, orari, programma, ospiti, specialità enogastronomiche, contatti, prezzi).\n"
-                "2. Identificare se l'evento è un Festival, Sagra o Festa Patronale che si articola su più giornate/date (multi-data).\n"
-                "3. Se si tratta di un evento multi-data, dividi l'evento principale in sotto-eventi giornalieri compilando l'array 'sotto_eventi' con i relativi titoli di ciascuna giornata, date e luoghi.\n"
-                "4. Trova se nel testo o sulla locandina è presente un indirizzo o link del sito web ufficiale dell'organizzatore (es. pagina Facebook, account Instagram dell'associazione o proloco, sito web dell'organizzatore). NON indicare il sito da cui è stato preso il link (es. paradisola, eventiinsardegna ecc.), ma SOLO quello del comitato organizzatore dell'evento.\n"
-                "IMPORTANTE: Produci un riassunto chiaro ed informativo nel campo 'testo_estratto' basato sia sul testo del sito che sulla locandina.\n"
-                "Rispondi ESCLUSIVAMENTE in formato JSON valido, usando esattamente questo schema:\n"
-                "{\n"
-                '  "testo_estratto": "Riassunto completo e strutturato unendo le informazioni del sito e della locandina...",\n'
-                '  "is_festival": true o false,\n'
-                '  "sotto_eventi": [\n'
-                '    {"titolo": "Nome Giornata/Sotto-evento", "data_inizio": "YYYY-MM-DD", "data_fine": "YYYY-MM-DD", "luogo": "Nome luogo/paese"}\n'
-                '  ],\n'
-                '  "link_organizzatore": "URL ufficiale del sito/social dell\'organizzatore se presente nel testo o nella locandina, altrimenti null"\n'
-                "}\n\n"
-                f"TESTO ESTRATTO DAL SITO (DESCRIZIONE):\n{descrizione}"
-            )
+            prompt = base_instructions + f"\nAnalizza attentamente il TESTO DELLA DESCRIZIONE e l'IMMAGINE DELLA LOCANDINA allegata:\n{descrizione}"
 
         contents = [prompt]
         

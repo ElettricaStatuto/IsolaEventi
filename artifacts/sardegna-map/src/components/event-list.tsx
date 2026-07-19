@@ -138,9 +138,18 @@ export function EventList({
                           Festival
                         </div>
                       )}
-                      <h3 className={`font-bold text-foreground mb-2 leading-tight text-sm pr-16 ${isFestival ? "text-amber-950 dark:text-amber-100" : ""}`}>
+                      <h3 className={`font-bold text-foreground mb-1.5 leading-tight text-sm pr-16 ${isFestival ? "text-amber-950 dark:text-amber-100" : ""}`}>
                         {evt.titolo}
                       </h3>
+                      {evt.tags && evt.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {evt.tags.map((tag, i) => (
+                            <span key={i} className="bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded text-[10px] font-medium">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       <div className="flex flex-col gap-1.5 text-xs text-muted-foreground">
                         {evt.data_inizio && (
                           <div className="flex items-center gap-1.5">

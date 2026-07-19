@@ -224,6 +224,34 @@ paths:
                     type: boolean
                   message:
                     type: string
+    put:
+      operationId: updateEvent
+      tags: [events]
+      summary: Update an existing event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Event"
+      responses:
+        "200":
+          description: Updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
 
 components:
   schemas:
@@ -271,6 +299,13 @@ components:
           type: ["boolean", "null"]
         link_organizzatore:
           type: ["string", "null"]
+        tags:
+          type: ["array", "null"]
+          items:
+            type: string
+        dettagli_extra:
+          type: ["object", "null"]
+          additionalProperties: true
 
     EventStats:
       type: object
@@ -361,6 +396,13 @@ components:
           type: ["boolean", "null"]
         link_organizzatore:
           type: ["string", "null"]
+        tags:
+          type: ["array", "null"]
+          items:
+            type: string
+        dettagli_extra:
+          type: ["object", "null"]
+          additionalProperties: true
 
     ApproveEventsBody:
       type: object

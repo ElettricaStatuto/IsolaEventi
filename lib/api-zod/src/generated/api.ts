@@ -43,7 +43,9 @@ export const ListEventsResponseItem = zod.object({
   "parent_id": zod.number().nullish(),
   "testo_estratto": zod.string().nullish(),
   "is_festival": zod.boolean().nullish(),
-  "link_organizzatore": zod.string().nullish()
+  "link_organizzatore": zod.string().nullish(),
+  "tags": zod.array(zod.string()).nullish(),
+  "dettagli_extra": zod.record(zod.string(), zod.unknown()).nullish()
 })
 export const ListEventsResponse = zod.array(ListEventsResponseItem)
 
@@ -98,7 +100,9 @@ export const PreviewEventsResponse = zod.object({
   "parent_id": zod.number().nullish(),
   "testo_estratto": zod.string().nullish(),
   "is_festival": zod.boolean().nullish(),
-  "link_organizzatore": zod.string().nullish()
+  "link_organizzatore": zod.string().nullish(),
+  "tags": zod.array(zod.string()).nullish(),
+  "dettagli_extra": zod.record(zod.string(), zod.unknown()).nullish()
 }))
 })
 
@@ -148,7 +152,9 @@ export const ApproveEventsBody = zod.object({
   "parent_id": zod.number().nullish(),
   "testo_estratto": zod.string().nullish(),
   "is_festival": zod.boolean().nullish(),
-  "link_organizzatore": zod.string().nullish()
+  "link_organizzatore": zod.string().nullish(),
+  "tags": zod.array(zod.string()).nullish(),
+  "dettagli_extra": zod.record(zod.string(), zod.unknown()).nullish()
 }))
 })
 
@@ -184,7 +190,9 @@ export const GetEventResponse = zod.object({
   "parent_id": zod.number().nullish(),
   "testo_estratto": zod.string().nullish(),
   "is_festival": zod.boolean().nullish(),
-  "link_organizzatore": zod.string().nullish()
+  "link_organizzatore": zod.string().nullish(),
+  "tags": zod.array(zod.string()).nullish(),
+  "dettagli_extra": zod.record(zod.string(), zod.unknown()).nullish()
 })
 
 
@@ -202,6 +210,40 @@ export const DeleteEventBody = zod.object({
 })
 
 export const DeleteEventResponse = zod.object({
+  "success": zod.boolean().optional(),
+  "message": zod.string().optional()
+})
+
+
+/**
+ * @summary Update an existing event
+ */
+export const UpdateEventParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateEventBody = zod.object({
+  "id": zod.number(),
+  "titolo": zod.string(),
+  "data_inizio": zod.string().nullish(),
+  "data_fine": zod.string().nullish(),
+  "luogo": zod.string().nullish(),
+  "latitudine": zod.number().nullish(),
+  "longitudine": zod.number().nullish(),
+  "link": zod.string().nullish(),
+  "descrizione": zod.string().nullish(),
+  "immagine": zod.string().nullish(),
+  "fonte": zod.string(),
+  "aggiornato_il": zod.string().optional(),
+  "parent_id": zod.number().nullish(),
+  "testo_estratto": zod.string().nullish(),
+  "is_festival": zod.boolean().nullish(),
+  "link_organizzatore": zod.string().nullish(),
+  "tags": zod.array(zod.string()).nullish(),
+  "dettagli_extra": zod.record(zod.string(), zod.unknown()).nullish()
+})
+
+export const UpdateEventResponse = zod.object({
   "success": zod.boolean().optional(),
   "message": zod.string().optional()
 })

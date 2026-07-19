@@ -92,6 +92,8 @@ router.get("/events", async (req, res): Promise<void> => {
       fonte: eventsTable.fonte,
       testoEstratto: eventsTable.testoEstratto,
       parentId: eventsTable.parentId,
+      tags: eventsTable.tags,
+      dettagliExtra: eventsTable.dettagliExtra,
       aggiornatoIl: eventsTable.aggiornatoIl,
       childrenCount: sql<number>`(SELECT COUNT(*) FROM events c WHERE c.parent_id = ${eventsTable.id})::int`,
     })
@@ -113,6 +115,8 @@ router.get("/events", async (req, res): Promise<void> => {
     fonte: r.fonte,
     testo_estratto: r.testoEstratto,
     parent_id: r.parentId,
+    tags: r.tags || [],
+    dettagli_extra: r.dettagliExtra || null,
     children_count: r.childrenCount ?? 0,
     aggiornato_il: r.aggiornatoIl.toISOString(),
   }));
@@ -478,6 +482,8 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
               testoEstratto: ev.testo_estratto || null,
               parentId: ev.parent_id || null,
               linkOrganizzatore: ev.link_organizzatore || null,
+              tags: ev.tags || null,
+              dettagliExtra: ev.dettagli_extra || null,
               aggiornatoIl: new Date(),
             })
             .where(eq(eventsTable.id, existingId));
@@ -514,6 +520,8 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
             testoEstratto: ev.testo_estratto || null,
             parentId: ev.parent_id || null,
             linkOrganizzatore: ev.link_organizzatore || null,
+            tags: ev.tags || null,
+            dettagliExtra: ev.dettagli_extra || null,
           }).returning({ id: eventsTable.id });
 
           const parentId = inserted?.id;
@@ -628,6 +636,8 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
               .set({
                 testoEstratto: r.testo_estratto,
                 linkOrganizzatore: r.link_organizzatore || null,
+                tags: r.tags || null,
+                dettagliExtra: r.dettagli_extra || null,
                 dataInizio: dataInizio,
                 dataFine: dataFine,
                 aggiornatoIl: new Date(),
@@ -778,9 +788,52 @@ router.get("/events/:id", async (req, res): Promise<void> => {
       fonte: row.fonte,
       testo_estratto: row.testoEstratto,
       parent_id: row.parentId,
+      tags: row.tags || [],
+      dettagli_extra: row.dettagliExtra || null,
       aggiornato_il: row.aggiornatoIl.toISOString(),
     })
   );
+});
+
+router.put("/events/:id", requireAdminKey, async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+  if (Number.isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+
+  try {
+    const data = req.body;
+    let { dataInizio, dataFine } = getFestivalDateRange(data.data_inizio, data.data_fine, data.sotto_eventi || []);
+    
+    // We only update the core fields that could be modified by the admin
+    await db.update(eventsTable)
+      .set({
+        titolo: data.titolo,
+        dataInizio: dataInizio,
+        dataFine: dataFine,
+        luogo: data.luogo,
+        latitudine: data.latitudine,
+        longitudine: data.longitudine,
+        link: data.link,
+        descrizione: data.descrizione,
+        immagine: data.immagine,
+        fonte: data.fonte,
+        testoEstratto: data.testo_estratto,
+        parentId: data.parent_id,
+        tags: data.tags,
+        dettagliExtra: data.dettagli_extra,
+        linkOrganizzatore: data.link_organizzatore,
+        aggiornatoIl: new Date(),
+      })
+      .where(eq(eventsTable.id, id));
+
+    res.json({ success: true, message: "Evento aggiornato con successo" });
+  } catch (e) {
+    req.log.error({ err: e }, "Update event failed");
+    res.status(500).json({ error: String(e) });
+  }
 });
 
 export default router;

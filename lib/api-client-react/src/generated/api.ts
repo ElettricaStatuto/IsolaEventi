@@ -32,7 +32,8 @@ import type {
   RefreshPreviewResult,
   RefreshResult,
   RejectedEvent,
-  RestoreRejectedEvent200
+  RestoreRejectedEvent200,
+  UpdateEvent200
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -803,5 +804,76 @@ export const useDeleteEvent = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteEventMutationOptions(options));
+    }
+
+export const getUpdateEventUrl = (id: number,) => {
+
+
+
+
+  return `/api/events/${id}`
+}
+
+/**
+ * @summary Update an existing event
+ */
+export const updateEvent = async (id: number,
+    event: Event, options?: RequestInit): Promise<UpdateEvent200> => {
+
+  return customFetch<UpdateEvent200>(getUpdateEventUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(event)
+  }
+);}
+
+
+
+
+export const getUpdateEventMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEvent>>, TError,{id: number;data: BodyType<Event>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateEvent>>, TError,{id: number;data: BodyType<Event>}, TContext> => {
+
+const mutationKey = ['updateEvent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateEvent>>, {id: number;data: BodyType<Event>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateEvent(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateEventMutationResult = NonNullable<Awaited<ReturnType<typeof updateEvent>>>
+    export type UpdateEventMutationBody = BodyType<Event>
+    export type UpdateEventMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update an existing event
+ */
+export const useUpdateEvent = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEvent>>, TError,{id: number;data: BodyType<Event>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateEvent>>,
+        TError,
+        {id: number;data: BodyType<Event>},
+        TContext
+      > => {
+      return useMutation(getUpdateEventMutationOptions(options));
     }
 
