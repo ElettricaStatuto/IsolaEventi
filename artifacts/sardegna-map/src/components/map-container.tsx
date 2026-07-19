@@ -91,25 +91,25 @@ export function MapContainer({
     events.forEach((evt) => {
       if (evt.latitudine == null || evt.longitudine == null) return;
 
-      const isFestival = events.some(e => e.parent_id === evt.id);
+      const isFestival = (evt as any).children_count > 0;
+      const isChild = !!evt.parent_id;
       let icon = new L.Icon.Default();
 
       if (isFestival) {
+        // 🟠 Festival padre — pin grande arancione con bandierina
         icon = L.divIcon({
           className: "custom-div-icon",
-          html: `<div style="background-color: #c0661b; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3); border: 2px solid white;">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
-                 </div>`,
-          iconSize: [30, 30],
-          iconAnchor: [15, 30]
+          html: `<div style="background-color: #c0661b; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.4); border: 2px solid white; font-size:16px;">🎪</div>`,
+          iconSize: [32, 32],
+          iconAnchor: [16, 32]
         });
-      } else if (evt.parent_id) {
-        // Child event: smaller, different color
+      } else if (isChild) {
+        // 🔵 Concerto figlio — pin piccolo blu
         icon = L.divIcon({
           className: "custom-div-icon-child",
-          html: `<div style="background-color: #6b21a8; border-radius: 50%; width: 16px; height: 16px; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div>`,
-          iconSize: [16, 16],
-          iconAnchor: [8, 8]
+          html: `<div style="background-color: #1d4ed8; border-radius: 50%; width: 18px; height: 18px; border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.35); display:flex;align-items:center;justify-content:center;font-size:9px;color:white;">🎵</div>`,
+          iconSize: [18, 18],
+          iconAnchor: [9, 9]
         });
       }
 

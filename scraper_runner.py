@@ -24,6 +24,7 @@ import requests
 from scraper.sites.paradisola import ParadisolaScraper
 from scraper.sites.sardegnaturismo import SardegnaTurismoScraper
 from scraper.sites.eventiinsardegna import EventiInSardegnaScraper
+from scraper.sites.timeinjazz import TimeInJazzScraper
 from scraper.ai_analyzer import analyze_event
 from scraper.models import SottoEvento
 
@@ -159,6 +160,60 @@ def _load_rejected(conn) -> set[tuple[str, str]]:
     return {(r[0], r[1]) for r in rows}
 
 
+def _upsert_festival_parent(conn, festival_name: str, fonte: str, eventi: list) -> int:
+    """Crea (o aggiorna) l'evento padre di un festival nel DB.
+    Calcola data_inizio e data_fine come min/max dei figli.
+    Restituisce l'ID dell'evento padre.
+    """
+    # Calcola date min/max dai figli
+    date_figli = []
+    for ev in eventi:
+        d = _parse_mixed_date(ev.data_inizio)
+        if d:
+            date_figli.append(d)
+    
+    data_inizio = min(date_figli) if date_figli else None
+    data_fine = max(date_figli) if date_figli else None
+    
+    # Prova a trovare il luogo più comune tra i figli (primo disponibile)
+    luogo = next((ev.luogo for ev in eventi if ev.luogo), None)
+    
+    cur = conn.cursor()
+    
+    # Cerca se esiste già un evento padre con questo titolo e fonte
+    cur.execute(
+        "SELECT id FROM events WHERE titolo = %s AND fonte = %s AND parent_id IS NULL LIMIT 1",
+        (festival_name, fonte)
+    )
+    row = cur.fetchone()
+    
+    if row:
+        parent_id = row[0]
+        # Aggiorna le date del padre
+        cur.execute(
+            """UPDATE events
+               SET data_inizio = %s, data_fine = %s, aggiornato_il = now()
+               WHERE id = %s""",
+            (data_inizio, data_fine, parent_id)
+        )
+        logger.info(f"Festival padre aggiornato: '{festival_name}' (id={parent_id})")
+    else:
+        cur.execute(
+            """INSERT INTO events
+               (titolo, data_inizio, data_fine, luogo, fonte, aggiornato_il)
+               VALUES (%s, %s, %s, %s, %s, now())
+               RETURNING id""",
+            (festival_name, data_inizio, data_fine, luogo, fonte)
+        )
+        parent_id = cur.fetchone()[0]
+        logger.info(f"Festival padre creato: '{festival_name}' (id={parent_id})")
+    
+    conn.commit()
+    cur.close()
+    return parent_id
+
+
+
 def _download_image(url: str, event_id: int) -> Optional[str]:
     """Scarica un'immagine da URL e la salva come evento_{id}.{ext}.
     Restituisce il nome file relativo (es. 'evento_42.jpg')."""
@@ -229,6 +284,9 @@ def main():
     if not enabled_sources or "sardegnaturismo" in enabled_sources:
         scrapers.append(SardegnaTurismoScraper())
 
+    if not enabled_sources or "timeinjazz" in enabled_sources:
+        scrapers.append(TimeInJazzScraper())
+
     # Configurazione target per eventiinsardegna.it
     eventiinsardegna_targets = []
     if not enabled_sources or "eventiinsardegna_calendar" in enabled_sources:
@@ -248,16 +306,30 @@ def main():
         scrapers.append(scraper)
 
     tutti_eventi = []
+    # Mappa scraper → parent_id festival (per i festival scrapers)
+    festival_parent_ids: dict[str, int] = {}
+
+    conn_pre = psycopg2.connect(DATABASE_URL)
     for s in scrapers:
         try:
             emit_log(f"Inizio scraping da: {s.nome_fonte}...")
             eventi = s.scrapa_eventi()
             emit_log(f"Completato {s.nome_fonte}: trovati {len(eventi)} articoli.")
+
+            # Se lo scraper è un festival, crea/aggiorna il padre e segna tutti i figli
+            if getattr(s, 'festival_name', None):
+                parent_id = _upsert_festival_parent(conn_pre, s.festival_name, s.nome_fonte, eventi)
+                festival_parent_ids[s.nome_fonte] = parent_id
+                emit_log(f"Festival padre '{s.festival_name}' (id={parent_id}): {len(eventi)} concerti come figli.")
+                for ev in eventi:
+                    ev.parent_id = parent_id
+
             tutti_eventi.extend(eventi)
         except Exception as e:
             emit_log(f"Errore scraping {s.nome_fonte}: {e}")
             logger.error(f"Scraper {s.nome_fonte} failed: {e}")
             errori += 1
+    conn_pre.close()
 
     conn = psycopg2.connect(DATABASE_URL)
     rejected_set = _load_rejected(conn)
@@ -278,7 +350,7 @@ def main():
 
     # We need to know which ones are completely new to avoid re-analyzing
     cur = conn.cursor()
-    cur.execute("SELECT id, titolo FROM events WHERE parent_id IS NULL")
+    cur.execute("SELECT id, titolo FROM events")
     existing_events = list(cur.fetchall())
     
     for ev in filtrati:
@@ -340,6 +412,7 @@ def main():
                 "is_new": obj["is_new"],
                 "testo_estratto": ev.testo_estratto,
                 "is_festival": ev.is_festival,
+                "parent_id": getattr(ev, 'parent_id', None),
                 "sotto_eventi": [se.__dict__ for se in ev.sotto_eventi]
             })
         conn.close()
@@ -409,13 +482,14 @@ def main():
                     """
                     INSERT INTO events
                         (titolo, data_inizio, data_fine, luogo, latitudine, longitudine,
-                         link, descrizione, immagine, fonte, testo_estratto, aggiornato_il)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
+                         link, descrizione, immagine, fonte, testo_estratto, parent_id, aggiornato_il)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
                     RETURNING id
                     """,
                     (
                         ev.titolo, data_inizio, data_fine, ev.luogo,
-                        lat, lon, ev.url, ev.descrizione, None, ev.fonte or "", ev.testo_estratto,
+                        lat, lon, ev.url, ev.descrizione, None, ev.fonte or "",
+                        ev.testo_estratto, getattr(ev, 'parent_id', None),
                     ),
                 )
                 event_id = cur.fetchone()[0]

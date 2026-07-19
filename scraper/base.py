@@ -24,6 +24,9 @@ HEADERS = {
 class BaseScraper(ABC):
     nome_fonte: str = "Sconosciuta"
     url_base: str = ""
+    # Se impostato, tutti gli eventi di questo scraper saranno figli
+    # di un evento padre "festival" con questo nome
+    festival_name: str | None = None
 
     def __init__(self, timeout: int = 15, pausa: float = 1.5):
         self.timeout = timeout

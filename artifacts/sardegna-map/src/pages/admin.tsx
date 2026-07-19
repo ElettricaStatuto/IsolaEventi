@@ -87,6 +87,7 @@ export function Admin() {
   const [selectedSources, setSelectedSources] = useState<string[]>([
     "paradisola",
     "sardegnaturismo",
+    "timeinjazz",
     "eventiinsardegna_calendar",
     "eventiinsardegna_alghero",
     "eventiinsardegna_cagliari",
@@ -772,113 +773,79 @@ export function Admin() {
                   Avvia lo scraper per recuperare eventi dai siti fonte. Potrai vedere l'anteprima, selezionare quelli da pubblicare e approvarli.
                 </CardDescription>
               </CardHeader>
-               <CardContent className="flex flex-col gap-4">
-                <div className="flex flex-col gap-3 border border-border rounded-md p-4 bg-muted/40 max-w-xl">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fonti da scansionare</span>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-                    {/* Paradisola */}
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="src-paradisola"
-                        checked={selectedSources.includes("paradisola")}
-                        onCheckedChange={(checked) => {
-                          setSelectedSources(prev => 
-                            checked ? [...prev, "paradisola"] : prev.filter(x => x !== "paradisola")
-                          );
-                        }}
-                      />
-                      <Label htmlFor="src-paradisola" className="text-sm font-medium cursor-pointer">Paradisola (paradisola.it)</Label>
-                    </div>
+              <CardContent className="flex flex-col gap-4">
+                 <div className="flex flex-col gap-3 border border-border rounded-md p-4 bg-muted/40 max-w-3xl">
+                   <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fonti da scansionare</span>
 
-                    {/* Sardegna Turismo */}
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="src-sardegnaturismo"
-                        checked={selectedSources.includes("sardegnaturismo")}
-                        onCheckedChange={(checked) => {
-                          setSelectedSources(prev => 
-                            checked ? [...prev, "sardegnaturismo"] : prev.filter(x => x !== "sardegnaturismo")
-                          );
-                        }}
-                      />
-                      <Label htmlFor="src-sardegnaturismo" className="text-sm font-medium cursor-pointer">Sardegna Turismo (sardegnaturismo.it)</Label>
-                    </div>
-                  </div>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1">
 
-                  <div className="border-t border-border/60 my-1"></div>
+                     {/* ── COLONNA SINISTRA: EVENTI GENERALI ── */}
+                     <div className="flex flex-col gap-3">
+                       <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">📅 Eventi Generali</span>
 
-                  {/* Eventi in Sardegna & Sub-targets */}
-                  <div className="flex flex-col gap-2">
-                    <span className="text-sm font-bold text-foreground">Eventi in Sardegna (eventiinsardegna.it)</span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-4">
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id="src-eis-calendar"
-                          checked={selectedSources.includes("eventiinsardegna_calendar")}
-                          onCheckedChange={(checked) => {
-                            setSelectedSources(prev => 
-                              checked ? [...prev, "eventiinsardegna_calendar"] : prev.filter(x => x !== "eventiinsardegna_calendar")
-                            );
-                          }}
-                        />
-                        <Label htmlFor="src-eis-calendar" className="text-sm font-normal cursor-pointer text-muted-foreground">Calendario Generale</Label>
-                      </div>
+                       <div className="flex items-center gap-2">
+                         <Checkbox id="src-paradisola" checked={selectedSources.includes("paradisola")}
+                           onCheckedChange={(checked) => setSelectedSources(prev => checked ? [...prev, "paradisola"] : prev.filter(x => x !== "paradisola"))} />
+                         <Label htmlFor="src-paradisola" className="text-sm font-medium cursor-pointer">Paradisola (paradisola.it)</Label>
+                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id="src-eis-alghero"
-                          checked={selectedSources.includes("eventiinsardegna_alghero")}
-                          onCheckedChange={(checked) => {
-                            setSelectedSources(prev => 
-                              checked ? [...prev, "eventiinsardegna_alghero"] : prev.filter(x => x !== "eventiinsardegna_alghero")
-                            );
-                          }}
-                        />
-                        <Label htmlFor="src-eis-alghero" className="text-sm font-normal cursor-pointer text-muted-foreground">Tag: Alghero</Label>
-                      </div>
+                       <div className="flex items-center gap-2">
+                         <Checkbox id="src-sardegnaturismo" checked={selectedSources.includes("sardegnaturismo")}
+                           onCheckedChange={(checked) => setSelectedSources(prev => checked ? [...prev, "sardegnaturismo"] : prev.filter(x => x !== "sardegnaturismo"))} />
+                         <Label htmlFor="src-sardegnaturismo" className="text-sm font-medium cursor-pointer">Sardegna Turismo (sardegnaturismo.it)</Label>
+                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id="src-eis-cagliari"
-                          checked={selectedSources.includes("eventiinsardegna_cagliari")}
-                          onCheckedChange={(checked) => {
-                            setSelectedSources(prev => 
-                              checked ? [...prev, "eventiinsardegna_cagliari"] : prev.filter(x => x !== "eventiinsardegna_cagliari")
-                            );
-                          }}
-                        />
-                        <Label htmlFor="src-eis-cagliari" className="text-sm font-normal cursor-pointer text-muted-foreground">Tag: Cagliari</Label>
-                      </div>
+                       <div className="flex flex-col gap-2 mt-1">
+                         <span className="text-xs font-bold text-foreground">EventiInSardegna.it</span>
+                         <div className="flex flex-col gap-2 pl-3">
+                           <div className="flex items-center gap-2">
+                             <Checkbox id="src-eis-calendar" checked={selectedSources.includes("eventiinsardegna_calendar")}
+                               onCheckedChange={(checked) => setSelectedSources(prev => checked ? [...prev, "eventiinsardegna_calendar"] : prev.filter(x => x !== "eventiinsardegna_calendar"))} />
+                             <Label htmlFor="src-eis-calendar" className="text-sm font-normal cursor-pointer text-muted-foreground">Calendario Generale</Label>
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <Checkbox id="src-eis-alghero" checked={selectedSources.includes("eventiinsardegna_alghero")}
+                               onCheckedChange={(checked) => setSelectedSources(prev => checked ? [...prev, "eventiinsardegna_alghero"] : prev.filter(x => x !== "eventiinsardegna_alghero"))} />
+                             <Label htmlFor="src-eis-alghero" className="text-sm font-normal cursor-pointer text-muted-foreground">Tag: Alghero</Label>
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <Checkbox id="src-eis-cagliari" checked={selectedSources.includes("eventiinsardegna_cagliari")}
+                               onCheckedChange={(checked) => setSelectedSources(prev => checked ? [...prev, "eventiinsardegna_cagliari"] : prev.filter(x => x !== "eventiinsardegna_cagliari"))} />
+                             <Label htmlFor="src-eis-cagliari" className="text-sm font-normal cursor-pointer text-muted-foreground">Tag: Cagliari</Label>
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <Checkbox id="src-eis-centro" checked={selectedSources.includes("eventiinsardegna_centro")}
+                               onCheckedChange={(checked) => setSelectedSources(prev => checked ? [...prev, "eventiinsardegna_centro"] : prev.filter(x => x !== "eventiinsardegna_centro"))} />
+                             <Label htmlFor="src-eis-centro" className="text-sm font-normal cursor-pointer text-muted-foreground">Tag: Centro Sardegna</Label>
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <Checkbox id="src-eis-agosto" checked={selectedSources.includes("eventiinsardegna_agosto")}
+                               onCheckedChange={(checked) => setSelectedSources(prev => checked ? [...prev, "eventiinsardegna_agosto"] : prev.filter(x => x !== "eventiinsardegna_agosto"))} />
+                             <Label htmlFor="src-eis-agosto" className="text-sm font-normal cursor-pointer text-muted-foreground">Categoria: Agosto</Label>
+                           </div>
+                         </div>
+                       </div>
+                     </div>
 
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id="src-eis-centro"
-                          checked={selectedSources.includes("eventiinsardegna_centro")}
-                          onCheckedChange={(checked) => {
-                            setSelectedSources(prev => 
-                              checked ? [...prev, "eventiinsardegna_centro"] : prev.filter(x => x !== "eventiinsardegna_centro")
-                            );
-                          }}
-                        />
-                        <Label htmlFor="src-eis-centro" className="text-sm font-normal cursor-pointer text-muted-foreground">Tag: Centro Sardegna</Label>
-                      </div>
+                     {/* ── COLONNA DESTRA: FESTIVAL ── */}
+                     <div className="flex flex-col gap-3">
+                       <span className="text-xs font-bold text-orange-600 uppercase tracking-wide">🎪 Festival</span>
+                       <p className="text-xs text-muted-foreground -mt-1">Gli eventi estratti da questi siti vengono raggruppati automaticamente come concerti figli del festival.</p>
 
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id="src-eis-agosto"
-                          checked={selectedSources.includes("eventiinsardegna_agosto")}
-                          onCheckedChange={(checked) => {
-                            setSelectedSources(prev => 
-                              checked ? [...prev, "eventiinsardegna_agosto"] : prev.filter(x => x !== "eventiinsardegna_agosto")
-                            );
-                          }}
-                        />
-                        <Label htmlFor="src-eis-agosto" className="text-sm font-normal cursor-pointer text-muted-foreground">Categoria: Agosto</Label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                       <div className="flex items-start gap-2 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-md p-3">
+                         <Checkbox id="src-timeinjazz" checked={selectedSources.includes("timeinjazz")}
+                           onCheckedChange={(checked) => setSelectedSources(prev => checked ? [...prev, "timeinjazz"] : prev.filter(x => x !== "timeinjazz"))}
+                           className="mt-0.5"
+                         />
+                         <div>
+                           <Label htmlFor="src-timeinjazz" className="text-sm font-semibold cursor-pointer text-orange-700 dark:text-orange-400">Time in Jazz 2026</Label>
+                           <p className="text-xs text-muted-foreground mt-0.5">timeinjazz.it — 86 concerti a Berchidda e dintorni</p>
+                         </div>
+                       </div>
+                     </div>
+
+                   </div>
+                 </div>
 
                 <Button 
                   onClick={handlePreview} 

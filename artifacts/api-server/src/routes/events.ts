@@ -78,7 +78,23 @@ router.get("/events", async (req, res): Promise<void> => {
   if (fonte) conditions.push(ilike(eventsTable.fonte, `%${fonte}%`));
 
   const rows = await db
-    .select()
+    .select({
+      id: eventsTable.id,
+      titolo: eventsTable.titolo,
+      dataInizio: eventsTable.dataInizio,
+      dataFine: eventsTable.dataFine,
+      luogo: eventsTable.luogo,
+      latitudine: eventsTable.latitudine,
+      longitudine: eventsTable.longitudine,
+      link: eventsTable.link,
+      descrizione: eventsTable.descrizione,
+      immagine: eventsTable.immagine,
+      fonte: eventsTable.fonte,
+      testoEstratto: eventsTable.testoEstratto,
+      parentId: eventsTable.parentId,
+      aggiornatoIl: eventsTable.aggiornatoIl,
+      childrenCount: sql<number>`(SELECT COUNT(*) FROM events c WHERE c.parent_id = ${eventsTable.id})::int`,
+    })
     .from(eventsTable)
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(eventsTable.dataInizio);
@@ -97,10 +113,45 @@ router.get("/events", async (req, res): Promise<void> => {
     fonte: r.fonte,
     testo_estratto: r.testoEstratto,
     parent_id: r.parentId,
+    children_count: r.childrenCount ?? 0,
     aggiornato_il: r.aggiornatoIl.toISOString(),
   }));
 
   res.json(ListEventsResponse.parse(mapped));
+});
+
+// GET /events/:id/children — restituisce i concerti figli di un festival
+router.get("/events/:id/children", async (req, res): Promise<void> => {
+  const parentId = parseInt(req.params.id, 10);
+  if (isNaN(parentId)) {
+    res.status(400).json({ error: "ID non valido" });
+    return;
+  }
+
+  const children = await db
+    .select()
+    .from(eventsTable)
+    .where(eq(eventsTable.parentId, parentId))
+    .orderBy(eventsTable.dataInizio);
+
+  const mapped = children.map((r) => ({
+    id: r.id,
+    titolo: r.titolo,
+    data_inizio: r.dataInizio,
+    data_fine: r.dataFine,
+    luogo: r.luogo,
+    latitudine: r.latitudine,
+    longitudine: r.longitudine,
+    link: r.link,
+    descrizione: r.descrizione,
+    immagine: r.immagine,
+    fonte: r.fonte,
+    parent_id: r.parentId,
+    children_count: 0,
+    aggiornato_il: r.aggiornatoIl.toISOString(),
+  }));
+
+  res.json(mapped);
 });
 
 router.get("/events/stats", async (_req, res): Promise<void> => {
@@ -404,8 +455,7 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
     // Carica tutti gli eventi principali esistenti in memoria per la deduplica sfocata
     const existingEvents = await db
       .select({ id: eventsTable.id, titolo: eventsTable.titolo })
-      .from(eventsTable)
-      .where(isNull(eventsTable.parentId));
+      .from(eventsTable);
 
     for (const ev of events as any[]) {
       try {
@@ -426,6 +476,7 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
               descrizione: ev.descrizione,
               immagine: ev.immagine,
               testoEstratto: ev.testo_estratto || null,
+              parentId: ev.parent_id || null,
               linkOrganizzatore: ev.link_organizzatore || null,
               aggiornatoIl: new Date(),
             })
@@ -461,6 +512,7 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
             immagine: ev.immagine,
             fonte: ev.fonte || "",
             testoEstratto: ev.testo_estratto || null,
+            parentId: ev.parent_id || null,
             linkOrganizzatore: ev.link_organizzatore || null,
           }).returning({ id: eventsTable.id });
 

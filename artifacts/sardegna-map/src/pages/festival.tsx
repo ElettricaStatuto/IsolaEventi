@@ -140,10 +140,17 @@ export function FestivalPage() {
                         )}
                         <h3 className="text-lg font-bold leading-tight">{se.titolo}</h3>
                         
-                        {(se.luogo || se.descrizione) && (
-                          <div className="mt-2 text-muted-foreground text-sm flex flex-col gap-1">
-                            {se.luogo && <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {se.luogo}</span>}
+                        {se.luogo && (
+                          <div className="mt-1 text-muted-foreground text-sm flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 shrink-0" />
+                            <span>{se.luogo}</span>
                           </div>
+                        )}
+                        
+                        {se.descrizione && (
+                          <p className="mt-2 text-foreground/85 text-sm leading-relaxed whitespace-pre-line border-t border-border/40 pt-2">
+                            {se.descrizione}
+                          </p>
                         )}
                       </CardContent>
                     </Card>
