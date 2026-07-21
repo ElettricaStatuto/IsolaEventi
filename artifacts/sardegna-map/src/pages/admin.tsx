@@ -1472,21 +1472,25 @@ export function Admin() {
                   {/* ── Preview inline dopo Analizza URL ── */}
                   {urlScrapedEvents.length > 0 && (
                     <div className="mt-4 flex flex-col gap-3 max-w-3xl">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap items-center justify-between gap-2 bg-emerald-50 dark:bg-emerald-950/20 p-3 rounded-lg border border-emerald-200">
                         <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider flex items-center gap-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          {urlScrapedEvents.length === 1 ? "1 evento estratto" : `${urlScrapedEvents.length} eventi estratti`}
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                          {urlScrapedEvents.length === 1 ? "1 evento estratto con successo!" : `${urlScrapedEvents.length} eventi estratti con successo!`}
                         </span>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-xs text-muted-foreground"
-                            onClick={() => { setUrlScrapedEvents([]); setGenericUrl(""); }}
-                          >
-                            <XCircle className="w-3.5 h-3.5 mr-1" /> Chiudi
-                          </Button>
-                        </div>
+                        {urlScrapedEvents[0]?.dettagli_extra?._usage && (
+                          <div className="text-xs font-semibold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/50 px-3 py-1 rounded-md border border-amber-300 flex items-center gap-1.5 shadow-sm">
+                            <Brain className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Consumo AI: Input {urlScrapedEvents[0].dettagli_extra._usage.prompt_tokens || urlScrapedEvents[0].dettagli_extra._usage.input_tokens || 0} | Output {urlScrapedEvents[0].dettagli_extra._usage.candidates_tokens || urlScrapedEvents[0].dettagli_extra._usage.output_tokens || 0} | Totale {urlScrapedEvents[0].dettagli_extra._usage.total_tokens || 0} Token</span>
+                          </div>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-xs text-muted-foreground h-7"
+                          onClick={() => { setUrlScrapedEvents([]); setGenericUrl(""); }}
+                        >
+                          <XCircle className="w-3.5 h-3.5 mr-1" /> Chiudi
+                        </Button>
                       </div>
 
                       {urlScrapedEvents.map((ev, i) => (
@@ -1499,6 +1503,12 @@ export function Admin() {
                               <div className="flex items-center gap-2 mb-1 flex-wrap">
                                 {ev.is_festival && <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200">Festival</Badge>}
                                 {ev.categoria && <Badge variant="outline">{ev.categoria}</Badge>}
+                                {ev.dettagli_extra?._usage && (
+                                  <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 flex items-center gap-1 text-[11px] font-mono">
+                                    <Brain className="w-3 h-3 text-amber-600" />
+                                    ⚡ Token AI: {ev.dettagli_extra._usage.total_tokens || 0} (In: {ev.dettagli_extra._usage.prompt_tokens || ev.dettagli_extra._usage.input_tokens || 0}, Out: {ev.dettagli_extra._usage.candidates_tokens || ev.dettagli_extra._usage.output_tokens || 0})
+                                  </Badge>
+                                )}
                               </div>
                               <h3 className="font-bold text-base text-foreground leading-snug">{ev.titolo}</h3>
                               <p className="text-xs text-muted-foreground mt-1">📍 {ev.luogo || "Sardegna"} | 📅 {ev.data_inizio} {ev.data_fine ? `- ${ev.data_fine}` : ""}</p>
