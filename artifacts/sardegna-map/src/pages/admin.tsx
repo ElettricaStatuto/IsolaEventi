@@ -1946,8 +1946,26 @@ export function Admin() {
                                       <div className="w-16 h-12 bg-muted rounded border flex items-center justify-center text-xs text-muted-foreground">—</div>
                                     )}
                                   </td>
-                                  <td className="p-2 font-medium max-w-xs truncate">
-                                    {ev.titolo}
+                                  <td className="p-2 font-medium">
+                                    <div className="flex flex-col gap-1 max-w-md">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="font-bold text-foreground text-sm">{ev.titolo}</span>
+                                        {ev.categoria && <Badge variant="secondary" className="bg-purple-100 text-purple-800 text-[10px]">{ev.categoria}</Badge>}
+                                        {ev.tags && Array.isArray(ev.tags) && ev.tags.map((t: string, ti: number) => (
+                                          <Badge key={ti} variant="outline" className="text-[10px] bg-blue-50 text-blue-700">{t}</Badge>
+                                        ))}
+                                      </div>
+                                      {(ev.testo_estratto || ev.dettagli_extra?.bio_artista_o_opera || ev.descrizione) && (
+                                        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed font-normal">
+                                          {ev.dettagli_extra?.bio_artista_o_opera || ev.testo_estratto || ev.descrizione}
+                                        </p>
+                                      )}
+                                      {ev.dettagli_extra?.orario_e_prezzi && (
+                                        <span className="text-[11px] text-amber-700 font-mono font-medium">
+                                          🎟️ {ev.dettagli_extra.orario_e_prezzi}
+                                        </span>
+                                      )}
+                                    </div>
                                   </td>
                                   <td className="p-2 text-muted-foreground whitespace-nowrap">
                                     {ev.data_inizio ? new Date(ev.data_inizio).toLocaleDateString("it-IT") : "N/D"}
