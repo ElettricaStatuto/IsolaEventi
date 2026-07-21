@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Loader2, CheckCircle2, XCircle, ShieldCheck, ArrowLeft, Eye, Database,
-  Trash2, RotateCcw, AlertTriangle, Calendar, MapPin, Globe, Search, RefreshCw, Clock, Terminal, Upload, BarChart3
+  Trash2, RotateCcw, AlertTriangle, Calendar, MapPin, Globe, Search, RefreshCw, Clock, Terminal, Upload, BarChart3, Brain
 } from "lucide-react";
 import { AdminStats } from "@/components/admin-stats";
 
@@ -146,6 +146,12 @@ export function Admin() {
   const [forceFestival, setForceFestival] = useState<boolean>(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [anFilterTitolo, setAnFilterTitolo] = useState("");
+  const [anFilterFonte, setAnFilterFonte] = useState("");
+  const [anFilterDataFrom, setAnFilterDataFrom] = useState("");
+  const [anFilterDataTo, setAnFilterDataTo] = useState("");
+  const [appliedAnFilters, setAppliedAnFilters] = useState({ titolo: "", fonte: "", dataFrom: "", dataTo: "" });
+  const [selectedAnIds, setSelectedAnIds] = useState<Set<string>>(new Set());
 
   const loadPreviewCache = useCallback(async () => {
     if (!adminKey) return;
@@ -464,6 +470,120 @@ export function Admin() {
     } finally {
       setUploadingPdf(false);
     }
+  };
+
+  const applyAnFilters = () => {
+    setAppliedAnFilters({
+      titolo: anFilterTitolo,
+      fonte: anFilterFonte,
+      dataFrom: anFilterDataFrom,
+      dataTo: anFilterDataTo,
+    });
+  };
+
+  const clearAnFilters = () => {
+    setAnFilterTitolo("");
+    setAnFilterFonte("");
+    setAnFilterDataFrom("");
+    setAnFilterDataTo("");
+    setAppliedAnFilters({ titolo: "", fonte: "", dataFrom: "", dataTo: "" });
+  };
+
+  const handlePublishAnalyzed = async (toPublish: any[]) => {
+    if (toPublish.length === 0) return;
+    setError(null);
+    try {
+      await fetchJson("/api/events/approve", "POST", { events: toPublish }, adminKey);
+      const toPublishTitles = new Set(toPublish.map(e => e.titolo));
+      const nextPreviews = previewEvents.filter(ev => !toPublishTitles.has(ev.titolo));
+      setPreviewEvents(nextPreviews);
+      updatePreviewCache(nextPreviews);
+      setSelectedAnIds(new Set());
+      loadPublished(appliedFilters);
+    } catch (e) {
+      setError(`Errore pubblicazione: ${String(e)}`);
+    }
+  };
+
+  const handleAnBulkPubblica = async () => {
+    if (selectedAnIds.size === 0) return;
+    const prevIndices: number[] = [];
+    for (const idKey of selectedAnIds) {
+      if (idKey.startsWith("prev-")) {
+        prevIndices.push(parseInt(idKey.replace("prev-", ""), 10));
+      }
+    }
+    const toPublish = prevIndices.map(i => previewEvents[i]).filter(Boolean);
+    if (toPublish.length === 0) return;
+    if (!window.confirm(`Pubblicare ${toPublish.length} eventi selezionati?`)) return;
+    await handlePublishAnalyzed(toPublish);
+  };
+
+  const handleAnPublishAllFiltered = async () => {
+    const analyzedPreview = previewEvents
+      .map((ev, i) => ({ ...ev, original_idx: i }))
+      .filter((ev) => (ev as any).testo_estratto)
+      .map((ev) => ({ ...ev, is_pending: true, id_key: `prev-${ev.original_idx}` }));
+      
+    const filteredPending = analyzedPreview.filter(ev => {
+      if (appliedAnFilters.titolo && !ev.titolo?.toLowerCase().includes(appliedAnFilters.titolo.toLowerCase())) return false;
+      if (appliedAnFilters.fonte && !ev.fonte?.toLowerCase().includes(appliedAnFilters.fonte.toLowerCase())) return false;
+      if (appliedAnFilters.dataFrom && ev.data_inizio && ev.data_inizio < appliedAnFilters.dataFrom) return false;
+      if (appliedAnFilters.dataTo && ev.data_inizio && ev.data_inizio > appliedAnFilters.dataTo) return false;
+      return true;
+    });
+
+    if (filteredPending.length === 0) {
+      setError("Nessun evento analizzato corrisponde ai filtri impostati.");
+      return;
+    }
+
+    if (!window.confirm(`Pubblicare TUTTI i ${filteredPending.length} eventi analizzati filtrati?`)) return;
+    await handlePublishAnalyzed(filteredPending);
+  };
+
+  const handleAnBulkAnalyze = async () => {
+    if (selectedAnIds.size === 0) return;
+    const toAnalyze: any[] = [];
+    for (const idKey of selectedAnIds) {
+      if (idKey.startsWith("prev-")) {
+        const idx = parseInt(idKey.replace("prev-", ""), 10);
+        if (previewEvents[idx]) toAnalyze.push({ ...previewEvents[idx], original_idx: idx, is_pending: true });
+      } else if (idKey.startsWith("pub-")) {
+        const id = parseInt(idKey.replace("pub-", ""), 10);
+        const ev = publishedEvents.find(e => e.id === id);
+        if (ev) toAnalyze.push({ ...ev, is_pending: false });
+      }
+    }
+    if (toAnalyze.length === 0) return;
+    if (!window.confirm(`Analizzare i ${toAnalyze.length} eventi selezionati?`)) return;
+    await handleAnalyzeEventsMixed(toAnalyze);
+    setSelectedAnIds(new Set());
+  };
+
+  const handleAnAnalyzeAllFiltered = async () => {
+    const analyzedPreview = previewEvents
+      .map((ev, i) => ({ ...ev, original_idx: i, is_pending: true }))
+      .filter((ev) => (ev as any).testo_estratto);
+    const analyzedPublished = publishedEvents
+      .map((ev) => ({ ...ev, is_pending: false }))
+      .filter((ev) => (ev as any).testo_estratto);
+      
+    const allAnalyzed = [...analyzedPreview, ...analyzedPublished].filter(ev => {
+      if (appliedAnFilters.titolo && !ev.titolo?.toLowerCase().includes(appliedAnFilters.titolo.toLowerCase())) return false;
+      if (appliedAnFilters.fonte && !ev.fonte?.toLowerCase().includes(appliedAnFilters.fonte.toLowerCase())) return false;
+      if (appliedAnFilters.dataFrom && ev.data_inizio && ev.data_inizio < appliedAnFilters.dataFrom) return false;
+      if (appliedAnFilters.dataTo && ev.data_inizio && ev.data_inizio > appliedAnFilters.dataTo) return false;
+      return true;
+    });
+
+    if (allAnalyzed.length === 0) {
+      setError("Nessun evento analizzato corrisponde ai filtri impostati.");
+      return;
+    }
+
+    if (!window.confirm(`Rianalizzare TUTTI i ${allAnalyzed.length} eventi analizzati filtrati?`)) return;
+    await handleAnalyzeEventsMixed(allAnalyzed);
   };
 
   const handleApprove = async () => {
@@ -1970,6 +2090,51 @@ export function Admin() {
                     </tbody>
                   </table>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ── ANALYZED TAB ── */}
+          <TabsContent value="analyzed" className="mt-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Eventi Analizzati</CardTitle>
+                <CardDescription>
+                  Eventi che sono già stati elaborati dall'AI. Puoi pubblicarli o rianalizzarli in blocco.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4">
+                <div className="flex flex-wrap gap-2 items-center bg-muted/50 p-2 rounded border border-border">
+                  <Input placeholder="Filtra titolo…" value={anFilterTitolo} onChange={(e) => setAnFilterTitolo(e.target.value)} className="h-8 text-xs w-40" />
+                  <Input placeholder="Filtra fonte…" value={anFilterFonte} onChange={(e) => setAnFilterFonte(e.target.value)} className="h-8 text-xs w-32" />
+                  <Input type="date" value={anFilterDataFrom} onChange={(e) => setAnFilterDataFrom(e.target.value)} className="h-8 text-xs w-32" />
+                  <Input type="date" value={anFilterDataTo} onChange={(e) => setAnFilterDataTo(e.target.value)} className="h-8 text-xs w-32" />
+                  <Button size="sm" className="h-8 text-xs px-3" onClick={applyAnFilters}><Search className="w-3 h-3 mr-1" /> Applica</Button>
+                  <Button variant="ghost" size="sm" className="h-8 text-xs px-3" onClick={clearAnFilters}>Azzera</Button>
+                  <div className="flex-1"></div>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="secondary" className="h-8 text-xs px-3" onClick={handleAnAnalyzeAllFiltered}>
+                      <Brain className="w-3.5 h-3.5 mr-1" /> Rianalizza Filtrati
+                    </Button>
+                    <Button size="sm" className="h-8 text-xs px-3 bg-green-600 hover:bg-green-700 text-white" onClick={handleAnPublishAllFiltered}>
+                      <CheckCircle2 className="w-4 h-4 mr-1" /> Pubblica Filtrati
+                    </Button>
+                  </div>
+                </div>
+
+                {selectedAnIds.size > 0 && (
+                  <div className="bg-muted p-2 rounded-md flex items-center justify-between border">
+                    <span className="text-sm font-semibold ml-2">{selectedAnIds.size} eventi selezionati</span>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="secondary" onClick={handleAnBulkAnalyze}>
+                        <Brain className="w-4 h-4 mr-1" /> Rianalizza Selezionati
+                      </Button>
+                      <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={handleAnBulkPubblica}>
+                        <CheckCircle2 className="w-4 h-4 mr-1" /> Pubblica Selezionati
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
