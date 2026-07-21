@@ -1738,8 +1738,16 @@ export function Admin() {
                     .map((ev) => ({ ...ev, is_pending: false, id_key: `pub-${ev.id}` }));
                   const allAnalyzed = [...analyzedPreview, ...analyzedPublished];
 
-                  const futureAnalyzed = allAnalyzed.filter(ev => !ev.data_inizio || ev.data_inizio >= todayStr);
-                  const pastAnalyzed = allAnalyzed.filter(ev => ev.data_inizio && ev.data_inizio < todayStr);
+                  const filteredAnalyzed = allAnalyzed.filter(ev => {
+                    if (appliedAnFilters.titolo && !ev.titolo?.toLowerCase().includes(appliedAnFilters.titolo.toLowerCase())) return false;
+                    if (appliedAnFilters.fonte && !ev.fonte?.toLowerCase().includes(appliedAnFilters.fonte.toLowerCase())) return false;
+                    if (appliedAnFilters.dataFrom && ev.data_inizio && ev.data_inizio < appliedAnFilters.dataFrom) return false;
+                    if (appliedAnFilters.dataTo && ev.data_inizio && ev.data_inizio > appliedAnFilters.dataTo) return false;
+                    return true;
+                  });
+
+                  const futureAnalyzed = filteredAnalyzed.filter(ev => !ev.data_inizio || ev.data_inizio >= todayStr);
+                  const pastAnalyzed = filteredAnalyzed.filter(ev => ev.data_inizio && ev.data_inizio < todayStr);
 
                   const renderTable = (list: typeof allAnalyzed, emptyMessage: string) => {
                     if (list.length === 0) {
