@@ -869,6 +869,36 @@ export function Admin() {
     setSelectedPubAnalyzeIds(next);
   };
 
+  const handleAnalyzeAllPublishedFiltered = async () => {
+    if (publishedEvents.length === 0) return;
+    if (!window.confirm(`Analizzare TUTTI i ${publishedEvents.length} eventi pubblicati visibili?`)) return;
+    await handleAnalyzeEventsMixed(publishedEvents.map(ev => ({ ...ev, is_pending: false })));
+  };
+
+  const handleDeleteAllPublishedFiltered = async (recordRejected: boolean) => {
+    if (publishedEvents.length === 0) return;
+    const msg = recordRejected 
+      ? `Sei sicuro di voler eliminare E METTERE IN BLACKLIST TUTTI i ${publishedEvents.length} eventi pubblicati visibili?`
+      : `Sei sicuro di voler eliminare TUTTI i ${publishedEvents.length} eventi pubblicati visibili?`;
+    if (!window.confirm(msg)) return;
+    setError(null);
+    let success = 0;
+    let failed = 0;
+    for (const ev of publishedEvents) {
+      try {
+        await fetchJson(`/api/events/${ev.id}`, "DELETE", { record_rejected: recordRejected }, adminKey);
+        success++;
+      } catch {
+        failed++;
+      }
+    }
+    loadPublished(appliedFilters);
+    if (recordRejected) refreshRejected();
+    setSelectedPubIds(new Set());
+    setSelectedPubAnalyzeIds(new Set());
+    if (failed > 0) setError(`${failed} eliminazioni fallite su ${publishedEvents.length}`);
+  };
+
   const handleAnalyzePublished = async () => {
     if (selectedPubAnalyzeIds.size === 0) {
       setError("Seleziona almeno un evento pubblicato per l'analisi.");
@@ -1821,6 +1851,28 @@ export function Admin() {
                 </div>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
+                {/* Banner Legenda & Azioni Massive sui Filtrati per Pubblicati */}
+                <div className="bg-muted/40 p-3 rounded-lg border border-border flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="font-semibold text-foreground">Totale Pubblicati: {publishedEvents.length}</span>
+                    <span>|</span>
+                    <span>Selezionati Eliminazione: {selectedPubIds.size}</span>
+                    <span>|</span>
+                    <span>Selezionati Analisi: {selectedPubAnalyzeIds.size}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button size="sm" variant="outline" className="h-7 text-xs border-blue-500 text-blue-600 hover:bg-blue-50" onClick={handleAnalyzeAllPublishedFiltered}>
+                      <Brain className="w-3.5 h-3.5 mr-1" /> Analizza Tutti Filtrati ({publishedEvents.length})
+                    </Button>
+                    <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={() => handleDeleteAllPublishedFiltered(false)}>
+                      <Trash2 className="w-3.5 h-3.5 mr-1" /> Elimina Tutti Filtrati ({publishedEvents.length})
+                    </Button>
+                    <Button size="sm" variant="destructive" className="h-7 text-xs bg-orange-600 hover:bg-orange-700 text-white border-none" onClick={() => handleDeleteAllPublishedFiltered(true)}>
+                      <AlertTriangle className="w-3.5 h-3.5 mr-1" /> Elimina & Scarta Tutti ({publishedEvents.length})
+                    </Button>
+                  </div>
+                </div>
+
                 {/* Bulk actions */}
                 {(selectedPubIds.size > 0 || selectedPubAnalyzeIds.size > 0) && (
                   <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
