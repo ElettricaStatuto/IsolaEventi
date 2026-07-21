@@ -10,8 +10,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Loader2, CheckCircle2, XCircle, ShieldCheck, ArrowLeft, Eye, Database,
-  Trash2, RotateCcw, AlertTriangle, Calendar, MapPin, Globe, Search, RefreshCw, Clock, Terminal, Upload
+  Trash2, RotateCcw, AlertTriangle, Calendar, MapPin, Globe, Search, RefreshCw, Clock, Terminal, Upload, BarChart3
 } from "lucide-react";
+import { AdminStats } from "@/components/admin-stats";
 
 const LS_KEY = "sardegna_admin_key";
 
@@ -994,7 +995,7 @@ export function Admin() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 max-w-3xl">
+          <TabsList className="grid w-full grid-cols-6 max-w-4xl">
             <TabsTrigger value="scraping">
               <Eye className="w-4 h-4 mr-1" /> Scraping
             </TabsTrigger>
@@ -1009,6 +1010,9 @@ export function Admin() {
             </TabsTrigger>
             <TabsTrigger value="rejected">
               <AlertTriangle className="w-4 h-4 mr-1" /> Scartati
+            </TabsTrigger>
+            <TabsTrigger value="stats">
+              <BarChart3 className="w-4 h-4 mr-1" /> Statistiche
             </TabsTrigger>
           </TabsList>
 
@@ -1968,6 +1972,11 @@ export function Admin() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* ── STATS TAB ── */}
+          <TabsContent value="stats" className="mt-4">
+            <AdminStats adminKey={adminKey} />
           </TabsContent>
         </Tabs>
 
