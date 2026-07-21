@@ -1,6 +1,6 @@
 [
   {
-    "titolo": "Sun d’aixia 2026",
+    "titolo": "Sun d'Aixia: Rassegna di concerti al tramonto",
     "data_inizio": null,
     "data_fine": null,
     "luogo": null,
@@ -11,43 +11,51 @@
     "immagine": null,
     "fonte": "bottidushcoggiu.com",
     "is_new": true,
-    "testo_estratto": "Sun d’Aixia si conferma come una delle rassegne più suggestive dell'estate nel Sud Sardegna. Ideata dall'Associazione Bòtti du Shcöggiu, questa rassegna trasforma la magnifica cornice della Residenza A Cova, in località Lucaise a Carloforte, in un palcoscenico naturale unico dove la musica dal vivo incontra la magia del tramonto. L'edizione 2026 propone un cartellone raffinato, capace di spaziare dalla sperimentazione elettronica e contemporanea alla musica tradizionale araba fino al rigore della musica da camera, offrendo agli spettatori un'esperienza immersiva di rara intensità, in perfetto dialogo con il paesaggio mediterraneo dell'Isola di San Pietro.",
+    "testo_estratto": "Torna anche quest'anno l'incanto di Sun d'Aixia, la rassegna di concerti al tramonto ideata dall'Associazione Bòtti du Shcòggiu. Nella suggestiva cornice della Residenza A Cova, a Carloforte, la musica dal vivo si fonde con la natura incontaminata dell'Isola di San Pietro. Un palcoscenico naturale dove il calar del sole diventa parte integrante di un'esperienza sensoriale unica, che spazia dalla sperimentazione sonora contemporanea alle raffinate atmosfere della musica da camera e alle sonorità ancestrali del Medio Oriente. Un appuntamento imperdibile per chi cerca un ascolto consapevole, in un dialogo autentico tra grandi interpreti della scena internazionale e il paesaggio mediterraneo.",
     "is_festival": true,
     "parent_id": null,
     "sotto_eventi": [
       {
         "titolo": "Concerto: Valeria Sturba",
-        "data_inizio": "2026-07-19T19:30:00",
-        "data_fine": "2026-07-19T21:00:00",
-        "luogo": "Residenza a Cova, Carloforte",
+        "data_inizio": "19 Luglio 2026 ore 19:30",
+        "data_fine": "19 Luglio 2026",
+        "luogo": "Residenza a Cova, Isola di San Pietro",
         "url": "https://bottidushcoggiu.com/evento/valeria-sturba/",
-        "descrizione": "Performance poliedrica di Valeria Sturba, che tra violino, theremin ed elettronica esplora i confini della sperimentazione sonora."
+        "descrizione": "Performance solista di Valeria Sturba 'La Musica diSturba', un viaggio tra violino, theremin, elettronica e sperimentazione."
       },
       {
         "titolo": "Concerto: Farah Fersi",
-        "data_inizio": "2026-07-29T19:30:00",
-        "data_fine": "2026-07-29T21:00:00",
-        "luogo": "Residenza a Cova, Carloforte",
+        "data_inizio": "29 Luglio 2026 ore 19:30",
+        "data_fine": "29 Luglio 2026",
+        "luogo": "Residenza a Cova, Isola di San Pietro",
         "url": "https://bottidushcoggiu.com/evento/farah-fersi/",
-        "descrizione": "Un viaggio nel suono del kanun che intreccia tradizione araba, jazz e musica d'autore con il progetto 'REVA – The Living Memory'."
+        "descrizione": "Progetto 'REVA – The Living Memory': un intenso viaggio musicale tra tradizione araba, jazz e il virtuosismo del kanun."
       },
       {
         "titolo": "Concerto: Trio Chimera",
-        "data_inizio": "2026-08-03T19:30:00",
-        "data_fine": "2026-08-03T21:00:00",
-        "luogo": "Residenza a Cova, Carloforte",
+        "data_inizio": "3 Agosto 2026 ore 19:30",
+        "data_fine": "3 Agosto 2026",
+        "luogo": "Residenza a Cova, Isola di San Pietro",
         "url": "https://bottidushcoggiu.com/evento/trio-chimera/",
-        "descrizione": "Concerto di musica da camera con una delle formazioni emergenti più interessanti del panorama europeo, tra repertorio classico e contemporaneità."
+        "descrizione": "Concerto di musica da camera con Marta Ceretta, Stefano Raccagni e Giorgio Lucchini, tra repertorio classico e composizioni contemporanee."
       }
     ],
-    "tags": [],
+    "tags": [
+      "Musica",
+      "Festival",
+      "Jazz"
+    ],
     "dettagli_extra": {
+      "location": "Residenza a Cova, Carloforte",
+      "prezzo_ingresso": "10 euro",
       "_usage": {
-        "prompt_tokens": 9277,
-        "candidates_tokens": 809,
-        "total_tokens": 10086
+        "prompt_tokens": 9565,
+        "candidates_tokens": 752,
+        "total_tokens": 10317
       }
-    }
+    },
+    "categoria": "Musica",
+    "link_organizzatore": "https://bottidushcoggiu.com/"
   },
   {
     "titolo": "Concerto: Valeria Sturba",
@@ -61,10 +69,27 @@
     "immagine": null,
     "fonte": "bottidushcoggiu.com",
     "is_new": true,
-    "testo_estratto": "Performance poliedrica di Valeria Sturba, che tra violino, theremin ed elettronica esplora i confini della sperimentazione sonora."
+    "testo_estratto": "Un'esperienza sonora di rara suggestione attende il pubblico con la performance di Valeria Sturba, artista poliedrica capace di tessere trame musicali innovative. Attraverso un sapiente intreccio tra la classicità del violino, le atmosfere eteree del theremin e le infinite possibilità della manipolazione elettronica, Sturba conduce l'ascoltatore in un viaggio esplorativo ai confini della sperimentazione, dove il suono si fa materia viva, emozionante e profondamente contemporanea.",
+    "categoria": "Musica",
+    "tags": [
+      "Musica",
+      "Musica Elettronica"
+    ],
+    "dettagli_extra": {
+      "artista": "Valeria Sturba",
+      "strumentazione": "Violino, Theremin, Elettronica",
+      "_usage": {
+        "prompt_tokens": 845,
+        "candidates_tokens": 244,
+        "total_tokens": 1089
+      }
+    },
+    "is_festival": false,
+    "sotto_eventi": [],
+    "link_organizzatore": null
   },
   {
-    "titolo": "Concerto: Farah Fersi",
+    "titolo": "Concerto: REVA – The Living Memory",
     "data_inizio": "2026-07-29T19:30:00",
     "data_fine": "2026-07-29T21:00:00",
     "luogo": "Residenza a Cova, Carloforte",
@@ -75,10 +100,27 @@
     "immagine": null,
     "fonte": "bottidushcoggiu.com",
     "is_new": true,
-    "testo_estratto": "Un viaggio nel suono del kanun che intreccia tradizione araba, jazz e musica d'autore con il progetto 'REVA – The Living Memory'."
+    "testo_estratto": "Un'affascinante esplorazione sonora che attraversa i confini tra la millenaria tradizione del kanun e le vibrazioni contemporanee del jazz e della musica d'autore. Il progetto 'REVA – The Living Memory' si propone come un ponte culturale capace di tessere trame melodiche dal sapore antico, rilette attraverso una lente moderna. Un'esperienza immersiva pensata per chi desidera lasciarsi trasportare in un viaggio introspettivo, dove la memoria diventa materia viva e il suono diviene narrazione profonda e poetica.",
+    "categoria": "Musica",
+    "tags": [
+      "Musica",
+      "Jazz"
+    ],
+    "dettagli_extra": {
+      "strumento_principale": "Kanun",
+      "genere_fusione": "Musica araba, jazz, musica d'autore",
+      "_usage": {
+        "prompt_tokens": 849,
+        "candidates_tokens": 258,
+        "total_tokens": 1107
+      }
+    },
+    "is_festival": false,
+    "sotto_eventi": [],
+    "link_organizzatore": null
   },
   {
-    "titolo": "Concerto: Trio Chimera",
+    "titolo": "Concerto: Ensemble di musica da camera",
     "data_inizio": "2026-08-03T19:30:00",
     "data_fine": "2026-08-03T21:00:00",
     "luogo": "Residenza a Cova, Carloforte",
@@ -89,6 +131,23 @@
     "immagine": null,
     "fonte": "bottidushcoggiu.com",
     "is_new": true,
-    "testo_estratto": "Concerto di musica da camera con una delle formazioni emergenti più interessanti del panorama europeo, tra repertorio classico e contemporaneità."
+    "testo_estratto": "Un appuntamento imperdibile per gli amanti della grande musica colta. La serata vede protagonista una delle formazioni emergenti più promettenti del panorama cameristico europeo, impegnata in un programma raffinato che tesse un dialogo armonioso tra i capisaldi del repertorio classico e le suggestioni sonore della contemporaneità. Un'occasione preziosa per apprezzare il virtuosismo e l'intensità interpretativa di un ensemble che sta ridefinendo i confini del genere con freschezza e rigore accademico.",
+    "categoria": "Musica",
+    "tags": [
+      "Musica",
+      "Musica Classica"
+    ],
+    "dettagli_extra": {
+      "target_pubblico": "Appassionati di musica classica e contemporanea",
+      "approccio": "Analisi culturale ed estetica",
+      "_usage": {
+        "prompt_tokens": 852,
+        "candidates_tokens": 255,
+        "total_tokens": 1107
+      }
+    },
+    "is_festival": false,
+    "sotto_eventi": [],
+    "link_organizzatore": null
   }
 ]
