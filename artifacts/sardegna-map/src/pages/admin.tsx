@@ -2675,7 +2675,11 @@ export function Admin() {
                           Object.entries(inspectingEvent.dettagli_extra).map(([key, value]) => (
                             <div key={key} className="bg-muted/50 p-2 rounded border border-border/50 text-sm">
                               <span className="font-semibold text-foreground capitalize mr-2">{key.replace(/_/g, ' ')}:</span>
-                              <span className="text-muted-foreground">{String(value)}</span>
+                              <span className="text-muted-foreground">
+                                {key === "_usage" && typeof value === "object" && value !== null
+                                  ? `Input: ${(value as any).input_tokens || 0} | Output: ${(value as any).output_tokens || 0} | Totale: ${(value as any).total_tokens || 0}`
+                                  : String(value)}
+                              </span>
                             </div>
                           ))
                         ) : <span className="text-sm text-muted-foreground italic">Nessun dettaglio extra</span>}
@@ -2686,25 +2690,70 @@ export function Admin() {
 
                 {/* Sub-events (Sotto-eventi) */}
                 <div>
-                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                    Sotto-eventi Rilevati ({inspectingEvent.sub_events_list?.length || 0})
-                  </h4>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Sotto-eventi Rilevati ({inspectingEvent.sub_events_list?.length || 0})
+                    </h4>
+                    {inspectingEvent.sub_events_list && inspectingEvent.sub_events_list.length > 0 && inspectingEvent.is_pending && (
+                      <Button size="sm" variant="outline" className="h-7 text-xs border-amber-500 text-amber-700 hover:bg-amber-50" onClick={() => {
+                        const newCards = inspectingEvent.sub_events_list.map((se: any) => ({
+                          titolo: se.titolo,
+                          data_inizio: se.data_inizio || inspectingEvent.data_inizio,
+                          data_fine: se.data_fine || inspectingEvent.data_fine,
+                          luogo: se.luogo || inspectingEvent.luogo,
+                          latitudine: se.latitudine || inspectingEvent.latitudine,
+                          longitudine: se.longitudine || inspectingEvent.longitudine,
+                          link: se.link || inspectingEvent.link,
+                          descrizione: se.descrizione || inspectingEvent.descrizione,
+                          immagine: se.immagine || inspectingEvent.immagine,
+                          fonte: inspectingEvent.fonte,
+                          is_new: true,
+                          testo_estratto: se.descrizione || inspectingEvent.testo_estratto,
+                        }));
+                        setPreviewEvents(prev => [...prev, ...newCards]);
+                        updatePreviewCache([...previewEvents, ...newCards]);
+                        alert(`Generati ${newCards.length} nuovi eventi singoli in In Attesa!`);
+                      }}>
+                        <Brain className="w-3.5 h-3.5 mr-1" /> Genera Card Singole in "In Attesa"
+                      </Button>
+                    )}
+                  </div>
                   {inspectingEvent.sub_events_list && inspectingEvent.sub_events_list.length > 0 ? (
                     <div className="flex flex-col gap-2">
                       {inspectingEvent.sub_events_list.map((se: any, idx: number) => (
                         <div key={idx} className="p-3 bg-muted/40 rounded-lg border border-border/50 text-sm">
                           <div className="font-semibold text-foreground">{se.titolo}</div>
-                          <div className="text-xs text-muted-foreground mt-0.5 flex gap-3">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              {se.data_inizio ? new Date(se.data_inizio).toLocaleDateString("it-IT") : "N/D"}
-                              {se.data_fine && se.data_fine !== se.data_inizio ? ` - ${new Date(se.data_fine).toLocaleDateString("it-IT")}` : ""}
-                            </span>
-                            {se.luogo && (
+                          <div className="text-xs text-muted-foreground mt-0.5 flex gap-3 items-center justify-between">
+                            <div className="flex gap-3">
                               <span className="flex items-center gap-1">
-                                <MapPin className="w-3 h-3" /> {se.luogo}
+                                <Calendar className="w-3 h-3" />
+                                {se.data_inizio ? new Date(se.data_inizio).toLocaleDateString("it-IT") : "N/D"}
+                                {se.data_fine && se.data_fine !== se.data_inizio ? ` - ${new Date(se.data_fine).toLocaleDateString("it-IT")}` : ""}
                               </span>
-                            )}
+                              {se.luogo && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" /> {se.luogo}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button size="sm" variant="outline" className="h-6 text-[11px] px-2" onClick={async () => {
+                                const singlePayload = {
+                                  titolo: se.titolo,
+                                  data_inizio: se.data_inizio || inspectingEvent.data_inizio,
+                                  data_fine: se.data_fine || inspectingEvent.data_fine,
+                                  luogo: se.luogo || inspectingEvent.luogo,
+                                  link: se.link || inspectingEvent.link,
+                                  descrizione: se.descrizione || inspectingEvent.descrizione,
+                                  immagine: se.immagine || inspectingEvent.immagine,
+                                  fonte: inspectingEvent.fonte
+                                };
+                                await handlePublishAnalyzed([singlePayload]);
+                                alert(`Sotto-evento '${se.titolo}' pubblicato con successo!`);
+                              }}>
+                                <CheckCircle2 className="w-3 h-3 mr-1 text-green-600" /> Pubblica Singolo
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       ))}
