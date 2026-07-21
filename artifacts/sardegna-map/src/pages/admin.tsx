@@ -445,6 +445,11 @@ export function Admin() {
         forceFestival
       }, adminKey);
       if (resp.success && resp.events) {
+        if (resp.events.length === 0) {
+          setError("Impossibile leggere la pagina. Il sito sorgente (es. Comune di Oristano) potrebbe avere firewall o blocchi anti-bot attivi.");
+          setScrapingGeneric(false);
+          return;
+        }
         const firstEv = resp.events[0];
         if (firstEv && firstEv.dettagli_extra && firstEv.dettagli_extra._usage) {
           const u = firstEv.dettagli_extra._usage;

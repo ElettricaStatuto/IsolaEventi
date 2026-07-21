@@ -345,10 +345,15 @@ def main():
     conn = psycopg2.connect(DATABASE_URL)
     rejected_set = _load_rejected(conn)
 
-    filtrati = [ev for ev in tutti_eventi if (ev.titolo, ev.fonte or "") not in rejected_set]
-    scartati = len(tutti_eventi) - len(filtrati)
-    if scartati:
-        emit_log(f"Scartati in automatico {scartati} eventi presenti nella blacklist.")
+    if args.url:
+        filtrati = tutti_eventi
+        if any((ev.titolo, ev.fonte or "") in rejected_set for ev in tutti_eventi):
+            emit_log("Nota: Alcuni eventi estratti erano nella blacklist, ma essendo un'estrazione manuale sono stati mantenuti.")
+    else:
+        filtrati = [ev for ev in tutti_eventi if (ev.titolo, ev.fonte or "") not in rejected_set]
+        scartati = len(tutti_eventi) - len(filtrati)
+        if scartati:
+            emit_log(f"Scartati in automatico {scartati} eventi presenti nella blacklist.")
 
     # Process events and analyze via AI if new
     events_to_save = []
