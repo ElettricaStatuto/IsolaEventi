@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  Loader2, CheckCircle2, XCircle, ShieldCheck, ArrowLeft, Eye, Database,
+  Loader2, Info, CheckCircle2, XCircle, ShieldCheck, ArrowLeft, Eye, Database,
   Trash2, RotateCcw, AlertTriangle, Calendar, MapPin, Globe, Search, RefreshCw, Clock, Terminal, Upload, BarChart3, Brain
 } from "lucide-react";
 import { AdminStats } from "@/components/admin-stats";
@@ -1470,6 +1470,7 @@ export function Admin() {
                   </div>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-3">
+                  <ButtonLegendGuide />
                   {previewEvents.length === 0 ? (
                     <div className="text-center text-muted-foreground py-8">Nessun nuovo evento trovato.</div>
                   ) : (
@@ -1728,6 +1729,7 @@ export function Admin() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-6">
+                <ButtonLegendGuide />
                 {(() => {
                   const todayStr = new Date().toISOString().split("T")[0];
                   const analyzedPreview = previewEvents
@@ -1822,6 +1824,33 @@ export function Admin() {
 
                   return (
                     <div className="flex flex-col gap-6">
+                      {/* Banner Legenda & Azioni Massive sui Filtrati per Analizzati */}
+                      <div className="bg-muted/40 p-3 rounded-lg border border-border flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="font-semibold text-foreground">Totale Analizzati: {allAnalyzed.length}</span>
+                          <span>|</span>
+                          <span className="font-semibold text-blue-600">Filtrati: {filteredAnalyzed.length}</span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button size="sm" variant="secondary" className="h-7 text-xs px-3" onClick={handleAnAnalyzeAllFiltered}>
+                            <Brain className="w-3.5 h-3.5 mr-1" /> Rianalizza Tutti Filtrati ({filteredAnalyzed.length})
+                          </Button>
+                          <Button size="sm" className="h-7 text-xs px-3 bg-green-600 hover:bg-green-700 text-white" onClick={handleAnPublishAllFiltered}>
+                            <CheckCircle2 className="w-4 h-4 mr-1" /> Pubblica Tutti Filtrati ({filteredAnalyzed.length})
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Filter Box per Analizzati */}
+                      <div className="flex flex-wrap gap-2 items-center bg-muted/50 p-2 rounded border border-border">
+                        <Input placeholder="Filtra titolo…" value={anFilterTitolo} onChange={(e) => setAnFilterTitolo(e.target.value)} className="h-8 text-xs w-40 bg-background" />
+                        <Input placeholder="Filtra fonte…" value={anFilterFonte} onChange={(e) => setAnFilterFonte(e.target.value)} className="h-8 text-xs w-32 bg-background" />
+                        <Input type="date" value={anFilterDataFrom} onChange={(e) => setAnFilterDataFrom(e.target.value)} className="h-8 text-xs w-32 bg-background" />
+                        <Input type="date" value={anFilterDataTo} onChange={(e) => setAnFilterDataTo(e.target.value)} className="h-8 text-xs w-32 bg-background" />
+                        <Button size="sm" className="h-8 text-xs px-3" onClick={applyAnFilters}><Search className="w-3 h-3 mr-1" /> Applica</Button>
+                        <Button variant="ghost" size="sm" className="h-8 text-xs px-3" onClick={clearAnFilters}>Azzera</Button>
+                      </div>
+
                       <div>
                         <h3 className="font-semibold text-sm text-foreground mb-3 flex items-center gap-2">
                           <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
