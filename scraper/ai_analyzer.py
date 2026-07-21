@@ -142,7 +142,7 @@ Rispondi ESCLUSIVAMENTE in formato JSON usando questo schema esatto:
     except Exception as e:
         return [{"titolo": "Errore AI", "descrizione": str(e)}]
 
-def analyze_event(ev_dict: dict, target: str = "text", force_festival: bool = False) -> dict:
+def analyze_event(ev_dict: dict, target: str = "text", force_festival: bool = False, use_proxy: bool = False) -> dict:
     from google import genai
     from google.genai import types
 
@@ -153,7 +153,7 @@ def analyze_event(ev_dict: dict, target: str = "text", force_festival: bool = Fa
     except ImportError:
         pass
 
-    if target in ("image", "both", "both_source"):
+    if use_proxy:
         api_key = os.environ.get("REPLIT_API_KEY")
         client = genai.Client(
             api_key=api_key,
