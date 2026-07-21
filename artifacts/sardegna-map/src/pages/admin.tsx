@@ -597,6 +597,88 @@ export function Admin() {
     setSelectedAnIds(new Set());
   };
 
+  const handleAnBulkElimina = async (recordRejected: boolean = false) => {
+    if (selectedAnIds.size === 0) return;
+    const msg = recordRejected
+      ? `Eliminare e mettere in BLACKLIST i ${selectedAnIds.size} eventi selezionati?`
+      : `Eliminare i ${selectedAnIds.size} eventi selezionati?`;
+    if (!window.confirm(msg)) return;
+
+    setError(null);
+    let success = 0;
+    let failed = 0;
+
+    for (const idKey of selectedAnIds) {
+      try {
+        if (idKey.startsWith("prev-")) {
+          // Delete from preview
+          const title = idKey.replace("prev-", "");
+          const next = previewEvents.filter(e => e.titolo !== title);
+          setPreviewEvents(next);
+          updatePreviewCache(next);
+        } else if (idKey.startsWith("pub-")) {
+          // Delete from DB
+          const id = parseInt(idKey.replace("pub-", ""), 10);
+          await fetchJson(`/api/events/${id}`, "DELETE", { record_rejected: recordRejected }, adminKey);
+        }
+        success++;
+      } catch {
+        failed++;
+      }
+    }
+
+    loadPublished(appliedFilters);
+    if (recordRejected) refreshRejected();
+    setSelectedAnIds(new Set());
+    if (failed > 0) setError(`${failed} eliminazioni fallite su ${selectedAnIds.size}`);
+  };
+
+  const handleAnDeleteAllFiltered = async (recordRejected: boolean = false) => {
+    const analyzedPreview = previewEvents
+      .map((ev, i) => ({ ...ev, original_idx: i, is_pending: true, id_key: `prev-${ev.titolo}` }))
+      .filter((ev) => (ev as any).testo_estratto);
+    const analyzedPublished = publishedEvents
+      .map((ev) => ({ ...ev, is_pending: false, id_key: `pub-${ev.id}` }))
+      .filter((ev) => (ev as any).testo_estratto);
+      
+    const filteredAnalyzed = [...analyzedPreview, ...analyzedPublished].filter(ev => {
+      if (appliedAnFilters.titolo && !ev.titolo?.toLowerCase().includes(appliedAnFilters.titolo.toLowerCase())) return false;
+      if (appliedAnFilters.fonte && !ev.fonte?.toLowerCase().includes(appliedAnFilters.fonte.toLowerCase())) return false;
+      if (appliedAnFilters.dataFrom && ev.data_inizio && ev.data_inizio < appliedAnFilters.dataFrom) return false;
+      if (appliedAnFilters.dataTo && ev.data_inizio && ev.data_inizio > appliedAnFilters.dataTo) return false;
+      return true;
+    });
+
+    if (filteredAnalyzed.length === 0) {
+      setError("Nessun evento analizzato corrisponde ai filtri impostati.");
+      return;
+    }
+
+    const msg = recordRejected
+      ? `Sei sicuro di voler eliminare E METTERE IN BLACKLIST i ${filteredAnalyzed.length} eventi analizzati visibili?`
+      : `Sei sicuro di voler eliminare i ${filteredAnalyzed.length} eventi analizzati visibili?`;
+    if (!window.confirm(msg)) return;
+
+    setError(null);
+    for (const ev of filteredAnalyzed) {
+      try {
+        if (ev.is_pending) {
+          const next = previewEvents.filter(e => e.titolo !== ev.titolo);
+          setPreviewEvents(next);
+          updatePreviewCache(next);
+        } else {
+          await fetchJson(`/api/events/${ev.id}`, "DELETE", { record_rejected: recordRejected }, adminKey);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    loadPublished(appliedFilters);
+    if (recordRejected) refreshRejected();
+    setSelectedAnIds(new Set());
+  };
+
   const handleAnAnalyzeAllFiltered = async () => {
     const analyzedPreview = previewEvents
       .map((ev, i) => ({ ...ev, original_idx: i, is_pending: true }))
@@ -1800,6 +1882,19 @@ export function Admin() {
                         <table className="w-full text-sm">
                           <thead className="bg-muted sticky top-0">
                             <tr>
+                              <th className="p-2 w-10 text-center">
+                                <Checkbox 
+                                  checked={list.length > 0 && list.every((ev: any) => selectedAnIds.has(ev.id_key))}
+                                  onCheckedChange={(checked) => {
+                                    const next = new Set(selectedAnIds);
+                                    list.forEach((ev: any) => {
+                                      if (checked === true) next.add(ev.id_key);
+                                      else next.delete(ev.id_key);
+                                    });
+                                    setSelectedAnIds(next);
+                                  }}
+                                />
+                              </th>
                               <th className="p-2 text-left text-xs font-semibold">Stato</th>
                               <th className="p-2 text-left text-xs font-semibold">Immagine</th>
                               <th className="p-2 text-left text-xs font-semibold">Titolo</th>
@@ -1818,6 +1913,17 @@ export function Admin() {
 
                               return (
                                 <tr key={ev.id_key} className="border-t border-border hover:bg-muted/40">
+                                  <td className="p-2 text-center">
+                                    <Checkbox 
+                                      checked={selectedAnIds.has(ev.id_key)}
+                                      onCheckedChange={(checked) => {
+                                        const next = new Set(selectedAnIds);
+                                        if (checked === true) next.add(ev.id_key);
+                                        else next.delete(ev.id_key);
+                                        setSelectedAnIds(next);
+                                      }}
+                                    />
+                                  </td>
                                   <td className="p-2">
                                     <Badge variant={ev.is_pending ? "secondary" : "default"} className={ev.is_pending ? "bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200" : ""}>
                                       {ev.is_pending ? "In Attesa" : "Pubblicato"}
@@ -1845,9 +1951,33 @@ export function Admin() {
                                     </Badge>
                                   </td>
                                   <td className="p-2">
-                                    <Button variant="outline" size="sm" onClick={() => openEventDetails(ev, ev.is_pending)}>
-                                      <Eye className="w-4 h-4 mr-1" /> Dettagli
-                                    </Button>
+                                    <div className="flex items-center gap-1">
+                                      <Button variant="outline" size="sm" onClick={() => openEventDetails(ev, ev.is_pending)} className="h-7 text-xs px-2">
+                                        <Eye className="w-3.5 h-3.5 mr-1" /> Dettagli
+                                      </Button>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" title="Elimina" onClick={() => {
+                                        if (ev.is_pending) {
+                                          const next = previewEvents.filter(e => e.titolo !== ev.titolo);
+                                          setPreviewEvents(next);
+                                          updatePreviewCache(next);
+                                        } else {
+                                          deleteEvent(ev.id, false);
+                                        }
+                                      }}>
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </Button>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-orange-600 hover:bg-orange-50" title="Elimina e scarta" onClick={() => {
+                                        if (ev.is_pending) {
+                                          const next = previewEvents.filter(e => e.titolo !== ev.titolo);
+                                          setPreviewEvents(next);
+                                          updatePreviewCache(next);
+                                        } else {
+                                          deleteEvent(ev.id, true);
+                                        }
+                                      }}>
+                                        <AlertTriangle className="w-3.5 h-3.5" />
+                                      </Button>
+                                    </div>
                                   </td>
                                 </tr>
                               );
@@ -1866,6 +1996,8 @@ export function Admin() {
                           <span className="font-semibold text-foreground">Totale Analizzati: {allAnalyzed.length}</span>
                           <span>|</span>
                           <span className="font-semibold text-blue-600">Filtrati: {filteredAnalyzed.length}</span>
+                          <span>|</span>
+                          <span>Selezionati: {selectedAnIds.size}</span>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                           <Button size="sm" variant="secondary" className="h-7 text-xs px-3" onClick={handleAnAnalyzeAllFiltered}>
@@ -1874,8 +2006,35 @@ export function Admin() {
                           <Button size="sm" className="h-7 text-xs px-3 bg-green-600 hover:bg-green-700 text-white" onClick={handleAnPublishAllFiltered}>
                             <CheckCircle2 className="w-4 h-4 mr-1" /> Pubblica Tutti Filtrati ({filteredAnalyzed.length})
                           </Button>
+                          <Button size="sm" variant="destructive" className="h-7 text-xs px-3" onClick={() => handleAnDeleteAllFiltered(false)}>
+                            <Trash2 className="w-3.5 h-3.5 mr-1" /> Elimina Tutti Filtrati ({filteredAnalyzed.length})
+                          </Button>
+                          <Button size="sm" variant="destructive" className="h-7 text-xs px-3 bg-orange-600 hover:bg-orange-700 text-white border-none" onClick={() => handleAnDeleteAllFiltered(true)}>
+                            <AlertTriangle className="w-3.5 h-3.5 mr-1" /> Elimina & Scarta Tutti ({filteredAnalyzed.length})
+                          </Button>
                         </div>
                       </div>
+
+                      {/* Toolbar Selezionati per Analizzati */}
+                      {selectedAnIds.size > 0 && (
+                        <div className="bg-muted p-2 rounded-md flex items-center justify-between border">
+                          <span className="text-xs font-semibold ml-2">{selectedAnIds.size} eventi selezionati</span>
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={handleAnBulkAnalyze}>
+                              <Brain className="w-3.5 h-3.5 mr-1" /> Rianalizza Selezionati
+                            </Button>
+                            <Button size="sm" className="h-7 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={handleAnBulkPubblica}>
+                              <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Pubblica Selezionati
+                            </Button>
+                            <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={() => handleAnBulkElimina(false)}>
+                              <Trash2 className="w-3.5 h-3.5 mr-1" /> Elimina Selezionati
+                            </Button>
+                            <Button size="sm" variant="destructive" className="h-7 text-xs bg-orange-600 hover:bg-orange-700 text-white border-none" onClick={() => handleAnBulkElimina(true)}>
+                              <AlertTriangle className="w-3.5 h-3.5 mr-1" /> Elimina & Scarta Selezionati
+                            </Button>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Filter Box per Analizzati */}
                       <div className="flex flex-wrap gap-2 items-center bg-muted/50 p-2 rounded border border-border">
