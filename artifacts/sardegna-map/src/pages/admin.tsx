@@ -727,6 +727,45 @@ export function Admin() {
     setSelectedApproveIds(next);
   };
 
+  const handleDeleteAllFiltered = () => {
+    if (!window.confirm(`Sei sicuro di voler eliminare i ${filteredPreviewEvents.length} eventi visibili?`)) return;
+    const indicesToDelete = new Set(filteredPreviewEvents.map(({ i }) => i));
+    const next = previewEvents.filter((_, i) => !indicesToDelete.has(i));
+    setPreviewEvents(next);
+    updatePreviewCache(next);
+    setSelectedApproveIds(new Set());
+    setSelectedAnalyzeIds(new Set());
+  };
+
+  const handleApproveAllFiltered = () => {
+    if (!window.confirm(`Sei sicuro di voler pubblicare i ${filteredPreviewEvents.length} eventi visibili?`)) return;
+    const toApprove = filteredPreviewEvents.map(({ ev }) => ev);
+    setLoadingPreview(true);
+    setError(null);
+    fetchJson("/api/events/approve", "POST", { events: toApprove }, adminKey)
+      .then((data: RefreshResult) => {
+        setApprovalResult(data);
+        setScrapingStep("result");
+        updatePreviewCache([]);
+        loadPublished(appliedFilters);
+      })
+      .catch((e) => setError(`Errore di rete: ${String(e)}`))
+      .finally(() => setLoadingPreview(false));
+  };
+
+  const handleAnalyzeAllFiltered = () => {
+    if (!window.confirm(`Sei sicuro di voler analizzare i ${filteredPreviewEvents.length} eventi visibili?`)) return;
+    const explicitIndices = filteredPreviewEvents.map(({ i }) => i);
+    const toAnalyze = explicitIndices.map(i => ({ ...previewEvents[i], idx: i })).filter(ev => !ev.testo_estratto);
+    if (toAnalyze.length === 0) {
+      setError("Tutti gli eventi filtrati visibili sono già stati analizzati.");
+      return;
+    }
+    const nextAnalyze = new Set(selectedAnalyzeIds);
+    toAnalyze.forEach(ev => nextAnalyze.add(ev.idx));
+    setSelectedAnalyzeIds(nextAnalyze);
+  };
+
   const toggleAnalyzeAll = (checked: boolean) => {
     if (checked) setSelectedAnalyzeIds(new Set(previewEvents.map((_, i) => i)));
     else setSelectedAnalyzeIds(new Set());
@@ -1405,6 +1444,30 @@ export function Admin() {
                     <div className="text-center text-muted-foreground py-8">Nessun nuovo evento trovato.</div>
                   ) : (
                     <>
+                      {/* Banner Legenda & Azioni Massive sui Filtrati */}
+                      <div className="bg-muted/40 p-3 rounded-lg border border-border flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="font-semibold text-foreground">Totale: {previewEvents.length}</span>
+                          <span>|</span>
+                          <span className="font-semibold text-blue-600">Filtrati: {filteredPreviewEvents.length}</span>
+                          <span>|</span>
+                          <span>Selezionati Pubblicazione: {selectedApproveIds.size}</span>
+                          <span>|</span>
+                          <span>Selezionati Analisi: {selectedAnalyzeIds.size}</span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button size="sm" variant="outline" className="h-7 text-xs border-blue-500 text-blue-600 hover:bg-blue-50" onClick={handleAnalyzeAllFiltered}>
+                            <Brain className="w-3.5 h-3.5 mr-1" /> Analizza Tutti Filtrati ({filteredPreviewEvents.length})
+                          </Button>
+                          <Button size="sm" className="h-7 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={handleApproveAllFiltered}>
+                            <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Approva Tutti Filtrati ({filteredPreviewEvents.length})
+                          </Button>
+                          <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={handleDeleteAllFiltered}>
+                            <Trash2 className="w-3.5 h-3.5 mr-1" /> Elimina Tutti Filtrati ({filteredPreviewEvents.length})
+                          </Button>
+                        </div>
+                      </div>
+
                       <div className="flex items-center gap-2 pb-2 border-b border-border">
                         <Checkbox
                           checked={selectedApproveIds.size === previewEvents.length && previewEvents.length > 0}
