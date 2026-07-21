@@ -11,36 +11,42 @@
     "immagine": null,
     "fonte": "bottidushcoggiu.com",
     "is_new": true,
-    "testo_estratto": "Sun d’Aixia si conferma come uno degli appuntamenti più suggestivi dell'estate culturale nel Sud Sardegna. Ideata dall'Associazione Bòtti du Shcöggiu, questa rassegna trasforma il tramonto sull'Isola di San Pietro in un'esperienza sensoriale unica, dove la musica dal vivo dialoga con la bellezza naturale della Residenza A Cova. Il cartellone 2026 propone un viaggio artistico di altissima qualità, spaziando dalla sperimentazione sonora di Valeria Sturba, che fonde violino ed elettronica, alle atmosfere evocate dal kanun di Farah Fersi, fino al rigore cameristico del Trio Chimera. Un evento che non è semplice concerto, ma un profondo incontro tra paesaggio, innovazione e talento internazionale.",
+    "testo_estratto": "Sun d’Aixia si conferma come uno degli appuntamenti più suggestivi dell’estate culturale nel Sud Sardegna. Ideata dall'associazione Bòtti du Shcöggiu, questa rassegna trasforma la magnifica cornice della Residenza A Cova, a Carloforte, in un palcoscenico naturale dove la musica dal vivo incontra l'incanto del tramonto sull'Isola di San Pietro. Un ciclo di concerti ricercati che spaziano dalla sperimentazione elettronica e sonora, alle sonorità evocative del kanun, fino al rigore della musica da camera, offrendo al pubblico un'esperienza d'ascolto immersiva che fonde arte, paesaggio mediterraneo e talento internazionale.",
     "is_festival": true,
     "parent_id": null,
     "sotto_eventi": [
       {
-        "titolo": "Concerto: Valeria Sturba",
+        "titolo": "Concerto: Valeria Sturba - La Musica diSturba",
         "data_inizio": "2026-07-19T19:30:00",
         "data_fine": "2026-07-19T21:00:00",
         "luogo": "Residenza A Cova, Carloforte",
         "url": "https://bottidushcoggiu.com/evento/valeria-sturba/",
-        "descrizione": "Performance poliedrica tra violino, theremin ed elettronica nell'ambito del progetto 'La Musica diSturba'."
+        "descrizione": "Una performance poliedrica che intreccia violino, theremin, elettronica e loop station in un viaggio sperimentale tra canzone d'autore e ricerca sonora."
       },
       {
-        "titolo": "Concerto: Farah Fersi",
+        "titolo": "Concerto: Farah Fersi - REVA: The Living Memory",
         "data_inizio": "2026-07-29T19:30:00",
         "data_fine": "2026-07-29T21:00:00",
         "luogo": "Residenza A Cova, Carloforte",
         "url": "https://bottidushcoggiu.com/evento/farah-fersi/",
-        "descrizione": "Presentazione di 'REVA – The Living Memory', progetto che esplora le sonorità del kanun tra tradizione araba e jazz."
+        "descrizione": "Un progetto solista che esplora le infinite possibilità del kanun, fondendo la tradizione musicale araba con il jazz contemporaneo e suggestioni cinematografiche."
       },
       {
-        "titolo": "Concerto: Trio Chimera",
+        "titolo": "Concerto: Trio Chimera - Musica da Camera",
         "data_inizio": "2026-08-03T19:30:00",
         "data_fine": "2026-08-03T21:00:00",
         "luogo": "Residenza A Cova, Carloforte",
         "url": "https://bottidushcoggiu.com/evento/trio-chimera/",
-        "descrizione": "Concerto di musica da camera con Marta Ceretta, Stefano Raccagni e Giorgio Lucchini, dedicato al grande repertorio e alla nuova musica."
+        "descrizione": "Uno dei giovani ensemble cameristici più promettenti d'Europa propone un programma che unisce il grande repertorio classico alla sensibilità contemporanea."
       }
     ],
     "tags": [],
-    "dettagli_extra": {}
+    "dettagli_extra": {
+      "_usage": {
+        "prompt_tokens": 9277,
+        "candidates_tokens": 833,
+        "total_tokens": 10110
+      }
+    }
   }
 ]
