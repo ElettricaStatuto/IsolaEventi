@@ -69,7 +69,8 @@ def main():
                     "sotto_eventi": ai_data.get("sotto_eventi", []),
                     "link_organizzatore": ai_data.get("link_organizzatore"),
                     "tags": ai_data.get("tags", []),
-                    "dettagli_extra": dettagli
+                    "dettagli_extra": dettagli,
+                    "testo_grezzo_url": ai_data.get("testo_grezzo_url")
                 })
             except Exception as e:
                 # Append error info but continue to next event

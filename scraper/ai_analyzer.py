@@ -197,6 +197,8 @@ def analyze_event(ev_dict: dict, target: str = "text", force_festival: bool = Fa
                 with open(raw_text_path, "r", encoding="utf-8") as f:
                     descrizione = f.read()
                     
+        raw_text_used = descrizione if target in ("source_page", "both_source") or (dettagli_extra and dettagli_extra.get("pdf_path")) else None
+                    
         festival_instruction = ""
         if force_festival:
             festival_instruction = "\n\nATTENZIONE: L'utente ha confermato che questa pagina rappresenta il programma di un unico FESTIVAL. DEVI obbligatoriamente restituire 'is_festival': true e raggruppare tutti gli eventi trovati dentro l'array 'sotto_eventi'. Non restituire mai la lista vuota se ci sono eventi nel testo."

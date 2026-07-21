@@ -802,6 +802,7 @@ export function Admin() {
               tags: res.tags || (nextEvents[idx] as any).tags,
               dettagli_extra: res.dettagli_extra || (nextEvents[idx] as any).dettagli_extra,
               testo_estratto: res.testo_estratto,
+              descrizione: res.testo_grezzo_url || nextEvents[idx].descrizione,
               is_festival: res.is_festival,
               sotto_eventi: res.sotto_eventi,
               link_organizzatore: res.link_organizzatore,
@@ -1322,6 +1323,7 @@ export function Admin() {
           const updatedEvent = {
             ...inspectingEvent,
             testo_estratto: res.testo_estratto,
+            descrizione: res.testo_grezzo_url || inspectingEvent.descrizione,
             is_festival: res.is_festival,
             sub_events_list: res.sotto_eventi || inspectingEvent.sub_events_list,
             link_organizzatore: res.link_organizzatore,

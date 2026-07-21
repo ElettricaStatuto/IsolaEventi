@@ -845,6 +845,7 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
                 linkOrganizzatore: r.link_organizzatore || null,
                 tags: r.tags || null,
                 dettagliExtra: r.dettagli_extra || null,
+                descrizione: r.testo_grezzo_url || parent.descrizione,
                 dataInizio: dataInizio,
                 dataFine: dataFine,
                 aggiornatoIl: new Date(),
