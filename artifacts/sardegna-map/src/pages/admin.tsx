@@ -797,6 +797,10 @@ export function Admin() {
             const idx = parseInt(res.tmp_id, 10);
             nextEvents[idx] = {
               ...nextEvents[idx],
+              titolo: res.titolo || nextEvents[idx].titolo,
+              categoria: res.categoria || (nextEvents[idx] as any).categoria,
+              tags: res.tags || (nextEvents[idx] as any).tags,
+              dettagli_extra: res.dettagli_extra || (nextEvents[idx] as any).dettagli_extra,
               testo_estratto: res.testo_estratto,
               is_festival: res.is_festival,
               sotto_eventi: res.sotto_eventi,
@@ -872,16 +876,16 @@ export function Admin() {
   };
 
   const handleAnalyzeAllFiltered = () => {
-    if (!window.confirm(`Sei sicuro di voler analizzare i ${filteredPreviewEvents.length} eventi visibili?`)) return;
-    const explicitIndices = filteredPreviewEvents.map(({ i }) => i);
-    const toAnalyze = explicitIndices.map(i => ({ ...previewEvents[i], idx: i })).filter(ev => !ev.testo_estratto);
-    if (toAnalyze.length === 0) {
-      setError("Tutti gli eventi filtrati visibili sono già stati analizzati.");
+    if (filteredPreviewEvents.length === 0) {
+      setError("Nessun evento visibile per l'analisi.");
       return;
     }
+    if (!window.confirm(`Sei sicuro di voler (ri)analizzare i ${filteredPreviewEvents.length} eventi visibili?`)) return;
+    const explicitIndices = filteredPreviewEvents.map(({ i }) => i);
     const nextAnalyze = new Set(selectedAnalyzeIds);
-    toAnalyze.forEach(ev => nextAnalyze.add(ev.idx));
+    explicitIndices.forEach(i => nextAnalyze.add(i));
     setSelectedAnalyzeIds(nextAnalyze);
+    handleAnalyzeEventsMixed(explicitIndices.map(i => ({ ...previewEvents[i], original_idx: i, idx: i, is_pending: true })));
   };
 
   const toggleAnalyzeAll = (checked: boolean) => {
