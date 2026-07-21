@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MapPin, Calendar, ExternalLink, Loader2, Flag, Share2, Globe } from "lucide-react";
+import { MapPin, Calendar, ExternalLink, Loader2, Flag, Share2, Globe, FileText } from "lucide-react";
 import { format } from "date-fns";
 import type { Event } from "@workspace/api-client-react";
 import { Link } from "wouter";
@@ -162,10 +162,20 @@ export function EventList({
                             </span>
                           </div>
                         )}
-                        {evt.luogo && (
-                          <div className="flex items-center gap-1.5">
-                            <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${isFestival ? "text-amber-600" : "text-secondary"}`} />
-                            <span className="font-medium">{evt.luogo}</span>
+                        {(evt.dettagli_extra?.indirizzo_completo || evt.luogo) && (
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${isFestival ? "text-amber-600" : "text-muted-foreground"}`} />
+                            <span className="font-medium text-foreground">
+                              {(() => {
+                                const venue = evt.luogo;
+                                const addr = evt.dettagli_extra?.indirizzo_completo;
+                                if (venue && addr) {
+                                  if (addr.toLowerCase().includes(venue.toLowerCase())) return addr;
+                                  return `${venue}, ${addr}`;
+                                }
+                                return venue || addr || "Sardegna";
+                              })()}
+                            </span>
                           </div>
                         )}
                         
@@ -180,6 +190,19 @@ export function EventList({
                                 Approfondisci Programma →
                               </a>
                             </Link>
+                            
+                            {evt.dettagli_extra?.pdf_path && (
+                              <a
+                                href={`/api/event-pdfs/${String(evt.dettagli_extra.pdf_path).split('/').pop()}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center gap-1.5 text-white font-semibold bg-red-600 hover:bg-red-700 transition-colors w-fit px-3 py-1.5 rounded-md text-xs shadow-sm hover:shadow"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <FileText className="w-3.5 h-3.5" />
+                                Locandina PDF
+                              </a>
+                            )}
                             
                             {selectedEventId === evt.id && (
                               <button
@@ -208,45 +231,116 @@ export function EventList({
                               </button>
                             )}
                           </div>
-                        ) : (
-                          selectedEventId === evt.id && (
-                            <div className="flex items-center gap-3 mt-3 pt-2 border-t border-border/50">
-                              {evt.link_organizzatore && (
-                                <a
-                                  href={evt.link_organizzatore}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="flex items-center gap-1 text-amber-600 hover:underline text-xs font-semibold"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <Globe className="w-3.5 h-3.5" />
-                                  Sito Organizzatore
-                                </a>
-                              )}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const slug = evt.titolo
-                                    .toLowerCase()
-                                    .replace(/[^a-z0-9]+/g, "-")
-                                    .replace(/(^-|-$)/g, "");
-                                  const url = `${window.location.origin}/eventi/${evt.id}-${slug}`;
-                                  if (navigator.share) {
-                                    navigator.share({
-                                      title: evt.titolo,
-                                      text: evt.descrizione || "",
-                                      url: url
-                                    }).catch(() => {});
-                                  } else {
-                                    navigator.clipboard.writeText(url);
-                                    alert("Link copiato negli appunti!");
-                                  }
-                                }}
-                                className="flex items-center gap-1 text-muted-foreground hover:text-foreground text-xs bg-transparent border-none cursor-pointer"
+                        ) : evt.parent_id ? (
+                          <div className="flex flex-col gap-2 mt-3 pt-2 border-t border-blue-200/50">
+                            <Link href={`/festival/${evt.parent_id}`}>
+                              <a 
+                                className="flex items-center gap-1.5 text-blue-700 font-semibold bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors w-fit px-3 py-1.5 rounded-md text-xs shadow-sm hover:shadow" 
+                                onClick={(e) => e.stopPropagation()}
                               >
-                                <Share2 className="w-3.5 h-3.5" />
-                                Condividi
-                              </button>
+                                <Flag className="w-3.5 h-3.5 text-blue-500" />
+                                Fa parte di un Festival →
+                              </a>
+                            </Link>
+                            
+                            {evt.dettagli_extra?.pdf_path && (
+                              <a
+                                href={`/api/event-pdfs/${String(evt.dettagli_extra.pdf_path).split('/').pop()}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center gap-1.5 text-red-700 font-semibold bg-red-50 hover:bg-red-100 border border-red-200 transition-colors w-fit px-3 py-1.5 rounded-md text-xs shadow-sm hover:shadow"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <FileText className="w-3.5 h-3.5" />
+                                Locandina PDF
+                              </a>
+                            )}
+                          </div>
+                        ) : (
+                           selectedEventId === evt.id && (
+                            <div className="flex flex-col gap-3 mt-3 pt-3 border-t border-border/50">
+                              {/* Event Description */}
+                              {(evt.testo_estratto || evt.descrizione) && (
+                                <p className="text-xs text-foreground/80 leading-relaxed font-sans">
+                                  {evt.testo_estratto || evt.descrizione}
+                                </p>
+                              )}
+
+                              {/* Box Artista / Bio (AI arricchita) */}
+                              {evt.dettagli_extra?.bio_artista && (
+                                <div className="bg-muted/70 p-3 rounded-lg border border-border/50 mt-1">
+                                  <h4 className="font-semibold text-xs text-primary mb-1 flex items-center gap-1">
+                                    <span>👤</span> L'Artista / Protagonista
+                                  </h4>
+                                  <p className="text-[11px] text-muted-foreground leading-normal font-sans italic">
+                                    {evt.dettagli_extra.bio_artista}
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* Altri dettagli extra */}
+                              {((evt.dettagli_extra?.genere_musicale) || (evt.dettagli_extra?.artisti_principali)) && (
+                                <div className="text-[10px] text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 bg-muted/30 p-2 rounded border border-border/30">
+                                  {evt.dettagli_extra.genere_musicale && (
+                                    <span><strong>Genere:</strong> {evt.dettagli_extra.genere_musicale}</span>
+                                  )}
+                                  {evt.dettagli_extra.artisti_principali && (
+                                    <span><strong>Artisti:</strong> {evt.dettagli_extra.artisti_principali}</span>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Actions */}
+                              <div className="flex items-center gap-3 pt-1">
+                                {evt.link_organizzatore && (
+                                  <a
+                                    href={evt.link_organizzatore}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex items-center gap-1 text-amber-600 hover:underline text-xs font-semibold"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Globe className="w-3.5 h-3.5" />
+                                    Sito Organizzatore
+                                  </a>
+                                )}
+                                {evt.dettagli_extra?.pdf_path && (
+                                  <a
+                                    href={`/api/event-pdfs/${String(evt.dettagli_extra.pdf_path).split('/').pop()}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex items-center gap-1 text-red-600 hover:underline text-xs font-semibold"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <FileText className="w-3.5 h-3.5" />
+                                    PDF
+                                  </a>
+                                )}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const slug = evt.titolo
+                                      .toLowerCase()
+                                      .replace(/[^a-z0-9]+/g, "-")
+                                      .replace(/(^-|-$)/g, "");
+                                    const url = `${window.location.origin}/eventi/${evt.id}-${slug}`;
+                                    if (navigator.share) {
+                                      navigator.share({
+                                        title: evt.titolo,
+                                        text: evt.descrizione || "",
+                                        url: url
+                                      }).catch(() => {});
+                                    } else {
+                                      navigator.clipboard.writeText(url);
+                                      alert("Link copiato negli appunti!");
+                                    }
+                                  }}
+                                  className="flex items-center gap-1 text-muted-foreground hover:text-foreground text-xs bg-transparent border-none cursor-pointer"
+                                >
+                                  <Share2 className="w-3.5 h-3.5" />
+                                  Condividi
+                                </button>
+                              </div>
                             </div>
                           )
                         )}

@@ -34,6 +34,10 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
 const imagesDir = path.resolve(process.cwd(), "..", "..", "data", "event-images");
 app.use("/api/event-images", express.static(imagesDir));
 
+// Serve event pdfs statically
+const pdfsDir = path.resolve(process.cwd(), "..", "..", "data", "event-pdfs");
+app.use("/api/event-pdfs", express.static(pdfsDir));
+
 app.use("/api", router);
 
 export default app;

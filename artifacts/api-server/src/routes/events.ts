@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, gte, lte, ilike, sql, eq, isNull } from "drizzle-orm";
+import { and, gte, lte, ilike, sql, eq, isNull, inArray } from "drizzle-orm";
 import { db, eventsTable, rejectedEventsTable } from "@workspace/db";
 import {
   ListEventsQueryParams,
@@ -19,7 +19,10 @@ import { promisify } from "util";
 import path from "path";
 import { logger } from "../lib/logger";
 import { requireAdminKey } from "../middlewares/auth";
+import fs from "fs";
+import multer from "multer";
 
+const upload = multer({ dest: "data/uploads/" });
 const execFileAsync = promisify(execFile);
 
 const router: IRouter = Router();
@@ -292,8 +295,6 @@ router.post("/events/refresh", requireAdminKey, async (req, res): Promise<void> 
   }
 });
 
-import fs from "fs";
-
 // Human-in-the-loop: preview events without writing to DB
 router.post("/events/refresh/preview", requireAdminKey, (req, res): void => {
   req.log.info("Starting scraper preview (dry-run) with streaming");
@@ -363,6 +364,83 @@ router.post("/events/refresh/preview", requireAdminKey, (req, res): void => {
   });
 });
 
+router.get("/events/admin-stats", requireAdminKey, async (req, res): Promise<void> => {
+  try {
+    const [totaleRow] = await db.select({ count: sql<number>`count(*)::int` }).from(eventsTable);
+    
+    const [analizzatiRow] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(eventsTable)
+      .where(sql`${eventsTable.testoEstratto} is not null`);
+      
+    const [grezziRow] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(eventsTable)
+      .where(sql`${eventsTable.testoEstratto} is null`);
+      
+    const [rifiutatiRow] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(rejectedEventsTable);
+      
+    const [senzaCoordinateRow] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(eventsTable)
+      .where(
+        sql`${eventsTable.latitudine} is null OR ${eventsTable.longitudine} is null`
+      );
+
+    // Dati per fonte
+    const fontiRows = await db
+      .select({
+        fonte: eventsTable.fonte,
+        totale: sql<number>`count(*)::int`,
+        analizzati: sql<number>`count(*) filter (where ${eventsTable.testoEstratto} is not null)::int`
+      })
+      .from(eventsTable)
+      .groupBy(eventsTable.fonte)
+      .orderBy(sql`count(*) desc`);
+
+    // Top tags - eseguiamo in JS per evitare problemi con array unnest in Drizzle base
+    const tagRows = await db.select({ tags: eventsTable.tags }).from(eventsTable).where(sql`${eventsTable.tags} is not null`);
+    const tagCounts: Record<string, number> = {};
+    for (const row of tagRows) {
+      if (row.tags && Array.isArray(row.tags)) {
+        for (const t of row.tags) {
+          if (!t) continue;
+          const cleanTag = t.trim().toLowerCase();
+          tagCounts[cleanTag] = (tagCounts[cleanTag] || 0) + 1;
+        }
+      }
+    }
+    
+    // Sort and limit tags to top 15
+    const sortedTags = Object.entries(tagCounts)
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 15);
+
+    res.json({
+      success: true,
+      data: {
+        totale_pubblicati: totaleRow?.count ?? 0,
+        totale_analizzati: analizzatiRow?.count ?? 0,
+        totale_grezzi: grezziRow?.count ?? 0,
+        totale_rifiutati: rifiutatiRow?.count ?? 0,
+        senza_coordinate: senzaCoordinateRow?.count ?? 0,
+        fonti: fontiRows.map(r => ({
+          fonte: r.fonte || "Sconosciuta",
+          totale: r.totale,
+          analizzati: r.analizzati
+        })),
+        top_tags: sortedTags
+      }
+    });
+  } catch (err) {
+    req.log.error({ err }, "Failed to load admin stats");
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
 router.get("/events/refresh/preview/cache", requireAdminKey, (req, res): void => {
   const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
     ? path.resolve(process.cwd(), "../..")
@@ -380,6 +458,123 @@ router.get("/events/refresh/preview/cache", requireAdminKey, (req, res): void =>
   } catch (err) {
     req.log.error({ err }, "Failed to read preview cache");
     res.json({ success: false, events: [], messaggio: String(err) });
+  }
+});
+
+router.post("/events/scrape-url", requireAdminKey, async (req, res): Promise<void> => {
+  req.log.info("Starting scraper preview for generic URL");
+
+  const { url, maxLinks, forceFestival } = req.body;
+  if (!url || typeof url !== "string") {
+    res.status(400).json({ error: "No URL provided" });
+    return;
+  }
+
+  const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
+    ? path.resolve(process.cwd(), "../..")
+    : process.cwd();
+
+  const scraperScript = path.resolve(workspaceRoot, "scraper_runner.py");
+
+  try {
+    const pythonArgs = [scraperScript, "--preview", "--url", url];
+    if (maxLinks !== undefined) pythonArgs.push("--max-links", String(maxLinks));
+    if (forceFestival) pythonArgs.push("--force-festival");
+
+    const { stdout, stderr } = await execFileAsync("python", pythonArgs, {
+      timeout: 60000,
+      env: { ...process.env },
+      cwd: workspaceRoot,
+    });
+
+    if (stderr) req.log.warn({ stderr }, "Generic Scraper stderr");
+
+    const lines = stdout.split("\n");
+    let resultJson: any = null;
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i].trim();
+      if (line.startsWith("{") && line.includes('"events"')) {
+        try {
+          resultJson = JSON.parse(line);
+          break;
+        } catch (e) {}
+      }
+    }
+
+    if (resultJson && resultJson.success) {
+      res.json({ success: true, events: resultJson.events });
+    } else {
+      res.json({ success: false, message: "No events found or parsing failed." });
+    }
+  } catch (err) {
+    req.log.error({ err }, "Generic Scraper failed");
+    res.json({ success: false, message: String(err) });
+  }
+});
+
+router.post("/events/upload-pdf", requireAdminKey, upload.single("file"), async (req, res): Promise<void> => {
+  req.log.info("Starting scraper preview for uploaded PDF");
+
+  const file = req.file;
+  if (!file) {
+    res.status(400).json({ error: "Nessun file PDF caricato" });
+    return;
+  }
+
+  const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
+    ? path.resolve(process.cwd(), "../..")
+    : process.cwd();
+
+  const scraperScript = path.resolve(workspaceRoot, "scraper_runner.py");
+  const absolutePdfPath = path.resolve(process.cwd(), file.path);
+  
+  // Rinomina il file temporaneo con il nome originale in modo che pypdf veda il vero nome
+  const safeName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+  const renamedPdfPath = path.resolve(path.dirname(absolutePdfPath), safeName);
+  
+  try {
+    fs.renameSync(absolutePdfPath, renamedPdfPath);
+  } catch(e) {
+    req.log.warn({err: e}, "Failed to rename uploaded PDF");
+  }
+
+  try {
+    const { stdout, stderr } = await execFileAsync("python", [scraperScript, "--preview", "--pdf", renamedPdfPath], {
+      timeout: 120000,
+      env: { ...process.env },
+      cwd: workspaceRoot,
+    });
+
+    if (stderr) req.log.warn({ stderr }, "PDF Scraper stderr");
+
+    const lines = stdout.split("\n");
+    let resultJson: any = null;
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i].trim();
+      if (line.startsWith("{") && line.includes('"events"')) {
+        try {
+          resultJson = JSON.parse(line);
+          break;
+        } catch (e) {}
+      }
+    }
+
+    // Pulisci il file caricato dopo l'uso
+    try {
+      if (fs.existsSync(absolutePdfPath)) fs.unlinkSync(absolutePdfPath);
+      if (fs.existsSync(renamedPdfPath)) fs.unlinkSync(renamedPdfPath);
+    } catch (e) {
+      req.log.warn({ err: e }, "Failed to remove uploaded PDF");
+    }
+
+    if (resultJson && resultJson.success) {
+      res.json({ success: true, events: resultJson.events });
+    } else {
+      res.json({ success: false, message: "Nessun evento trovato o estrazione fallita." });
+    }
+  } catch (err) {
+    req.log.error({ err }, "PDF Scraper failed");
+    res.json({ success: false, message: String(err) });
   }
 });
 
@@ -471,6 +666,9 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
         if (existingId) {
           await db.update(eventsTable)
             .set({
+              titolo: ev.titolo,
+              titoloOriginale: ev.titolo_originale || ev.titolo,
+              categoria: ev.categoria || null,
               dataInizio: dataInizio,
               dataFine: dataFine,
               luogo: ev.luogo,
@@ -494,7 +692,9 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
             await db.delete(eventsTable).where(eq(eventsTable.parentId, existingId));
             for (const se of ev.sotto_eventi) {
               await db.insert(eventsTable).values({
-                titolo: `${ev.titolo} - ${se.titolo}`,
+                titolo: se.titolo ? `${ev.titolo} - ${se.titolo}` : `${ev.titolo}`,
+                titoloOriginale: se.titolo || null,
+                categoria: ev.categoria || null,
                 dataInizio: se.data_inizio,
                 dataFine: se.data_fine || se.data_inizio,
                 luogo: se.luogo || ev.luogo,
@@ -508,6 +708,8 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
         } else {
           const [inserted] = await db.insert(eventsTable).values({
             titolo: ev.titolo,
+            titoloOriginale: ev.titolo_originale || ev.titolo,
+            categoria: ev.categoria || null,
             dataInizio: dataInizio,
             dataFine: dataFine,
             luogo: ev.luogo,
@@ -532,7 +734,9 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
             if (ev.is_festival && ev.sotto_eventi && ev.sotto_eventi.length > 0) {
               for (const se of ev.sotto_eventi) {
                 await db.insert(eventsTable).values({
-                  titolo: `${ev.titolo} - ${se.titolo}`,
+                  titolo: se.titolo ? `${ev.titolo} - ${se.titolo}` : `${ev.titolo}`,
+                  titoloOriginale: se.titolo || null,
+                  categoria: ev.categoria || null,
                   dataInizio: se.data_inizio,
                   dataFine: se.data_fine || se.data_inizio,
                   luogo: se.luogo || ev.luogo,
@@ -634,6 +838,9 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
 
             await db.update(eventsTable)
               .set({
+                titolo: r.titolo || parent.titolo,
+                titoloOriginale: parent.titoloOriginale || parent.titolo,
+                categoria: r.categoria || null,
                 testoEstratto: r.testo_estratto,
                 linkOrganizzatore: r.link_organizzatore || null,
                 tags: r.tags || null,
@@ -651,7 +858,9 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
               await db.delete(eventsTable).where(eq(eventsTable.parentId, parent.id));
               for (const se of r.sotto_eventi) {
                 await db.insert(eventsTable).values({
-                  titolo: `${parent.titolo} - ${se.titolo}`,
+                  titolo: se.titolo ? `${r.titolo || parent.titolo} - ${se.titolo}` : `${r.titolo || parent.titolo}`,
+                  titoloOriginale: se.titolo || null,
+                  categoria: r.categoria || null,
                   dataInizio: se.data_inizio,
                   dataFine: se.data_fine || se.data_inizio,
                   luogo: se.luogo || parent.luogo,
@@ -721,6 +930,35 @@ router.delete("/events/:id", requireAdminKey, async (req, res): Promise<void> =>
   }
 });
 
+router.delete("/events/bulk", requireAdminKey, async (req, res): Promise<void> => {
+  const { ids, record_rejected } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    res.status(400).json({ error: "No ids provided" });
+    return;
+  }
+
+  try {
+    if (record_rejected) {
+      const rows = await db.select().from(eventsTable).where(inArray(eventsTable.id, ids));
+      const toInsert = rows.map(r => ({
+        titolo: r.titolo,
+        fonte: r.fonte,
+        motivo: "Rifiutato dall'admin in bulk",
+      }));
+      if (toInsert.length > 0) {
+        await db.insert(rejectedEventsTable).values(toInsert);
+      }
+    }
+    
+    await db.delete(eventsTable).where(inArray(eventsTable.id, ids));
+    req.log.info({ count: ids.length }, "Events bulk deleted");
+    res.json({ success: true, message: `${ids.length} eventi eliminati` });
+  } catch (e) {
+    req.log.error({ err: e }, "Bulk delete failed");
+    res.status(500).json({ error: String(e) });
+  }
+});
+
 router.get("/events/rejected", requireAdminKey, async (_req, res): Promise<void> => {
   const rows = await db
     .select()
@@ -751,6 +989,45 @@ router.delete("/events/rejected/:id", requireAdminKey, async (req, res): Promise
     res.json({ success: true, message: "Evento rimosso dalla blacklist" });
   } catch (e) {
     req.log.error({ err: e }, "Restore rejected event failed");
+    res.status(500).json({ error: String(e) });
+  }
+});
+
+router.delete("/events/rejected/bulk", requireAdminKey, async (req, res): Promise<void> => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    res.status(400).json({ error: "No ids provided" });
+    return;
+  }
+
+  try {
+    await db.delete(rejectedEventsTable).where(inArray(rejectedEventsTable.id, ids));
+    req.log.info({ count: ids.length }, "Rejected events bulk deleted");
+    res.json({ success: true, message: `${ids.length} eventi scartati eliminati definitivamente` });
+  } catch (e) {
+    req.log.error({ err: e }, "Bulk restore/delete rejected events failed");
+    res.status(500).json({ error: String(e) });
+  }
+});
+
+router.post("/events/rejected/bulk-add", requireAdminKey, async (req, res): Promise<void> => {
+  const { events } = req.body;
+  if (!Array.isArray(events) || events.length === 0) {
+    res.status(400).json({ error: "No events provided" });
+    return;
+  }
+
+  try {
+    const toInsert = events.map((e: any) => ({
+      titolo: e.titolo,
+      fonte: e.fonte || "Sconosciuta",
+      motivo: "Rifiutato in bulk (Scarta)",
+    }));
+    await db.insert(rejectedEventsTable).values(toInsert);
+    req.log.info({ count: events.length }, "Added events to rejected blacklist");
+    res.json({ success: true, message: `${events.length} eventi aggiunti alla blacklist` });
+  } catch (e) {
+    req.log.error({ err: e }, "Failed to bulk add to rejected");
     res.status(500).json({ error: String(e) });
   }
 });

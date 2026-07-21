@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Loader2, CheckCircle2, XCircle, ShieldCheck, ArrowLeft, Eye, Database,
-  Trash2, RotateCcw, AlertTriangle, Calendar, MapPin, Globe, Search, RefreshCw, Clock, Terminal
+  Trash2, RotateCcw, AlertTriangle, Calendar, MapPin, Globe, Search, RefreshCw, Clock, Terminal, Upload
 } from "lucide-react";
 
 const LS_KEY = "sardegna_admin_key";
@@ -138,6 +138,13 @@ export function Admin() {
   const [approvalResult, setApprovalResult] = useState<RefreshResult | null>(null);
   const [scrapingStep, setScrapingStep] = useState<"input" | "list" | "result">("input");
   const [scrapingLogs, setScrapingLogs] = useState<string[]>([]);
+  const [genericUrl, setGenericUrl] = useState("");
+  const [scrapingGeneric, setScrapingGeneric] = useState(false);
+  const [urlScrapedEvents, setUrlScrapedEvents] = useState<any[]>([]);
+  const [maxLinksUrl, setMaxLinksUrl] = useState<number | "">("");
+  const [forceFestival, setForceFestival] = useState<boolean>(false);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
 
   const loadPreviewCache = useCallback(async () => {
     if (!adminKey) return;
@@ -378,6 +385,83 @@ export function Admin() {
       setError(`Errore di rete: ${String(e)}`);
     } finally {
       setLoadingPreview(false);
+    }
+  };
+
+  const handleScrapeUrl = async () => {
+    if (!keyVerified && !(await verifyKey())) return;
+    if (!genericUrl.trim()) return;
+    setError(null);
+    setScrapingGeneric(true);
+    setScrapingLogs([]);
+    setUrlScrapedEvents([]);
+    try {
+      const resp: any = await fetchJson("/api/events/scrape-url", "POST", { 
+        url: genericUrl.trim(),
+        maxLinks: maxLinksUrl === "" ? 70 : maxLinksUrl,
+        forceFestival
+      }, adminKey);
+      if (resp.success && resp.events) {
+        const firstEv = resp.events[0];
+        if (firstEv && firstEv.dettagli_extra && firstEv.dettagli_extra._usage) {
+          const u = firstEv.dettagli_extra._usage;
+          setScrapingLogs([`✅ Completato! ⚡ Token AI: ${u.total_tokens} (Prompt: ${u.prompt_tokens}, Risp: ${u.candidates_tokens})`]);
+        } else {
+          setScrapingLogs(["✅ Completato con successo!"]);
+        }
+        setUrlScrapedEvents(resp.events);
+        setPreviewEvents(prev => {
+          const next = [...prev, ...resp.events];
+          updatePreviewCache(next);
+          return next;
+        });
+      } else {
+        setError(resp.message || "Errore durante lo scraping dell'URL");
+      }
+    } catch (e) {
+      setError(`Errore di rete: ${String(e)}`);
+    } finally {
+      setScrapingGeneric(false);
+    }
+  };
+
+  const handleUploadPdf = async () => {
+    if (!keyVerified && !(await verifyKey())) return;
+    if (!pdfFile) return;
+    setError(null);
+    setUploadingPdf(true);
+    setScrapingLogs(["Caricamento PDF in corso..."]);
+    
+    try {
+      const formData = new FormData();
+      formData.append("file", pdfFile);
+
+      const resp = await fetch("/api/events/upload-pdf", {
+        method: "POST",
+        headers: {
+          "x-admin-key": adminKey.trim()
+        },
+        body: formData
+      });
+      
+      const data = await resp.json();
+
+      if (data.success && data.events) {
+        setPreviewEvents(prev => {
+          const next = [...prev, ...data.events];
+          updatePreviewCache(next);
+          return next;
+        });
+        setPdfFile(null);
+        setScrapingStep("list");
+        setActiveTab("pending");
+      } else {
+        setError(data.message || "Errore durante l'elaborazione del PDF");
+      }
+    } catch (e) {
+      setError(`Errore di rete: ${String(e)}`);
+    } finally {
+      setUploadingPdf(false);
     }
   };
 
@@ -1025,6 +1109,144 @@ export function Admin() {
                 {!keyVerified && (
                   <p className="text-sm text-muted-foreground">Inserisci e verifica la chiave admin prima di procedere.</p>
                 )}
+
+                  {/* ── Scraping URL Libero ── */}
+                  <div className="mt-6 pt-4 border-t border-border flex flex-col gap-3 max-w-2xl">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Scraping URL Libero</span>
+                    <p className="text-sm text-muted-foreground">Inserisci l'URL di un sito evento o festival per estrarre direttamente le informazioni con l'AI.</p>
+                    <div className="flex flex-col gap-3">
+                      <div className="flex gap-2">
+                        <Input 
+                          placeholder="https://www.esempio.it/evento..." 
+                          value={genericUrl}
+                          onChange={(e) => setGenericUrl(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button 
+                          onClick={handleScrapeUrl} 
+                          disabled={scrapingGeneric || !keyVerified || !genericUrl.trim()}
+                          className="shrink-0"
+                        >
+                          {scrapingGeneric ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Search className="w-4 h-4 mr-2" />}
+                          Analizza URL
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground border border-border p-3 rounded-md bg-muted/30">
+                        <div className="flex items-center gap-2" title="Numero massimo di link di approfondimento da navigare.">
+                          <label htmlFor="max-links" className="font-medium">Max Link Deep-Scrape:</label>
+                          <Input 
+                            id="max-links"
+                            type="number"
+                            placeholder="es. 70"
+                            value={maxLinksUrl}
+                            onChange={(e) => setMaxLinksUrl(e.target.value === "" ? "" : parseInt(e.target.value))}
+                            className="w-20 h-8"
+                            min="0"
+                          />
+                        </div>
+                        <div className="h-4 w-px bg-border"></div>
+                        <label className="flex items-center gap-2 cursor-pointer font-medium" title="Forza il sistema a unire tutti i link trovati sotto un unico grande Festival.">
+                          <input 
+                            type="checkbox" 
+                            className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                            checked={forceFestival}
+                            onChange={(e) => setForceFestival(e.target.checked)}
+                          />
+                          Raggruppa come Festival
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ── Preview inline dopo Analizza URL ── */}
+                  {urlScrapedEvents.length > 0 && (
+                    <div className="mt-4 flex flex-col gap-3 max-w-3xl">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          {urlScrapedEvents.length === 1 ? "1 evento estratto" : `${urlScrapedEvents.length} eventi estratti`}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-xs text-muted-foreground"
+                            onClick={() => { setUrlScrapedEvents([]); setGenericUrl(""); }}
+                          >
+                            <XCircle className="w-3.5 h-3.5 mr-1" /> Chiudi
+                          </Button>
+                        </div>
+                      </div>
+
+                      {urlScrapedEvents.map((ev, i) => (
+                        <div key={i} className={`border rounded-xl overflow-hidden shadow-sm ${ev.is_festival ? "border-orange-300 bg-orange-50/40" : "border-border bg-card"}`}>
+                          <div className="flex gap-3 p-4">
+                            {ev.immagine && (
+                              <img src={ev.immagine} alt={ev.titolo} className="w-24 h-24 object-cover rounded-lg flex-shrink-0 border border-border" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                {ev.is_festival && <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200">Festival</Badge>}
+                                {ev.categoria && <Badge variant="outline">{ev.categoria}</Badge>}
+                              </div>
+                              <h3 className="font-bold text-base text-foreground leading-snug">{ev.titolo}</h3>
+                              <p className="text-xs text-muted-foreground mt-1">📍 {ev.luogo || "Sardegna"} | 📅 {ev.data_inizio} {ev.data_fine ? `- ${ev.data_fine}` : ""}</p>
+                              {ev.descrizione && <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{ev.descrizione}</p>}
+                            </div>
+                          </div>
+                          {ev.sotto_eventi && ev.sotto_eventi.length > 0 && (
+                            <div className="bg-orange-50/70 border-t border-orange-200/60 p-3 flex flex-col gap-2">
+                              <span className="text-xs font-semibold text-orange-900 uppercase tracking-wider">Sotto-eventi ({ev.sotto_eventi.length})</span>
+                              <div className="grid grid-cols-1 gap-1.5">
+                                {ev.sotto_eventi.map((sub: any, si: number) => (
+                                  <div key={si} className="flex flex-col gap-2 text-xs text-foreground bg-white/60 rounded-md px-2 py-1.5 border border-orange-100">
+                                    <div className="flex items-start gap-2">
+                                      <span className="font-semibold text-orange-700 flex-shrink-0 min-w-[90px]">{sub.data_inizio || "-"}</span>
+                                      <span className="flex-1 leading-snug">{sub.titolo}</span>
+                                      {sub.luogo && <span className="text-muted-foreground flex-shrink-0 truncate max-w-[120px]">{sub.luogo}</span>}
+                                    </div>
+                                    {(sub.descrizione || sub.url) && (
+                                      <details className="group cursor-pointer">
+                                        <summary className="text-[10px] text-orange-600 font-semibold uppercase hover:underline">Dettagli</summary>
+                                        <div className="pt-2 pb-1 text-muted-foreground text-xs leading-relaxed border-t border-orange-100 mt-2">
+                                          {sub.url && <p className="mb-1 truncate"><a href={sub.url} target="_blank" className="text-blue-500 hover:underline">Link: {sub.url}</a></p>}
+                                          {sub.descrizione && <p className="whitespace-pre-wrap">{sub.descrizione}</p>}
+                                        </div>
+                                      </details>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* ── Caricamento PDF ── */}
+                  <div className="mt-6 pt-4 border-t border-border flex flex-col gap-3 max-w-xl">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Caricamento PDF</span>
+                    <p className="text-sm text-muted-foreground">Carica un PDF (es. locandina testuale o programma) per estrarne automaticamente gli eventi e le date.</p>
+                    <div className="flex gap-2 items-center">
+                      <Input 
+                        type="file" 
+                        accept="application/pdf"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          setPdfFile(file || null);
+                        }}
+                        className="flex-1 cursor-pointer"
+                      />
+                      <Button 
+                        onClick={handleUploadPdf} 
+                        disabled={uploadingPdf || !keyVerified || !pdfFile}
+                      >
+                        {uploadingPdf ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                        Carica PDF
+                      </Button>
+                    </div>
+                  </div>
                 {scrapingLogs.length > 0 && (
                   <div className="mt-4 bg-[#1e1e1e] text-green-400 p-4 rounded-md font-mono text-xs max-h-64 overflow-y-auto shadow-inner border border-border/50">
                     {scrapingLogs.map((log, i) => (

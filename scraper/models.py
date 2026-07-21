@@ -8,6 +8,8 @@ class SottoEvento:
     data_inizio: str
     data_fine: str
     luogo: Optional[str] = None
+    url: Optional[str] = None
+    descrizione: Optional[str] = None
 
 @dataclass
 class Evento:
@@ -25,6 +27,7 @@ class Evento:
     testo_estratto: Optional[str] = None
     is_festival: bool = False
     sotto_eventi: List[SottoEvento] = field(default_factory=list)
+    dettagli_extra: dict = field(default_factory=dict)
     parent_id: Optional[int] = None   # Impostato dal runner per gli eventi figli di un festival
 
     def to_dict(self) -> dict:

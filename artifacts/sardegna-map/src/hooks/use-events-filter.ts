@@ -5,15 +5,19 @@ import type { Event } from "@workspace/api-client-react";
 
 export function useEventsFilter(events: Event[] = []) {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   const filteredEvents = useMemo(() => {
-    // 1. Filter by date if range is selected
     let list = events;
+
+    // 1. Filter by date if range is selected
     if (dateRange?.from) {
       const from = startOfDay(dateRange.from);
       const to = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
 
-      list = events.filter((evt) => {
+      list = list.filter((evt) => {
         if (!evt.data_inizio) return true;
         const evtStart = parseISO(evt.data_inizio);
         const evtEnd = evt.data_fine ? parseISO(evt.data_fine) : evtStart;
@@ -21,7 +25,28 @@ export function useEventsFilter(events: Event[] = []) {
       });
     }
 
-    // 2. Sort events: future events first (ascending by start date), then past events (descending by start date)
+    // 2. Filter by search query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter((evt) => {
+        const titleMatch = evt.titolo?.toLowerCase().includes(q);
+        const locationMatch = evt.luogo?.toLowerCase().includes(q);
+        const addrMatch = evt.dettagli_extra?.indirizzo_completo?.toLowerCase().includes(q);
+        return titleMatch || locationMatch || addrMatch;
+      });
+    }
+
+    // 3. Filter by category
+    if (selectedCategory) {
+      list = list.filter((evt) => evt.categoria === selectedCategory);
+    }
+
+    // 4. Filter by tag
+    if (selectedTag) {
+      list = list.filter((evt) => evt.tags?.includes(selectedTag));
+    }
+
+    // 5. Sort events: future events first (ascending by start date), then past events (descending by start date)
     const d = new Date();
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -55,7 +80,17 @@ export function useEventsFilter(events: Event[] = []) {
         return b.data_inizio.localeCompare(a.data_inizio);
       }
     });
-  }, [events, dateRange]);
+  }, [events, dateRange, searchQuery, selectedCategory, selectedTag]);
 
-  return { filteredEvents, dateRange, setDateRange };
+  return {
+    filteredEvents,
+    dateRange,
+    setDateRange,
+    searchQuery,
+    setSearchQuery,
+    selectedCategory,
+    setSelectedCategory,
+    selectedTag,
+    setSelectedTag,
+  };
 }

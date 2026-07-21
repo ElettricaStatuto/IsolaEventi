@@ -267,6 +267,10 @@ def main():
     parser.add_argument("--preview", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--sources", type=str, default="")
+    parser.add_argument("--url", type=str, default="")
+    parser.add_argument("--pdf", type=str, default="")
+    parser.add_argument("--max-links", type=int, default=70)
+    parser.add_argument("--force-festival", action="store_true")
     args, unknown = parser.parse_known_args()
 
     dry_run = args.dry_run
@@ -280,32 +284,39 @@ def main():
     # --- Scrape ---
     scrapers = []
     
-    if not enabled_sources or "paradisola" in enabled_sources:
-        scrapers.append(ParadisolaScraper())
-        
-    if not enabled_sources or "sardegnaturismo" in enabled_sources:
-        scrapers.append(SardegnaTurismoScraper())
+    if args.url:
+        from scraper.sites.generic import GenericUrlScraper
+        scrapers.append(GenericUrlScraper(args.url, max_links=args.max_links))
+    elif args.pdf:
+        from scraper.sites.pdf_scraper import PdfScraper
+        scrapers.append(PdfScraper(args.pdf))
+    else:
+        if not enabled_sources or "paradisola" in enabled_sources:
+            scrapers.append(ParadisolaScraper())
+            
+        if not enabled_sources or "sardegnaturismo" in enabled_sources:
+            scrapers.append(SardegnaTurismoScraper())
 
-    if not enabled_sources or "timeinjazz" in enabled_sources:
-        scrapers.append(TimeInJazzScraper())
+        if not enabled_sources or "timeinjazz" in enabled_sources:
+            scrapers.append(TimeInJazzScraper())
 
-    # Configurazione target per eventiinsardegna.it
-    eventiinsardegna_targets = []
-    if not enabled_sources or "eventiinsardegna_calendar" in enabled_sources:
-        eventiinsardegna_targets.append(("https://www.eventiinsardegna.it/eventi/", "events_calendar"))
-    if not enabled_sources or "eventiinsardegna_alghero" in enabled_sources:
-        eventiinsardegna_targets.append(("https://www.eventiinsardegna.it/tag/alghero/", "wordpress_tag"))
-    if not enabled_sources or "eventiinsardegna_cagliari" in enabled_sources:
-        eventiinsardegna_targets.append(("https://www.eventiinsardegna.it/tag/cagliari/", "wordpress_tag"))
-    if not enabled_sources or "eventiinsardegna_centro" in enabled_sources:
-        eventiinsardegna_targets.append(("https://www.eventiinsardegna.it/tag/eventi-centro-sardegna/", "wordpress_tag"))
-    if not enabled_sources or "eventiinsardegna_agosto" in enabled_sources:
-        eventiinsardegna_targets.append(("https://www.eventiinsardegna.it/agosto/", "wordpress_tag"))
+        # Configurazione target per eventiinsardegna.it
+        eventiinsardegna_targets = []
+        if not enabled_sources or "eventiinsardegna_calendar" in enabled_sources:
+            eventiinsardegna_targets.append(("https://www.eventiinsardegna.it/eventi/", "events_calendar"))
+        if not enabled_sources or "eventiinsardegna_alghero" in enabled_sources:
+            eventiinsardegna_targets.append(("https://www.eventiinsardegna.it/tag/alghero/", "wordpress_tag"))
+        if not enabled_sources or "eventiinsardegna_cagliari" in enabled_sources:
+            eventiinsardegna_targets.append(("https://www.eventiinsardegna.it/tag/cagliari/", "wordpress_tag"))
+        if not enabled_sources or "eventiinsardegna_centro" in enabled_sources:
+            eventiinsardegna_targets.append(("https://www.eventiinsardegna.it/tag/eventi-centro-sardegna/", "wordpress_tag"))
+        if not enabled_sources or "eventiinsardegna_agosto" in enabled_sources:
+            eventiinsardegna_targets.append(("https://www.eventiinsardegna.it/agosto/", "wordpress_tag"))
 
-    if eventiinsardegna_targets:
-        scraper = EventiInSardegnaScraper()
-        scraper.targets = eventiinsardegna_targets
-        scrapers.append(scraper)
+        if eventiinsardegna_targets:
+            scraper = EventiInSardegnaScraper()
+            scraper.targets = eventiinsardegna_targets
+            scrapers.append(scraper)
 
     tutti_eventi = []
     # Mappa scraper → parent_id festival (per i festival scrapers)
@@ -398,6 +409,28 @@ def main():
         events_preview = []
         for obj in events_to_save:
             ev = obj["ev"]
+            
+            # Se è uno scraping URL libero, esegui subito l'analisi AI
+            if args.url:
+                emit_log(f"Esecuzione AI sull'evento estratto in corso...")
+                extra_kwargs = {"force_festival": True} if args.force_festival else {}
+                ai_result = analyze_event(ev.to_dict(), **extra_kwargs)
+                if ai_result:
+                    if "_usage" in ai_result:
+                        u = ai_result["_usage"]
+                        emit_log(f"⚡ Token Consumati: {u['total_tokens']} (Prompt: {u['prompt_tokens']}, Risposta: {u['candidates_tokens']})")
+                        if getattr(ev, 'dettagli_extra', None) is None:
+                            ev.dettagli_extra = {}
+                        ev.dettagli_extra["_usage"] = u
+
+                    ev.testo_estratto = ai_result.get("testo_estratto", "")
+                    ev.is_festival = ai_result.get("is_festival", False)
+                    ev.link_organizzatore = ai_result.get("link_organizzatore")
+                    
+                    sotto_eventi_dicts = ai_result.get("sotto_eventi", [])
+                    ev.sotto_eventi = [SottoEvento(**se) for se in sotto_eventi_dicts]
+                    emit_log(f"AI ha trovato {len(ev.sotto_eventi)} sotto-eventi.")
+
             events_preview.append({
                 "titolo": ev.titolo,
                 "data_inizio": obj["data_inizio"],
@@ -511,13 +544,13 @@ def main():
                         cur.execute(
                             """
                             INSERT INTO events
-                                (titolo, data_inizio, data_fine, luogo, parent_id, fonte, aggiornato_il)
-                            VALUES (%s,%s,%s,%s,%s,%s,now())
+                                (titolo, data_inizio, data_fine, luogo, parent_id, fonte, link, descrizione, aggiornato_il)
+                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,now())
                             """,
                             (
                                 f"{ev.titolo} - {se.titolo}", se_inizio, se_fine,
-                                se.luogo or ev.luogo, event_id, ev.fonte or "",
-                            ),
+                                se.luogo or ev.luogo, event_id, ev.fonte or "", getattr(se, 'url', None), getattr(se, 'descrizione', None)
+                            )
                         )
 
                 # Download immagine con l'ID appena creato

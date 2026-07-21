@@ -93,23 +93,47 @@ export function MapContainer({
 
       const isFestival = (evt as any).children_count > 0;
       const isChild = !!evt.parent_id;
+      
+      const categoryStyles: Record<string, { color: string; icon: string }> = {
+        Musica: { color: "#3b82f6", icon: "🎵" },
+        Teatro: { color: "#8b5cf6", icon: "🎭" },
+        Cinema: { color: "#ec4899", icon: "🎬" },
+        Arte: { color: "#10b981", icon: "🎨" },
+        Incontro: { color: "#f59e0b", icon: "🗣️" },
+        Enogastronomia: { color: "#ea580c", icon: "🍷" },
+        Folklore: { color: "#dc2626", icon: "🥁" },
+        Sport: { color: "#06b6d4", icon: "🏆" },
+        Bambini: { color: "#84cc16", icon: "🎈" },
+        Altro: { color: "#6b7280", icon: "📍" },
+      };
+
+      const cat = evt.categoria || "Altro";
+      const style = categoryStyles[cat] || categoryStyles.Altro;
       let icon = new L.Icon.Default();
 
       if (isFestival) {
-        // 🟠 Festival padre — pin grande arancione con bandierina
         icon = L.divIcon({
-          className: "custom-div-icon",
-          html: `<div style="background-color: #c0661b; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.4); border: 2px solid white; font-size:16px;">🎪</div>`,
-          iconSize: [32, 32],
-          iconAnchor: [16, 32]
+          className: "custom-div-icon-festival",
+          html: `<div style="background-color: #c0661b; color: white; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(0,0,0,0.4); border: 2px solid white;"><span style="transform: rotate(45deg); font-size:16px;">🎪</span></div>`,
+          iconSize: [34, 34],
+          iconAnchor: [17, 34],
+          popupAnchor: [0, -34]
         });
       } else if (isChild) {
-        // 🔵 Concerto figlio — pin piccolo blu
         icon = L.divIcon({
           className: "custom-div-icon-child",
-          html: `<div style="background-color: #1d4ed8; border-radius: 50%; width: 18px; height: 18px; border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.35); display:flex;align-items:center;justify-content:center;font-size:9px;color:white;">🎵</div>`,
-          iconSize: [18, 18],
-          iconAnchor: [9, 9]
+          html: `<div style="background-color: ${style.color}; border-radius: 50%; width: 22px; height: 22px; border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.35); display:flex;align-items:center;justify-content:center;font-size:11px;color:white;">${style.icon}</div>`,
+          iconSize: [22, 22],
+          iconAnchor: [11, 11],
+          popupAnchor: [0, -11]
+        });
+      } else {
+        icon = L.divIcon({
+          className: "custom-div-icon-standard",
+          html: `<div style="background-color: ${style.color}; color: white; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.35); border: 2px solid white;"><span style="transform: rotate(45deg); font-size:14px; display:block;">${style.icon}</span></div>`,
+          iconSize: [32, 32],
+          iconAnchor: [16, 32],
+          popupAnchor: [0, -32]
         });
       }
 
