@@ -830,6 +830,110 @@ export function Admin() {
     }
   };
 
+  const handleAnalyzeEventsMixed = async (toAnalyze: any[]) => {
+    if (toAnalyze.length === 0) return;
+
+    setAnalyzingStep("preview");
+    setAnalysisLogs([]);
+    setError(null);
+    isAbortedRef.current = false;
+
+    const total = toAnalyze.length;
+    let nextEvents = [...previewEvents];
+    let successi = 0;
+    let erroriCount = 0;
+    let reloadPublished = false;
+
+    try {
+      for (let i = 0; i < total; i++) {
+        if (isAbortedRef.current) {
+          setAnalysisLogs(prev => [...prev, "🚫 Analisi interrotta dall'utente."]);
+          break;
+        }
+
+        const ev = toAnalyze[i];
+        setAnalysisLogs(prev => [...prev, `[${i + 1}/${total}] Sto analizzando l'evento: '${ev.titolo}' (Target: ${analysisTarget})...`]);
+
+        const payload = [{
+          tmp_id: ev.is_pending ? ev.original_idx.toString() : "",
+          id: ev.is_pending ? undefined : ev.id,
+          titolo: ev.titolo,
+          descrizione: ev.descrizione,
+          immagine: ev.immagine,
+          link: ev.link,
+        }];
+
+        abortControllerRef.current = new AbortController();
+        const response = await fetch("/api/events/analyze", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-key": adminKey,
+          },
+          body: JSON.stringify({ events: payload, target: analysisTarget, use_proxy: aiProvider === "replit" }),
+          signal: abortControllerRef.current.signal,
+        });
+
+        if (!response.ok) {
+          let errMsg = `HTTP ${response.status}`;
+          try {
+            const errData = await response.json();
+            if (errData && errData.error) errMsg = errData.error;
+          } catch {}
+          throw new Error(errMsg);
+        }
+
+        const data = await response.json();
+        if (data.success && data.results && data.results.length > 0) {
+          const res = data.results[0];
+          if (res.error) {
+            erroriCount++;
+            setAnalysisLogs(prev => [...prev, `❌ Errore: ${res.error}`]);
+          } else {
+            successi++;
+            if (ev.is_pending) {
+              const idx = ev.original_idx;
+              nextEvents[idx] = {
+                ...nextEvents[idx],
+                titolo: res.titolo || nextEvents[idx].titolo,
+                categoria: res.categoria || (nextEvents[idx] as any).categoria,
+                tags: res.tags || (nextEvents[idx] as any).tags,
+                dettagli_extra: res.dettagli_extra || (nextEvents[idx] as any).dettagli_extra,
+                testo_estratto: res.testo_estratto,
+                is_festival: res.is_festival,
+                sotto_eventi: res.sotto_eventi,
+                link_organizzatore: res.link_organizzatore,
+              };
+              setPreviewEvents([...nextEvents]);
+              updatePreviewCache(nextEvents);
+            } else {
+              reloadPublished = true;
+            }
+            setAnalysisLogs(prev => [...prev, `✅ Completato con successo!`]);
+          }
+        } else {
+          erroriCount++;
+          setAnalysisLogs(prev => [...prev, `❌ Errore durante l'analisi.`]);
+        }
+      }
+      
+      if (!isAbortedRef.current) {
+        setSelectedAnalyzeIds(new Set());
+        if (reloadPublished) {
+          loadPublished(appliedFilters);
+        }
+        alert(`Analisi completata. ${successi} successi, ${erroriCount} errori.`);
+      }
+    } catch (e: any) {
+      if (e.name !== "AbortError") {
+        setError(`Errore analisi: ${String(e.message || e)}`);
+      }
+    } finally {
+      setAnalyzingStep("idle");
+      abortControllerRef.current = null;
+    }
+  };
+
   const deletePreviewEvent = (idx: number) => {
     const next = previewEvents.filter((_, i) => i !== idx);
     setPreviewEvents(next);
