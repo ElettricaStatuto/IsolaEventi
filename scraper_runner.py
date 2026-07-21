@@ -409,6 +409,11 @@ def main():
     cur.close()
 
 
+    # Truncate giant descriptions for ALL modes to avoid memory/db crashes
+    for obj in events_to_save:
+        if obj["ev"].descrizione and len(obj["ev"].descrizione) > 30000:
+            obj["ev"].descrizione = obj["ev"].descrizione[:30000] + "\n\n... [TESTO GREZZO TRONCATO]"
+
     if preview_only:
         # Restituisce JSON con lista eventi trovati, senza toccare il DB
         events_preview = []
