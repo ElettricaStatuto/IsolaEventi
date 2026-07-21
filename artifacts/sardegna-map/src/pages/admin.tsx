@@ -108,6 +108,42 @@ const AutoResizeTextarea = ({ value, onChange, className, ...props }: any) => {
   );
 };
 
+function ButtonLegendGuide() {
+  return (
+    <div className="bg-muted/30 border border-border/80 rounded-lg p-3 text-xs text-muted-foreground flex flex-col gap-2">
+      <div className="font-semibold text-foreground flex items-center gap-1.5 text-xs">
+        <Info className="w-3.5 h-3.5 text-blue-500" /> Legenda Guida Pulsanti e Azioni
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+        <div className="flex items-center gap-2 bg-background p-2 rounded border border-border/50">
+          <Badge variant="outline" className="shrink-0 text-[10px]"><Eye className="w-3 h-3 mr-1" /> Dettagli</Badge>
+          <span className="text-[11px]">Mostra la scheda completa dell'evento e i sotto-eventi.</span>
+        </div>
+        <div className="flex items-center gap-2 bg-background p-2 rounded border border-border/50">
+          <Badge variant="secondary" className="shrink-0 text-[10px]"><Brain className="w-3 h-3 mr-1" /> Analizza</Badge>
+          <span className="text-[11px]">Esegue l'estrazione AI su locandina/testo.</span>
+        </div>
+        <div className="flex items-center gap-2 bg-background p-2 rounded border border-border/50">
+          <Badge className="shrink-0 text-[10px] bg-green-600"><CheckCircle2 className="w-3 h-3 mr-1" /> Pubblica</Badge>
+          <span className="text-[11px]">Approva e rende visibile l'evento sulla mappa.</span>
+        </div>
+        <div className="flex items-center gap-2 bg-background p-2 rounded border border-border/50">
+          <Badge variant="destructive" className="shrink-0 text-[10px]"><Trash2 className="w-3 h-3 mr-1" /> Elimina</Badge>
+          <span className="text-[11px]">Rimuove l'evento consentendo scansioni future.</span>
+        </div>
+        <div className="flex items-center gap-2 bg-background p-2 rounded border border-border/50">
+          <Badge variant="destructive" className="shrink-0 text-[10px] bg-orange-600 border-none"><AlertTriangle className="w-3 h-3 mr-1" /> Scarta</Badge>
+          <span className="text-[11px]">Elimina e blocca l'evento in Blacklist.</span>
+        </div>
+        <div className="flex items-center gap-2 bg-background p-2 rounded border border-border/50">
+          <Badge variant="outline" className="shrink-0 text-[10px]"><RotateCcw className="w-3 h-3 mr-1" /> Ripristina</Badge>
+          <span className="text-[11px]">Rimuove l'evento dalla Blacklist.</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Admin() {
   const [adminKey, setAdminKey] = useState("bypass");
   const [keyVerified, setKeyVerified] = useState(true);
