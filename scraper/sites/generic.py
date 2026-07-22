@@ -15,6 +15,12 @@ logger = logging.getLogger(__name__)
 class GenericUrlScraper(BaseScraper):
     def __init__(self, target_url: str, max_links: int = 70):
         super().__init__()
+        # Pulizia da incollamenti doppi o malformati (es. https://...https://...)
+        target_url = target_url.strip()
+        matches = re.findall(r'https?://[^\s"<>]+', target_url)
+        if matches:
+            target_url = matches[0]
+
         self.target_url = target_url
         self.max_links = max_links
         parsed = urlparse(target_url)

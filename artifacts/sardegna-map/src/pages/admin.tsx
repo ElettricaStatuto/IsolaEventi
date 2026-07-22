@@ -440,13 +440,22 @@ export function Admin() {
   const handleScrapeUrl = async () => {
     if (!keyVerified && !(await verifyKey())) return;
     if (!genericUrl.trim()) return;
+    
+    // Pulizia automatica in caso di incollamento doppio di URL (es. https://...https://...)
+    let cleanUrl = genericUrl.trim();
+    const urlMatches = cleanUrl.match(/https?:\/\/[^\s"<>]+/g);
+    if (urlMatches && urlMatches.length > 0) {
+      cleanUrl = urlMatches[0];
+      setGenericUrl(cleanUrl);
+    }
+
     setError(null);
     setScrapingGeneric(true);
     setScrapingLogs([]);
     setUrlScrapedEvents([]);
     try {
       const resp: any = await fetchJson("/api/events/scrape-url", "POST", { 
-        url: genericUrl.trim(),
+        url: cleanUrl,
         maxLinks: maxLinksUrl === "" ? 70 : maxLinksUrl,
         forceFestival
       }, adminKey);
