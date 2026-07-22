@@ -60,6 +60,8 @@ export interface EventDetailsModalProps {
   handleAnalyzeGroupFromModal: () => void;
   handleSaveEventDetails: () => void;
   savingEvent: boolean;
+  publishedEvents?: any[];
+  openEventDetails?: (ev: any, isPending: boolean) => void;
 }
 
 export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
@@ -89,8 +91,55 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   handleAnalyzeGroupFromModal,
   handleSaveEventDetails,
   savingEvent,
+  publishedEvents = [],
+  openEventDetails,
 }) => {
   if (!inspectingEvent) return null;
+
+  // Trova eventuale evento Padre
+  let parentEvent: { ev: any; isPending: boolean } | null = null;
+  if (inspectingEvent.is_pending) {
+    const pTempId = inspectingEvent.dettagli_extra?.parent_temp_id;
+    if (pTempId) {
+      const parentInPreview = previewEvents?.find((e) => e.dettagli_extra?.id_key === pTempId);
+      if (parentInPreview) {
+        parentEvent = { ev: parentInPreview, isPending: true };
+      }
+    }
+    if (!parentEvent && inspectingEvent.dettagli_extra?.festival_padre) {
+      const festName = inspectingEvent.dettagli_extra.festival_padre.toLowerCase();
+      const mPrev = previewEvents?.find(
+        (e) => e.titolo?.toLowerCase() === festName || e.dettagli_extra?.id_key?.toLowerCase() === festName
+      );
+      if (mPrev) {
+        parentEvent = { ev: mPrev, isPending: true };
+      } else {
+        const mPub = publishedEvents?.find((e) => e.titolo?.toLowerCase() === festName);
+        if (mPub) {
+          parentEvent = { ev: mPub, isPending: false };
+        }
+      }
+    }
+  } else {
+    if (inspectingEvent.parent_id) {
+      const parentInPub = publishedEvents?.find((e) => e.id === inspectingEvent.parent_id);
+      if (parentInPub) {
+        parentEvent = { ev: parentInPub, isPending: false };
+      }
+    }
+    if (!parentEvent && inspectingEvent.dettagli_extra?.festival_padre) {
+      const festName = inspectingEvent.dettagli_extra.festival_padre.toLowerCase();
+      const mPub = publishedEvents?.find((e) => e.titolo?.toLowerCase() === festName);
+      if (mPub) {
+        parentEvent = { ev: mPub, isPending: false };
+      } else {
+        const mPrev = previewEvents?.find((e) => e.titolo?.toLowerCase() === festName);
+        if (mPrev) {
+          parentEvent = { ev: mPrev, isPending: true };
+        }
+      }
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
@@ -116,11 +165,20 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               ) : (
                 <div className="flex flex-col mt-1">
                   <CardTitle className="text-lg font-bold">{inspectingEvent.titolo}</CardTitle>
-                  {inspectingEvent.dettagli_extra?.festival_padre && (
+                  {parentEvent && openEventDetails ? (
+                    <button
+                      type="button"
+                      onClick={() => openEventDetails(parentEvent.ev, parentEvent.isPending)}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 px-2.5 py-1 rounded-md mt-1.5 transition-colors cursor-pointer w-fit"
+                      title="Clicca per aprire la scheda dell'evento Padre"
+                    >
+                      ★ Evento Padre: {parentEvent.ev.titolo} (Apri Scheda Padre →)
+                    </button>
+                  ) : inspectingEvent.dettagli_extra?.festival_padre ? (
                     <span className="text-xs font-medium text-amber-600 uppercase tracking-wide mt-1">
                       ★ {inspectingEvent.dettagli_extra.festival_padre}
                     </span>
-                  )}
+                  ) : null}
                 </div>
               )}
               <CardDescription className="mt-1">

@@ -1695,6 +1695,8 @@ export function Admin() {
           handleAnalyzeGroupFromModal={handleAnalyzeGroupFromModal}
           handleSaveEventDetails={handleSaveEventDetails}
           savingEvent={savingEvent}
+          publishedEvents={publishedEvents}
+          openEventDetails={openEventDetails}
         />
 
         {/* Global error */}
