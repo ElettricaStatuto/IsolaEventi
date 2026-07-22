@@ -159,14 +159,30 @@ export const AnalyzedEventsTable: React.FC<AnalyzedEventsTableProps> = ({
                   <td className="p-2 font-medium">
                     <div className="flex flex-col gap-1 max-w-md">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <div className="flex flex-col">
-                          <span className="font-bold text-foreground text-sm">{ev.titolo}</span>
-                          {ev.dettagli_extra?.festival_padre && (
-                            <span className="text-[11px] font-medium text-amber-600 uppercase tracking-wide">
-                              ★ {ev.dettagli_extra.festival_padre}
-                            </span>
-                          )}
-                        </div>
+                        {(() => {
+                          const isFest = Boolean(
+                            ev.is_festival ||
+                            ev.dettagli_extra?.is_festival ||
+                            (ev.sotto_eventi && ev.sotto_eventi.length > 0) ||
+                            (subCount > 0)
+                          );
+
+                          return (
+                            <div className="flex flex-col gap-1">
+                              <span className="font-bold text-foreground text-sm">{ev.titolo}</span>
+                              {isFest && (
+                                <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black px-2 py-0.5 text-[11px] shadow-sm flex items-center gap-1 w-fit border border-amber-600">
+                                  ⭐ FESTIVAL
+                                </Badge>
+                              )}
+                              {ev.dettagli_extra?.festival_padre && (
+                                <span className="text-[11px] font-medium text-amber-600 uppercase tracking-wide">
+                                  ★ {ev.dettagli_extra.festival_padre}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                         {ev.categoria && (
                           <Badge variant="secondary" className="bg-purple-100 text-purple-800 text-[10px]">
                             {ev.categoria}

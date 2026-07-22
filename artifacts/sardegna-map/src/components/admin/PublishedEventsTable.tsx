@@ -161,19 +161,38 @@ export const PublishedEventsTable: React.FC<PublishedEventsTableProps> = ({
                       </div>
                     )}
                   </td>
-                  <td className="p-2 font-medium max-w-xs truncate">
-                    {ev.link ? (
-                      <a href={ev.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                        {ev.titolo}
-                      </a>
-                    ) : (
-                      ev.titolo
-                    )}
-                    {ev.testo_estratto && (
-                      <Badge variant="outline" className="ml-2 border-green-500 text-green-500">
-                        Analizzato
-                      </Badge>
-                    )}
+                  <td className="p-2 font-medium max-w-xs">
+                    {(() => {
+                      const isFest = Boolean(
+                        ev.is_festival ||
+                        ev.dettagli_extra?.is_festival ||
+                        (subCount > 0)
+                      );
+
+                      const titleEl = ev.link ? (
+                        <a href={ev.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-bold">
+                          {ev.titolo}
+                        </a>
+                      ) : (
+                        <span className="font-bold text-foreground">{ev.titolo}</span>
+                      );
+
+                      return (
+                        <div className="flex flex-col gap-1">
+                          {titleEl}
+                          {isFest && (
+                            <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black px-2 py-0.5 text-[11px] shadow-sm flex items-center gap-1 w-fit border border-amber-600">
+                              ⭐ FESTIVAL
+                            </Badge>
+                          )}
+                          {ev.testo_estratto && (
+                            <Badge variant="outline" className="border-green-500 text-green-500 text-[10px] w-fit">
+                              Analizzato
+                            </Badge>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td className="p-2 text-muted-foreground whitespace-nowrap">
                     {ev.data_inizio ?? "—"}

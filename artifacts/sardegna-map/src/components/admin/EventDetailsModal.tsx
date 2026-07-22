@@ -147,40 +147,57 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
         <CardHeader className="pb-3 border-b border-border">
           <div className="flex items-start justify-between">
             <div className="w-full mr-4">
-              <div className="flex items-center gap-2">
-                <Badge
-                  variant={inspectingEvent.is_pending ? "secondary" : "default"}
-                  className={inspectingEvent.is_pending ? "bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200" : ""}
-                >
-                  {inspectingEvent.is_pending ? "In Attesa" : "Pubblicato"}
-                </Badge>
-                <Badge variant="outline">{inspectingEvent.fonte}</Badge>
-              </div>
-              {isEditingEvent ? (
-                <Input
-                  value={inspectingEvent.titolo}
-                  onChange={(e) => setInspectingEvent({ ...inspectingEvent, titolo: e.target.value })}
-                  className="text-lg font-bold mt-2 font-sans h-12 px-3"
-                />
-              ) : (
-                <div className="flex flex-col mt-1">
-                  <CardTitle className="text-lg font-bold">{inspectingEvent.titolo}</CardTitle>
-                  {parentEvent && openEventDetails ? (
-                    <button
-                      type="button"
-                      onClick={() => openEventDetails(parentEvent.ev, parentEvent.isPending)}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 px-2.5 py-1 rounded-md mt-1.5 transition-colors cursor-pointer w-fit"
-                      title="Clicca per aprire la scheda dell'evento Padre"
-                    >
-                      ★ Evento Padre: {parentEvent.ev.titolo} (Apri Scheda Padre →)
-                    </button>
-                  ) : inspectingEvent.dettagli_extra?.festival_padre ? (
-                    <span className="text-xs font-medium text-amber-600 uppercase tracking-wide mt-1">
-                      ★ {inspectingEvent.dettagli_extra.festival_padre}
-                    </span>
-                  ) : null}
-                </div>
-              )}
+              {(() => {
+                const isFestival = Boolean(
+                  inspectingEvent.is_festival ||
+                  inspectingEvent.dettagli_extra?.is_festival ||
+                  (inspectingEvent.sub_events_list && inspectingEvent.sub_events_list.length > 0)
+                );
+
+                return (
+                  <>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge
+                        variant={inspectingEvent.is_pending ? "secondary" : "default"}
+                        className={inspectingEvent.is_pending ? "bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200" : ""}
+                      >
+                        {inspectingEvent.is_pending ? "In Attesa" : "Pubblicato"}
+                      </Badge>
+                      <Badge variant="outline">{inspectingEvent.fonte}</Badge>
+                    </div>
+                    {isEditingEvent ? (
+                      <Input
+                        value={inspectingEvent.titolo}
+                        onChange={(e) => setInspectingEvent({ ...inspectingEvent, titolo: e.target.value })}
+                        className="text-lg font-bold mt-2 font-sans h-12 px-3"
+                      />
+                    ) : (
+                      <div className="flex flex-col mt-1.5 gap-1">
+                        <CardTitle className="text-lg font-bold">{inspectingEvent.titolo}</CardTitle>
+                        {isFestival && (
+                          <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black text-xs px-2.5 py-0.5 shadow border border-amber-600 w-fit">
+                            ⭐ FESTIVAL / EVENTO PADRE
+                          </Badge>
+                        )}
+                        {parentEvent && openEventDetails ? (
+                          <button
+                            type="button"
+                            onClick={() => openEventDetails(parentEvent.ev, parentEvent.isPending)}
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 px-2.5 py-1 rounded-md mt-1 transition-colors cursor-pointer w-fit"
+                            title="Clicca per aprire la scheda dell'evento Padre"
+                          >
+                            ★ Evento Padre: {parentEvent.ev.titolo} (Apri Scheda Padre →)
+                          </button>
+                        ) : inspectingEvent.dettagli_extra?.festival_padre ? (
+                          <span className="text-xs font-medium text-amber-600 uppercase tracking-wide mt-1">
+                            ★ {inspectingEvent.dettagli_extra.festival_padre}
+                          </span>
+                        ) : null}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
               <CardDescription className="mt-1">
                 {inspectingEvent.data_inizio ? new Date(inspectingEvent.data_inizio).toLocaleDateString("it-IT") : "N/D"}
                 {inspectingEvent.data_fine && inspectingEvent.data_fine !== inspectingEvent.data_inizio
