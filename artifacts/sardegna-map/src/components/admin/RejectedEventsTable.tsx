@@ -42,6 +42,13 @@ export const RejectedEventsTable: React.FC<RejectedEventsTableProps> = ({
   filteredRejectedEvents,
   restoreRejected,
 }) => {
+  const [soloFestival, setSoloFestival] = React.useState(false);
+
+  const displayedRejected = filteredRejectedEvents.filter((ev: any) => {
+    if (!soloFestival) return true;
+    return Boolean(ev.is_festival || ev.dettagli_extra?.is_festival);
+  });
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -124,11 +131,22 @@ export const RejectedEventsTable: React.FC<RejectedEventsTableProps> = ({
                   </div>
                 </th>
                 <th className="p-1">
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 items-center">
+                    <Button
+                      variant={soloFestival ? "default" : "outline"}
+                      size="sm"
+                      className={soloFestival ? "h-7 text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold border-amber-600 shrink-0" : "h-7 text-xs border-amber-400 text-amber-700 hover:bg-amber-50 shrink-0"}
+                      onClick={() => setSoloFestival(!soloFestival)}
+                    >
+                      ⭐ Solo Festival
+                    </Button>
                     <Button size="sm" className="h-7 text-xs px-2 shrink-0" onClick={applyRejFilters}>
                       <Search className="w-3 h-3 mr-1" /> Applica
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs px-2 shrink-0" onClick={clearRejFilters}>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs px-2 shrink-0" onClick={() => {
+                      clearRejFilters();
+                      setSoloFestival(false);
+                    }}>
                       Azzera
                     </Button>
                   </div>
@@ -136,14 +154,14 @@ export const RejectedEventsTable: React.FC<RejectedEventsTableProps> = ({
               </tr>
             </thead>
             <tbody>
-              {filteredRejectedEvents.length === 0 ? (
+              {displayedRejected.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="p-8 text-center text-muted-foreground">
                     {loadingRejected ? "Caricamento…" : "Nessun evento scartato trovato."}
                   </td>
                 </tr>
               ) : (
-                filteredRejectedEvents.map((ev) => (
+                displayedRejected.map((ev) => (
                   <tr key={ev.id} className="border-t border-border hover:bg-muted/40">
                     <td className="p-2 font-medium">{ev.titolo}</td>
                     <td className="p-2">

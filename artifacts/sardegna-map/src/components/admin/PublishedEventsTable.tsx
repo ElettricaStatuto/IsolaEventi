@@ -71,9 +71,21 @@ export const PublishedEventsTable: React.FC<PublishedEventsTableProps> = ({
   openEventDetails,
   deleteEvent,
 }) => {
+  const [soloFestival, setSoloFestival] = React.useState(false);
   const todayStr = new Date().toISOString().split("T")[0];
-  const futurePublished = publishedEvents.filter((ev) => !ev.data_inizio || ev.data_inizio >= todayStr);
-  const pastPublished = publishedEvents.filter((ev) => ev.data_inizio && ev.data_inizio < todayStr);
+
+  const filteredList = publishedEvents.filter((ev) => {
+    if (!soloFestival) return true;
+    const subCount = publishedEvents.filter((child) => child.parent_id === ev.id).length;
+    return Boolean(
+      ev.is_festival ||
+      ev.dettagli_extra?.is_festival ||
+      (subCount > 0)
+    );
+  });
+
+  const futurePublished = filteredList.filter((ev) => !ev.data_inizio || ev.data_inizio >= todayStr);
+  const pastPublished = filteredList.filter((ev) => ev.data_inizio && ev.data_inizio < todayStr);
 
   const renderPublishedTable = (list: typeof publishedEvents, emptyMessage: string) => {
     if (list.length === 0) {
@@ -391,11 +403,22 @@ export const PublishedEventsTable: React.FC<PublishedEventsTableProps> = ({
             onChange={(e) => setFilterFonte(e.target.value)}
             className="h-8 text-xs bg-background"
           />
-          <div className="flex gap-1">
+          <div className="flex gap-1 items-center">
+            <Button
+              variant={soloFestival ? "default" : "outline"}
+              size="sm"
+              className={soloFestival ? "h-8 text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold border-amber-600 shrink-0" : "h-8 text-xs border-amber-400 text-amber-700 hover:bg-amber-50 shrink-0"}
+              onClick={() => setSoloFestival(!soloFestival)}
+            >
+              ⭐ Solo Festival
+            </Button>
             <Button size="sm" className="h-8 text-xs px-2 flex-1" onClick={applyFilters}>
               <Search className="w-3 h-3 mr-1" /> Applica
             </Button>
-            <Button variant="ghost" size="sm" className="h-8 text-xs px-2" onClick={clearFilters}>
+            <Button variant="ghost" size="sm" className="h-8 text-xs px-2" onClick={() => {
+              clearFilters();
+              setSoloFestival(false);
+            }}>
               Azzera
             </Button>
           </div>

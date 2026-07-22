@@ -1,0 +1,25 @@
+{
+  "target_url": "https://bottidushcoggiu.com/evento/sun-daixia-2026/",
+  "orario_inizio_scraping": "2026-07-22T16:41:42.351055+00:00",
+  "orario_fine_scraping": "2026-07-22T16:41:48.783747+00:00",
+  "link_utilizzati": [
+    "https://bottidushcoggiu.com/evento/valeria-sturba/",
+    "https://bottidushcoggiu.com/evento/farah-fersi/",
+    "https://bottidushcoggiu.com/evento/trio-chimera/",
+    "https://bottidushcoggiu.com/shops/"
+  ],
+  "link_scartati": [
+    {
+      "url": "https://bottidushcoggiu.com/evento/sun-daixia-2026/",
+      "motivo": "Pagina principale"
+    },
+    {
+      "url": "https://maps.app.goo.gl/tJMt8k64Vs2HLLGV6",
+      "motivo": "Dominio esterno"
+    },
+    {
+      "url": "https://maps.app.goo.gl/i5M6Fc52kP8q5Pcy7",
+      "motivo": "Dominio esterno"
+    }
+  ]
+}

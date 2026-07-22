@@ -73,6 +73,8 @@ export const AnalyzedEventsTable: React.FC<AnalyzedEventsTableProps> = ({
     .map((ev) => ({ ...ev, is_pending: false, id_key: `pub-${ev.id}` }));
   const allAnalyzed = [...analyzedPreview, ...analyzedPublished];
 
+  const [soloFestival, setSoloFestival] = React.useState(false);
+
   const filteredAnalyzed = allAnalyzed.filter((ev) => {
     if (appliedAnFilters.titolo && !ev.titolo?.toLowerCase().includes(appliedAnFilters.titolo.toLowerCase())) return false;
     if (appliedAnFilters.fonte && !ev.fonte?.toLowerCase().includes(appliedAnFilters.fonte.toLowerCase())) return false;
@@ -81,8 +83,21 @@ export const AnalyzedEventsTable: React.FC<AnalyzedEventsTableProps> = ({
     return true;
   });
 
-  const futureAnalyzed = filteredAnalyzed.filter((ev) => !ev.data_inizio || ev.data_inizio >= todayStr);
-  const pastAnalyzed = filteredAnalyzed.filter((ev) => ev.data_inizio && ev.data_inizio < todayStr);
+  const displayedAnalyzed = filteredAnalyzed.filter((ev: any) => {
+    if (!soloFestival) return true;
+    const subCount = ev.is_pending
+      ? ev.sotto_eventi?.length || 0
+      : publishedEvents.filter((child) => child.parent_id === ev.id).length;
+    return Boolean(
+      ev.is_festival ||
+      ev.dettagli_extra?.is_festival ||
+      (ev.sotto_eventi && ev.sotto_eventi.length > 0) ||
+      (subCount > 0)
+    );
+  });
+
+  const futureAnalyzed = displayedAnalyzed.filter((ev) => !ev.data_inizio || ev.data_inizio >= todayStr);
+  const pastAnalyzed = displayedAnalyzed.filter((ev) => ev.data_inizio && ev.data_inizio < todayStr);
 
   const renderTable = (list: typeof allAnalyzed, emptyMessage: string) => {
     if (list.length === 0) {
@@ -376,10 +391,21 @@ export const AnalyzedEventsTable: React.FC<AnalyzedEventsTableProps> = ({
               onChange={(e) => setAnFilterDataTo(e.target.value)}
               className="h-8 text-xs w-32 bg-background"
             />
+            <Button
+              variant={soloFestival ? "default" : "outline"}
+              size="sm"
+              className={soloFestival ? "h-8 text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold border-amber-600 shrink-0" : "h-8 text-xs border-amber-400 text-amber-700 hover:bg-amber-50 shrink-0"}
+              onClick={() => setSoloFestival(!soloFestival)}
+            >
+              ⭐ Solo Festival
+            </Button>
             <Button size="sm" className="h-8 text-xs px-3" onClick={applyAnFilters}>
               <Search className="w-3 h-3 mr-1" /> Applica
             </Button>
-            <Button variant="ghost" size="sm" className="h-8 text-xs px-3" onClick={clearAnFilters}>
+            <Button variant="ghost" size="sm" className="h-8 text-xs px-3" onClick={() => {
+              clearAnFilters();
+              setSoloFestival(false);
+            }}>
               Azzera
             </Button>
           </div>

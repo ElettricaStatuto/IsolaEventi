@@ -82,6 +82,18 @@ export const PendingEventsTable: React.FC<PendingEventsTableProps> = ({
   loadingPreview,
   approvalResult,
 }) => {
+  const [soloFestival, setSoloFestival] = React.useState(false);
+
+  const displayedList = filteredPreviewEvents.filter(({ ev }) => {
+    if (!soloFestival) return true;
+    return Boolean(
+      ev.is_festival ||
+      ev.dettagli_extra?.is_festival ||
+      (ev.sotto_eventi && ev.sotto_eventi.length > 0) ||
+      previewEvents.some((child: any) => child.dettagli_extra?.parent_temp_id && child.dettagli_extra.parent_temp_id === ev.dettagli_extra?.id_key)
+    );
+  });
+
   return (
     <>
       {scrapingStep === "list" && (
@@ -110,7 +122,7 @@ export const PendingEventsTable: React.FC<PendingEventsTableProps> = ({
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span className="font-semibold text-foreground">Totale: {previewEvents.length}</span>
                     <span>|</span>
-                    <span className="font-semibold text-blue-600">Filtrati: {filteredPreviewEvents.length}</span>
+                    <span className="font-semibold text-blue-600">Filtrati: {displayedList.length}</span>
                     <span>|</span>
                     <span>Selezionati Pubblicazione: {selectedApproveIds.size}</span>
                     <span>|</span>
@@ -123,14 +135,14 @@ export const PendingEventsTable: React.FC<PendingEventsTableProps> = ({
                       className="h-7 text-xs border-blue-500 text-blue-600 hover:bg-blue-50"
                       onClick={handleAnalyzeAllFiltered}
                     >
-                      <Brain className="w-3.5 h-3.5 mr-1" /> Analizza Tutti Filtrati ({filteredPreviewEvents.length})
+                      <Brain className="w-3.5 h-3.5 mr-1" /> Analizza Tutti Filtrati ({displayedList.length})
                     </Button>
                     <Button
                       size="sm"
                       className="h-7 text-xs bg-green-600 hover:bg-green-700 text-white"
                       onClick={handleApproveAllFiltered}
                     >
-                      <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Approva Tutti Filtrati ({filteredPreviewEvents.length})
+                      <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Approva Tutti Filtrati ({displayedList.length})
                     </Button>
                     <Button
                       size="sm"
@@ -138,7 +150,7 @@ export const PendingEventsTable: React.FC<PendingEventsTableProps> = ({
                       className="h-7 text-xs"
                       onClick={handleDeleteAllFiltered}
                     >
-                      <Trash2 className="w-3.5 h-3.5 mr-1" /> Elimina Tutti Filtrati ({filteredPreviewEvents.length})
+                      <Trash2 className="w-3.5 h-3.5 mr-1" /> Elimina Tutti Filtrati ({displayedList.length})
                     </Button>
                   </div>
                 </div>
@@ -159,21 +171,21 @@ export const PendingEventsTable: React.FC<PendingEventsTableProps> = ({
                     id="analyze-all"
                   />
                   <Label htmlFor="analyze-all" className="text-sm font-medium">
-                    Seleziona tutti (Analisi)
+                    Seleziona tutti (Analisi AI)
                   </Label>
                 </div>
 
-                <div className="border border-border rounded-md overflow-hidden relative z-0">
-                  <ScrollArea className="h-[400px]">
-                    <table className="w-full text-sm text-left">
-                      <thead className="text-xs uppercase bg-muted text-muted-foreground sticky top-0 z-20">
-                        <tr>
-                          <th className="px-4 py-3 w-10">Pubblica</th>
-                          <th className="px-4 py-3 w-10">Analizza</th>
-                          <th className="px-4 py-3">Immagine</th>
-                          <th className="px-4 py-3">Titolo</th>
-                          <th className="px-4 py-3">Data</th>
-                          <th className="px-4 py-3">Fonte</th>
+                <div className="overflow-hidden border rounded-md border-border">
+                  <ScrollArea className="h-[500px]">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted sticky top-0 z-10">
+                        <tr className="border-b border-border">
+                          <th className="w-10 px-4 py-3">Pubb.</th>
+                          <th className="w-10 px-4 py-3">Anal.</th>
+                          <th className="w-16 px-4 py-3">Img</th>
+                          <th className="px-4 py-3 text-left">Titolo</th>
+                          <th className="px-4 py-3 text-left">Data</th>
+                          <th className="px-4 py-3 text-left">Fonte</th>
                           <th className="px-4 py-3 text-right">Azioni</th>
                         </tr>
                         <tr className="border-t border-border bg-muted/40">
@@ -212,7 +224,15 @@ export const PendingEventsTable: React.FC<PendingEventsTableProps> = ({
                             />
                           </th>
                           <th className="p-1">
-                            <div className="flex gap-1 justify-end">
+                            <div className="flex gap-1 justify-end items-center">
+                              <Button
+                                variant={soloFestival ? "default" : "outline"}
+                                size="sm"
+                                className={soloFestival ? "h-7 text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold border-amber-600 shrink-0" : "h-7 text-xs border-amber-400 text-amber-700 hover:bg-amber-50 shrink-0"}
+                                onClick={() => setSoloFestival(!soloFestival)}
+                              >
+                                ⭐ Solo Festival
+                              </Button>
                               <Button size="sm" className="h-7 text-xs px-2 shrink-0" onClick={applyPrevFilters}>
                                 <Search className="w-3 h-3 mr-1" /> Filtra
                               </Button>
@@ -220,7 +240,10 @@ export const PendingEventsTable: React.FC<PendingEventsTableProps> = ({
                                 variant="ghost"
                                 size="sm"
                                 className="h-7 text-xs px-2 shrink-0"
-                                onClick={clearPrevFilters}
+                                onClick={() => {
+                                  clearPrevFilters();
+                                  setSoloFestival(false);
+                                }}
                               >
                                 Azzera
                               </Button>
@@ -229,14 +252,14 @@ export const PendingEventsTable: React.FC<PendingEventsTableProps> = ({
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredPreviewEvents.length === 0 ? (
+                        {displayedList.length === 0 ? (
                           <tr>
                             <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
                               Nessun evento in attesa corrisponde ai filtri impostati.
                             </td>
                           </tr>
                         ) : (
-                          filteredPreviewEvents.map(({ ev, i }) => (
+                          displayedList.map(({ ev, i }) => (
                             <tr key={i} className="border-b border-border hover:bg-muted/50">
                               <td className="px-4 py-3">
                                 <Checkbox
