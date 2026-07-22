@@ -13,6 +13,12 @@ import {
   Trash2, RotateCcw, AlertTriangle, Calendar, MapPin, Globe, Search, RefreshCw, Clock, Terminal, Upload, BarChart3, Brain
 } from "lucide-react";
 import { AdminStats } from "@/components/admin-stats";
+import { ScraperPanel } from "@/components/admin/ScraperPanel";
+import { PendingEventsTable } from "@/components/admin/PendingEventsTable";
+import { AnalyzedEventsTable } from "@/components/admin/AnalyzedEventsTable";
+import { PublishedEventsTable } from "@/components/admin/PublishedEventsTable";
+import { RejectedEventsTable } from "@/components/admin/RejectedEventsTable";
+import { EventDetailsModal } from "@/components/admin/EventDetailsModal";
 
 const LS_KEY = "sardegna_admin_key";
 
@@ -1456,1155 +1462,158 @@ export function Admin() {
 
           {/* ── SCRAPING TAB ── */}
           <TabsContent value="scraping" className="mt-4">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Preview eventi</CardTitle>
-                <CardDescription>
-                  Avvia lo scraper per recuperare eventi dai siti fonte. Potrai vedere l'anteprima, selezionare quelli da pubblicare e approvarli.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-4">
-                 <div className="flex flex-col gap-3 border border-border rounded-md p-4 bg-muted/40 max-w-3xl">
-                   <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fonti da scansionare</span>
-
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1">
-
-                     {/* ── COLONNA SINISTRA: EVENTI GENERALI ── */}
-                     <div className="flex flex-col gap-3">
-                       <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">📅 Eventi Generali</span>
-
-                       <div className="flex items-center gap-2">
-                         <Checkbox id="src-paradisola" checked={selectedSources.includes("paradisola")}
-                           onCheckedChange={(checked) => setSelectedSources(prev => checked ? [...prev, "paradisola"] : prev.filter(x => x !== "paradisola"))} />
-                         <Label htmlFor="src-paradisola" className="text-sm font-medium cursor-pointer">Paradisola (paradisola.it)</Label>
-                       </div>
-
-                       <div className="flex items-center gap-2">
-                         <Checkbox id="src-sardegnaturismo" checked={selectedSources.includes("sardegnaturismo")}
-                           onCheckedChange={(checked) => setSelectedSources(prev => checked ? [...prev, "sardegnaturismo"] : prev.filter(x => x !== "sardegnaturismo"))} />
-                         <Label htmlFor="src-sardegnaturismo" className="text-sm font-medium cursor-pointer">Sardegna Turismo (sardegnaturismo.it)</Label>
-                       </div>
-
-                       <div className="flex flex-col gap-2 mt-1">
-                         <span className="text-xs font-bold text-foreground">EventiInSardegna.it</span>
-                         <div className="flex flex-col gap-2 pl-3">
-                           <div className="flex items-center gap-2">
-                             <Checkbox id="src-eis-calendar" checked={selectedSources.includes("eventiinsardegna_calendar")}
-                               onCheckedChange={(checked) => setSelectedSources(prev => checked ? [...prev, "eventiinsardegna_calendar"] : prev.filter(x => x !== "eventiinsardegna_calendar"))} />
-                             <Label htmlFor="src-eis-calendar" className="text-sm font-normal cursor-pointer text-muted-foreground">Calendario Generale</Label>
-                           </div>
-                           <div className="flex items-center gap-2">
-                             <Checkbox id="src-eis-alghero" checked={selectedSources.includes("eventiinsardegna_alghero")}
-                               onCheckedChange={(checked) => setSelectedSources(prev => checked ? [...prev, "eventiinsardegna_alghero"] : prev.filter(x => x !== "eventiinsardegna_alghero"))} />
-                             <Label htmlFor="src-eis-alghero" className="text-sm font-normal cursor-pointer text-muted-foreground">Tag: Alghero</Label>
-                           </div>
-                           <div className="flex items-center gap-2">
-                             <Checkbox id="src-eis-cagliari" checked={selectedSources.includes("eventiinsardegna_cagliari")}
-                               onCheckedChange={(checked) => setSelectedSources(prev => checked ? [...prev, "eventiinsardegna_cagliari"] : prev.filter(x => x !== "eventiinsardegna_cagliari"))} />
-                             <Label htmlFor="src-eis-cagliari" className="text-sm font-normal cursor-pointer text-muted-foreground">Tag: Cagliari</Label>
-                           </div>
-                           <div className="flex items-center gap-2">
-                             <Checkbox id="src-eis-centro" checked={selectedSources.includes("eventiinsardegna_centro")}
-                               onCheckedChange={(checked) => setSelectedSources(prev => checked ? [...prev, "eventiinsardegna_centro"] : prev.filter(x => x !== "eventiinsardegna_centro"))} />
-                             <Label htmlFor="src-eis-centro" className="text-sm font-normal cursor-pointer text-muted-foreground">Tag: Centro Sardegna</Label>
-                           </div>
-                           <div className="flex items-center gap-2">
-                             <Checkbox id="src-eis-agosto" checked={selectedSources.includes("eventiinsardegna_agosto")}
-                               onCheckedChange={(checked) => setSelectedSources(prev => checked ? [...prev, "eventiinsardegna_agosto"] : prev.filter(x => x !== "eventiinsardegna_agosto"))} />
-                             <Label htmlFor="src-eis-agosto" className="text-sm font-normal cursor-pointer text-muted-foreground">Categoria: Agosto</Label>
-                           </div>
-                         </div>
-                       </div>
-                     </div>
-
-                     {/* ── COLONNA DESTRA: FESTIVAL ── */}
-                     <div className="flex flex-col gap-3">
-                       <span className="text-xs font-bold text-orange-600 uppercase tracking-wide">🎪 Festival</span>
-                       <p className="text-xs text-muted-foreground -mt-1">Gli eventi estratti da questi siti vengono raggruppati automaticamente come concerti figli del festival.</p>
-
-                       <div className="flex items-start gap-2 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-md p-3">
-                         <Checkbox id="src-timeinjazz" checked={selectedSources.includes("timeinjazz")}
-                           onCheckedChange={(checked) => setSelectedSources(prev => checked ? [...prev, "timeinjazz"] : prev.filter(x => x !== "timeinjazz"))}
-                           className="mt-0.5"
-                         />
-                         <div>
-                           <Label htmlFor="src-timeinjazz" className="text-sm font-semibold cursor-pointer text-orange-700 dark:text-orange-400">Time in Jazz 2026</Label>
-                           <p className="text-xs text-muted-foreground mt-0.5">timeinjazz.it — 86 concerti a Berchidda e dintorni</p>
-                         </div>
-                       </div>
-                     </div>
-
-                   </div>
-                 </div>
-
-                <Button 
-                  onClick={handlePreview} 
-                  disabled={loadingPreview || !keyVerified || selectedSources.length === 0} 
-                  className="w-full max-w-sm mt-2"
-                >
-                  {loadingPreview ? (
-                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Scraping in corso…</>
-                  ) : (
-                    <><Eye className="w-4 h-4 mr-2" /> Avvia Scraper ({selectedSources.length})</>
-                  )}
-                </Button>
-                {!keyVerified && (
-                  <p className="text-sm text-muted-foreground">Inserisci e verifica la chiave admin prima di procedere.</p>
-                )}
-
-                  {/* ── Scraping URL Libero ── */}
-                  <div className="mt-6 pt-4 border-t border-border flex flex-col gap-3 max-w-2xl">
-                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Scraping URL Libero</span>
-                    <p className="text-sm text-muted-foreground">Inserisci l'URL di un sito evento o festival per estrarre direttamente le informazioni con l'AI.</p>
-                    <div className="flex flex-col gap-3">
-                      <div className="flex gap-2">
-                        <Input 
-                          placeholder="https://www.esempio.it/evento..." 
-                          value={genericUrl}
-                          onChange={(e) => setGenericUrl(e.target.value)}
-                          className="flex-1"
-                        />
-                        <Button 
-                          onClick={handleScrapeUrl} 
-                          disabled={scrapingGeneric || !keyVerified || !genericUrl.trim()}
-                          className="shrink-0"
-                        >
-                          {scrapingGeneric ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Search className="w-4 h-4 mr-2" />}
-                          Analizza URL
-                        </Button>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground border border-border p-3 rounded-md bg-muted/30">
-                        <div className="flex items-center gap-2" title="Numero massimo di link di approfondimento da navigare.">
-                          <label htmlFor="max-links" className="font-medium">Max Link Deep-Scrape:</label>
-                          <Input 
-                            id="max-links"
-                            type="number"
-                            placeholder="es. 70"
-                            value={maxLinksUrl}
-                            onChange={(e) => setMaxLinksUrl(e.target.value === "" ? "" : parseInt(e.target.value))}
-                            className="w-20 h-8"
-                            min="0"
-                          />
-                        </div>
-                        <div className="h-4 w-px bg-border"></div>
-                        <label className="flex items-center gap-2 cursor-pointer font-medium" title="Forza il sistema a unire tutti i link trovati sotto un unico grande Festival.">
-                          <input 
-                            type="checkbox" 
-                            className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
-                            checked={forceFestival}
-                            onChange={(e) => setForceFestival(e.target.checked)}
-                          />
-                          Raggruppa come Festival
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* ── Preview inline dopo Analizza URL ── */}
-                  {urlScrapedEvents.length > 0 && (
-                    <div className="mt-4 flex flex-col gap-3 max-w-3xl">
-                      <div className="flex flex-wrap items-center justify-between gap-2 bg-emerald-50 dark:bg-emerald-950/20 p-3 rounded-lg border border-emerald-200">
-                        <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider flex items-center gap-1.5">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                          {urlScrapedEvents.length === 1 ? "1 evento estratto con successo!" : `${urlScrapedEvents.length} eventi estratti con successo!`}
-                        </span>
-                        {urlScrapedEvents[0]?.dettagli_extra?._usage && (
-                          <div className="text-xs font-semibold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/50 px-3 py-1 rounded-md border border-amber-300 flex items-center gap-1.5 shadow-sm">
-                            <Brain className="w-3.5 h-3.5 text-amber-600" />
-                            <span>Consumo AI: Input {urlScrapedEvents[0].dettagli_extra._usage.prompt_tokens || urlScrapedEvents[0].dettagli_extra._usage.input_tokens || 0} | Output {urlScrapedEvents[0].dettagli_extra._usage.candidates_tokens || urlScrapedEvents[0].dettagli_extra._usage.output_tokens || 0} | Totale {urlScrapedEvents[0].dettagli_extra._usage.total_tokens || 0} Token</span>
-                          </div>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-xs text-muted-foreground h-7"
-                          onClick={() => { setUrlScrapedEvents([]); setGenericUrl(""); }}
-                        >
-                          <XCircle className="w-3.5 h-3.5 mr-1" /> Chiudi
-                        </Button>
-                      </div>
-
-                      {urlScrapedEvents.map((ev, i) => (
-                        <div key={i} className={`border rounded-xl overflow-hidden shadow-sm ${ev.is_festival ? "border-orange-300 bg-orange-50/40" : "border-border bg-card"}`}>
-                          <div className="flex gap-3 p-4">
-                            {ev.immagine && (
-                              <img src={ev.immagine} alt={ev.titolo} className="w-24 h-24 object-cover rounded-lg flex-shrink-0 border border-border" />
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                {ev.is_festival && <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200">Festival</Badge>}
-                                {ev.categoria && <Badge variant="outline">{ev.categoria}</Badge>}
-                                {ev.dettagli_extra?._usage && (
-                                  <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 flex items-center gap-1 text-[11px] font-mono">
-                                    <Brain className="w-3 h-3 text-amber-600" />
-                                    ⚡ Token AI: {ev.dettagli_extra._usage.total_tokens || 0} (In: {ev.dettagli_extra._usage.prompt_tokens || ev.dettagli_extra._usage.input_tokens || 0}, Out: {ev.dettagli_extra._usage.candidates_tokens || ev.dettagli_extra._usage.output_tokens || 0})
-                                  </Badge>
-                                )}
-                              </div>
-                              <h3 className="font-bold text-base text-foreground leading-snug">{ev.titolo}</h3>
-                              <p className="text-xs text-muted-foreground mt-1">📍 {ev.luogo || "Sardegna"} | 📅 {ev.data_inizio} {ev.data_fine ? `- ${ev.data_fine}` : ""}</p>
-                              {ev.descrizione && <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{ev.descrizione}</p>}
-                            </div>
-                          </div>
-                          {ev.sotto_eventi && ev.sotto_eventi.length > 0 && (
-                            <div className="bg-orange-50/70 border-t border-orange-200/60 p-3 flex flex-col gap-2">
-                              <span className="text-xs font-semibold text-orange-900 uppercase tracking-wider">Sotto-eventi ({ev.sotto_eventi.length})</span>
-                              <div className="grid grid-cols-1 gap-1.5">
-                                {ev.sotto_eventi.map((sub: any, si: number) => (
-                                  <div key={si} className="flex flex-col gap-2 text-xs text-foreground bg-white/60 rounded-md px-2 py-1.5 border border-orange-100">
-                                    <div className="flex items-start gap-2">
-                                      <span className="font-semibold text-orange-700 flex-shrink-0 min-w-[90px]">{sub.data_inizio || "-"}</span>
-                                      <span className="flex-1 leading-snug">{sub.titolo}</span>
-                                      {sub.luogo && <span className="text-muted-foreground flex-shrink-0 truncate max-w-[120px]">{sub.luogo}</span>}
-                                    </div>
-                                    {(sub.descrizione || sub.url) && (
-                                      <details className="group cursor-pointer">
-                                        <summary className="text-[10px] text-orange-600 font-semibold uppercase hover:underline">Dettagli</summary>
-                                        <div className="pt-2 pb-1 text-muted-foreground text-xs leading-relaxed border-t border-orange-100 mt-2">
-                                          {sub.url && <p className="mb-1 truncate"><a href={sub.url} target="_blank" className="text-blue-500 hover:underline">Link: {sub.url}</a></p>}
-                                          {sub.descrizione && <p className="whitespace-pre-wrap">{sub.descrizione}</p>}
-                                        </div>
-                                      </details>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* ── Caricamento PDF ── */}
-                  <div className="mt-6 pt-4 border-t border-border flex flex-col gap-3 max-w-xl">
-                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Caricamento PDF</span>
-                    <p className="text-sm text-muted-foreground">Carica un PDF (es. locandina testuale o programma) per estrarne automaticamente gli eventi e le date.</p>
-                    <div className="flex gap-2 items-center">
-                      <Input 
-                        type="file" 
-                        accept="application/pdf"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          setPdfFile(file || null);
-                        }}
-                        className="flex-1 cursor-pointer"
-                      />
-                      <Button 
-                        onClick={handleUploadPdf} 
-                        disabled={uploadingPdf || !keyVerified || !pdfFile}
-                      >
-                        {uploadingPdf ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-                        Carica PDF
-                      </Button>
-                    </div>
-                  </div>
-                {scrapingLogs.length > 0 && (
-                  <div className="mt-4 bg-[#1e1e1e] text-green-400 p-4 rounded-md font-mono text-xs max-h-64 overflow-y-auto shadow-inner border border-border/50">
-                    {scrapingLogs.map((log, i) => (
-                      <div key={i} className="mb-1"><span className="text-muted-foreground mr-2">{">"}</span> {log}</div>
-                    ))}
-                    {loadingPreview && <div className="animate-pulse"><span className="text-muted-foreground mr-2">{">"}</span> _</div>}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <ScraperPanel
+              selectedSources={selectedSources}
+              setSelectedSources={setSelectedSources}
+              loadingPreview={loadingPreview}
+              keyVerified={keyVerified}
+              handlePreview={handlePreview}
+              genericUrl={genericUrl}
+              setGenericUrl={setGenericUrl}
+              handleScrapeUrl={handleScrapeUrl}
+              scrapingGeneric={scrapingGeneric}
+              maxLinksUrl={maxLinksUrl}
+              setMaxLinksUrl={setMaxLinksUrl}
+              forceFestival={forceFestival}
+              setForceFestival={setForceFestival}
+              urlScrapedEvents={urlScrapedEvents}
+              setUrlScrapedEvents={setUrlScrapedEvents}
+              pdfFile={pdfFile}
+              setPdfFile={setPdfFile}
+              uploadingPdf={uploadingPdf}
+              handleUploadPdf={handleUploadPdf}
+              scrapingLogs={scrapingLogs}
+            />
           </TabsContent>
 
           {/* ── PENDING TAB ── */}
           <TabsContent value="pending" className="mt-4">
-            {scrapingStep === "list" && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-base">{previewEvents.length} eventi trovati</CardTitle>
-                      <CardDescription>
-                        Seleziona gli eventi da pubblicare. I deselezionati verranno ignorati.
-                      </CardDescription>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={() => setScrapingStep("input")}>
-                      <ArrowLeft className="w-4 h-4 mr-1" /> Indietro
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-3">
-                  <ButtonLegendGuide />
-                  {previewEvents.length === 0 ? (
-                    <div className="text-center text-muted-foreground py-8">Nessun nuovo evento trovato.</div>
-                  ) : (
-                    <>
-                      {/* Banner Legenda & Azioni Massive sui Filtrati */}
-                      <div className="bg-muted/40 p-3 rounded-lg border border-border flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span className="font-semibold text-foreground">Totale: {previewEvents.length}</span>
-                          <span>|</span>
-                          <span className="font-semibold text-blue-600">Filtrati: {filteredPreviewEvents.length}</span>
-                          <span>|</span>
-                          <span>Selezionati Pubblicazione: {selectedApproveIds.size}</span>
-                          <span>|</span>
-                          <span>Selezionati Analisi: {selectedAnalyzeIds.size}</span>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Button size="sm" variant="outline" className="h-7 text-xs border-blue-500 text-blue-600 hover:bg-blue-50" onClick={handleAnalyzeAllFiltered}>
-                            <Brain className="w-3.5 h-3.5 mr-1" /> Analizza Tutti Filtrati ({filteredPreviewEvents.length})
-                          </Button>
-                          <Button size="sm" className="h-7 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={handleApproveAllFiltered}>
-                            <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Approva Tutti Filtrati ({filteredPreviewEvents.length})
-                          </Button>
-                          <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={handleDeleteAllFiltered}>
-                            <Trash2 className="w-3.5 h-3.5 mr-1" /> Elimina Tutti Filtrati ({filteredPreviewEvents.length})
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 pb-2 border-b border-border">
-                        <Checkbox
-                          checked={selectedApproveIds.size === previewEvents.length && previewEvents.length > 0}
-                          onCheckedChange={(v) => toggleApproveAll(v === true)}
-                          id="approve-all"
-                        />
-                        <Label htmlFor="approve-all" className="text-sm font-medium">Seleziona tutti (Pubblicazione)</Label>
-                        <div className="mx-2 border-l h-4 border-border"></div>
-                        <Checkbox
-                          checked={selectedAnalyzeIds.size === previewEvents.length && previewEvents.length > 0}
-                          onCheckedChange={(v) => toggleAnalyzeAll(v === true)}
-                          id="analyze-all"
-                        />
-                        <Label htmlFor="analyze-all" className="text-sm font-medium">Seleziona tutti (Analisi)</Label>
-                      </div>
-
-                      <div className="border border-border rounded-md overflow-hidden relative z-0">
-                        <ScrollArea className="h-[400px]">
-                          <table className="w-full text-sm text-left">
-                            <thead className="text-xs uppercase bg-muted text-muted-foreground sticky top-0 z-20">
-                              <tr>
-                                <th className="px-4 py-3 w-10">Pubblica</th>
-                                <th className="px-4 py-3 w-10">Analizza</th>
-                                <th className="px-4 py-3">Immagine</th>
-                                <th className="px-4 py-3">Titolo</th>
-                                <th className="px-4 py-3">Data</th>
-                                <th className="px-4 py-3">Fonte</th>
-                                <th className="px-4 py-3 text-right">Azioni</th>
-                              </tr>
-                              <tr className="border-t border-border bg-muted/40">
-                                <th colSpan={3} className="p-1"></th>
-                                <th className="p-1">
-                                  <Input 
-                                    placeholder="Filtra titolo…" 
-                                    value={prevFilterTitolo} 
-                                    onChange={(e) => setPrevFilterTitolo(e.target.value)} 
-                                    className="h-7 text-xs bg-background" 
-                                  />
-                                </th>
-                                <th className="p-1">
-                                  <div className="flex gap-1 items-center">
-                                    <Input 
-                                      type="date" 
-                                      value={prevFilterDataFrom} 
-                                      onChange={(e) => setPrevFilterDataFrom(e.target.value)} 
-                                      className="h-7 text-xs px-1 bg-background" 
-                                    />
-                                    <span className="text-muted-foreground text-xs">-</span>
-                                    <Input 
-                                      type="date" 
-                                      value={prevFilterDataTo} 
-                                      onChange={(e) => setPrevFilterDataTo(e.target.value)} 
-                                      className="h-7 text-xs px-1 bg-background" 
-                                    />
-                                  </div>
-                                </th>
-                                <th className="p-1">
-                                  <Input 
-                                    placeholder="Filtra fonte…" 
-                                    value={prevFilterFonte} 
-                                    onChange={(e) => setPrevFilterFonte(e.target.value)} 
-                                    className="h-7 text-xs bg-background" 
-                                  />
-                                </th>
-                                <th className="p-1">
-                                  <div className="flex gap-1 justify-end">
-                                    <Button size="sm" className="h-7 text-xs px-2 shrink-0" onClick={applyPrevFilters}>
-                                      <Search className="w-3 h-3 mr-1" /> Filtra
-                                    </Button>
-                                    <Button variant="ghost" size="sm" className="h-7 text-xs px-2 shrink-0" onClick={clearPrevFilters}>
-                                      Azzera
-                                    </Button>
-                                  </div>
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {filteredPreviewEvents.length === 0 ? (
-                                <tr>
-                                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                                    Nessun evento in attesa corrisponde ai filtri impostati.
-                                  </td>
-                                </tr>
-                              ) : (
-                                filteredPreviewEvents.map(({ ev, i }) => (
-                                  <tr key={i} className="border-b border-border hover:bg-muted/50">
-                                    <td className="px-4 py-3">
-                                      <Checkbox
-                                        checked={selectedApproveIds.has(i)}
-                                        onCheckedChange={(v) => toggleApproveOne(i, v === true)}
-                                        aria-label={`Approva ${ev.titolo}`}
-                                      />
-                                    </td>
-                                    <td className="px-4 py-3">
-                                      <Checkbox
-                                        checked={selectedAnalyzeIds.has(i)}
-                                        onCheckedChange={(v) => toggleAnalyzeOne(i, v === true)}
-                                        aria-label={`Analizza ${ev.titolo}`}
-                                      />
-                                    </td>
-                                    <td className="px-4 py-3">
-                                      {ev.immagine ? (
-                                        <img
-                                          src={ev.immagine}
-                                          alt={ev.titolo}
-                                          className="w-16 h-16 object-cover rounded-md border border-border"
-                                          loading="lazy"
-                                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                                        />
-                                      ) : (
-                                        <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center text-xs text-muted-foreground">
-                                          N/D
-                                        </div>
-                                      )}
-                                    </td>
-                                    <td className="px-4 py-3 font-medium">
-                                      {ev.titolo}
-                                      {ev.is_new && <Badge variant="default" className="ml-2 bg-blue-600 text-white">Nuovo</Badge>}
-                                      {ev.testo_estratto && <Badge variant="outline" className="ml-2 border-green-500 text-green-500">Analizzato</Badge>}
-                                    </td>
-                                    <td className="px-4 py-3 whitespace-nowrap">
-                                      {ev.data_inizio ? new Date(ev.data_inizio).toLocaleDateString("it-IT") : "N/D"}
-                                    </td>
-                                    <td className="px-4 py-3">
-                                      <Badge variant="outline" className="bg-background">{ev.fonte}</Badge>
-                                    </td>
-                                    <td className="px-4 py-3 text-right">
-                                      <div className="flex items-center justify-end gap-1">
-                                        <Button variant="ghost" size="sm" onClick={() => openEventDetails(ev, true)} title="Vedi dettagli" className="h-8 px-2 text-xs">
-                                          <Eye className="w-4 h-4 mr-1" /> Dettagli
-                                        </Button>
-                                        <Button variant="ghost" size="icon" onClick={() => deletePreviewEvent(i)} title="Cestina evento">
-                                          <Trash2 className="w-4 h-4 text-red-500" />
-                                        </Button>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                ))
-                              )}
-                            </tbody>
-                          </table>
-                        </ScrollArea>
-                      </div>
-
-                      <div className="flex justify-end gap-3 pt-2">
-                        <Button variant="outline" onClick={() => setScrapingStep("input")}>Annulla</Button>
-                        <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1 bg-background text-xs">
-                          <span className="text-muted-foreground text-xs">Provider:</span>
-                          <select 
-                            value={aiProvider} 
-                            onChange={(e) => setAiProvider(e.target.value as any)}
-                            className="bg-transparent border-none outline-none font-semibold text-foreground cursor-pointer text-xs"
-                          >
-                            <option value="direct">Chiave Diretta</option>
-                            <option value="replit">Proxy Replit</option>
-                          </select>
-                        </div>
-                        <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1 bg-background text-xs">
-                          <span className="text-muted-foreground text-xs">Analizza:</span>
-                          <select 
-                            value={analysisTarget} 
-                            onChange={(e) => setAnalysisTarget(e.target.value as any)}
-                            className="bg-transparent border-none outline-none font-semibold text-foreground cursor-pointer text-xs"
-                          >
-                            <option value="both">Locandina + Testo Breve</option>
-                            <option value="both_source">Locandina + Pagina Fonte (Link)</option>
-                            <option value="image">Solo Locandina</option>
-                            <option value="text">Solo Testo Breve</option>
-                            <option value="source_page">Solo Pagina Fonte (Link)</option>
-                          </select>
-                        </div>
-                        <Button
-                          variant="secondary"
-                          onClick={handleAnalyzePreview}
-                          disabled={analyzingStep !== "idle" || selectedAnalyzeIds.size === 0}
-                        >
-                          {analyzingStep === "preview" && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                          Analizza ({selectedAnalyzeIds.size})
-                        </Button>
-                        <Button
-                          onClick={handleApprove}
-                          disabled={loadingPreview || selectedApproveIds.size === 0}
-                        >
-                          {loadingPreview && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                          Approva Eventi ({selectedApproveIds.size})
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {scrapingStep === "result" && approvalResult && (
-              <Card className="border-green-500/40 bg-green-50/30">
-                <CardContent className="pt-4 flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-green-600" />
-                    <span className="font-medium text-sm">{approvalResult.messaggio}</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 mt-1">
-                    {[
-                      { label: "Nuovi", value: approvalResult.nuovi, color: "text-green-700" },
-                      { label: "Aggiornati", value: approvalResult.aggiornati, color: "text-blue-700" },
-                      { label: "Errori", value: approvalResult.errori, color: "text-red-700" },
-                    ].map(({ label, value, color }) => (
-                      <div key={label} className="bg-white/60 rounded-lg p-2 text-center border border-border/50">
-                        <div className={`text-2xl font-bold ${color}`}>{value}</div>
-                        <div className="text-xs text-muted-foreground">{label}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <Button variant="outline" className="mt-2 text-foreground" onClick={() => setScrapingStep("input")}>
-                    <ArrowLeft className="w-4 h-4 mr-1" /> Nuovo preview
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
+            <PendingEventsTable
+              scrapingStep={scrapingStep}
+              setScrapingStep={setScrapingStep}
+              previewEvents={previewEvents}
+              filteredPreviewEvents={filteredPreviewEvents}
+              selectedApproveIds={selectedApproveIds}
+              selectedAnalyzeIds={selectedAnalyzeIds}
+              handleAnalyzeAllFiltered={handleAnalyzeAllFiltered}
+              handleApproveAllFiltered={handleApproveAllFiltered}
+              handleDeleteAllFiltered={handleDeleteAllFiltered}
+              toggleApproveAll={toggleApproveAll}
+              toggleAnalyzeAll={toggleAnalyzeAll}
+              prevFilterTitolo={prevFilterTitolo}
+              setPrevFilterTitolo={setPrevFilterTitolo}
+              prevFilterDataFrom={prevFilterDataFrom}
+              setPrevFilterDataFrom={setPrevFilterDataFrom}
+              prevFilterDataTo={prevFilterDataTo}
+              setPrevFilterDataTo={setPrevFilterDataTo}
+              prevFilterFonte={prevFilterFonte}
+              setPrevFilterFonte={setPrevFilterFonte}
+              applyPrevFilters={applyPrevFilters}
+              clearPrevFilters={clearPrevFilters}
+              toggleApproveOne={toggleApproveOne}
+              toggleAnalyzeOne={toggleAnalyzeOne}
+              openEventDetails={openEventDetails}
+              deletePreviewEvent={deletePreviewEvent}
+              aiProvider={aiProvider}
+              setAiProvider={setAiProvider}
+              analysisTarget={analysisTarget}
+              setAnalysisTarget={setAnalysisTarget}
+              handleAnalyzePreview={handleAnalyzePreview}
+              analyzingStep={analyzingStep}
+              handleApprove={handleApprove}
+              loadingPreview={loadingPreview}
+              approvalResult={approvalResult}
+            />
           </TabsContent>
 
           {/* ── ANALYZED TAB ── */}
           <TabsContent value="analyzed" className="mt-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Eventi Analizzati</CardTitle>
-                <CardDescription>
-                  Visualizza tutti gli eventi che hanno una locandina analizzata e le relative informazioni estratte.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-6">
-                <ButtonLegendGuide />
-                {(() => {
-                  const todayStr = new Date().toISOString().split("T")[0];
-                  const analyzedPreview = previewEvents
-                    .filter((ev) => (ev as any).testo_estratto)
-                    .map((ev) => ({ ...ev, is_pending: true, id_key: `prev-${ev.titolo}` }));
-                  const analyzedPublished = publishedEvents
-                    .filter((ev) => (ev as any).testo_estratto)
-                    .map((ev) => ({ ...ev, is_pending: false, id_key: `pub-${ev.id}` }));
-                  const allAnalyzed = [...analyzedPreview, ...analyzedPublished];
-
-                  const filteredAnalyzed = allAnalyzed.filter(ev => {
-                    if (appliedAnFilters.titolo && !ev.titolo?.toLowerCase().includes(appliedAnFilters.titolo.toLowerCase())) return false;
-                    if (appliedAnFilters.fonte && !ev.fonte?.toLowerCase().includes(appliedAnFilters.fonte.toLowerCase())) return false;
-                    if (appliedAnFilters.dataFrom && ev.data_inizio && ev.data_inizio < appliedAnFilters.dataFrom) return false;
-                    if (appliedAnFilters.dataTo && ev.data_inizio && ev.data_inizio > appliedAnFilters.dataTo) return false;
-                    return true;
-                  });
-
-                  const futureAnalyzed = filteredAnalyzed.filter(ev => !ev.data_inizio || ev.data_inizio >= todayStr);
-                  const pastAnalyzed = filteredAnalyzed.filter(ev => ev.data_inizio && ev.data_inizio < todayStr);
-
-                  const renderTable = (list: typeof allAnalyzed, emptyMessage: string) => {
-                    if (list.length === 0) {
-                      return (
-                        <div className="p-8 text-center text-muted-foreground border rounded-md text-sm bg-background">
-                          {emptyMessage}
-                        </div>
-                      );
-                    }
-                    return (
-                      <div className="overflow-auto border rounded-md bg-background">
-                        <table className="w-full text-sm">
-                          <thead className="bg-muted sticky top-0">
-                            <tr>
-                              <th className="p-2 w-10 text-center">
-                                <Checkbox 
-                                  checked={list.length > 0 && list.every((ev: any) => selectedAnIds.has(ev.id_key))}
-                                  onCheckedChange={(checked) => {
-                                    const next = new Set(selectedAnIds);
-                                    list.forEach((ev: any) => {
-                                      if (checked === true) next.add(ev.id_key);
-                                      else next.delete(ev.id_key);
-                                    });
-                                    setSelectedAnIds(next);
-                                  }}
-                                />
-                              </th>
-                              <th className="p-2 text-left text-xs font-semibold">Stato</th>
-                              <th className="p-2 text-left text-xs font-semibold">Immagine</th>
-                              <th className="p-2 text-left text-xs font-semibold">Titolo</th>
-                              <th className="p-2 text-left text-xs font-semibold">Data</th>
-                              <th className="p-2 text-left text-xs font-semibold">Fonte</th>
-                              <th className="p-2 text-left text-xs font-semibold">Sotto-eventi</th>
-                              <th className="p-2 text-left text-xs font-semibold">Azione</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {list.map((ev: any) => {
-                              const img = imageUrl(ev);
-                              const subCount = ev.is_pending
-                                ? (ev.sotto_eventi?.length || 0)
-                                : publishedEvents.filter((child) => child.parent_id === ev.id).length;
-
-                              return (
-                                <tr key={ev.id_key} className="border-t border-border hover:bg-muted/40">
-                                  <td className="p-2 text-center">
-                                    <Checkbox 
-                                      checked={selectedAnIds.has(ev.id_key)}
-                                      onCheckedChange={(checked) => {
-                                        const next = new Set(selectedAnIds);
-                                        if (checked === true) next.add(ev.id_key);
-                                        else next.delete(ev.id_key);
-                                        setSelectedAnIds(next);
-                                      }}
-                                    />
-                                  </td>
-                                  <td className="p-2">
-                                    <Badge variant={ev.is_pending ? "secondary" : "default"} className={ev.is_pending ? "bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200" : ""}>
-                                      {ev.is_pending ? "In Attesa" : "Pubblicato"}
-                                    </Badge>
-                                  </td>
-                                  <td className="p-2">
-                                    {img ? (
-                                      <img src={img} alt={ev.titolo} className="w-16 h-12 object-cover rounded border" loading="lazy" />
-                                    ) : (
-                                      <div className="w-16 h-12 bg-muted rounded border flex items-center justify-center text-xs text-muted-foreground">—</div>
-                                    )}
-                                  </td>
-                                  <td className="p-2 font-medium">
-                                    <div className="flex flex-col gap-1 max-w-md">
-                                      <div className="flex items-center gap-1.5 flex-wrap">
-                                        <div className="flex flex-col">
-                                          <span className="font-bold text-foreground text-sm">{ev.titolo}</span>
-                                          {ev.dettagli_extra?.festival_padre && (
-                                            <span className="text-[11px] font-medium text-amber-600 uppercase tracking-wide">
-                                              ★ {ev.dettagli_extra.festival_padre}
-                                            </span>
-                                          )}
-                                        </div>
-                                        {ev.categoria && <Badge variant="secondary" className="bg-purple-100 text-purple-800 text-[10px]">{ev.categoria}</Badge>}
-                                        {ev.tags && Array.isArray(ev.tags) && ev.tags.map((t: string, ti: number) => (
-                                          <Badge key={ti} variant="outline" className="text-[10px] bg-blue-50 text-blue-700">{t}</Badge>
-                                        ))}
-                                      </div>
-                                      {(ev.testo_estratto || ev.dettagli_extra?.bio_artista_o_opera || ev.descrizione) && (
-                                        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed font-normal">
-                                          {ev.dettagli_extra?.bio_artista_o_opera || ev.testo_estratto || ev.descrizione}
-                                        </p>
-                                      )}
-                                      {ev.dettagli_extra?.orario_e_prezzi && (
-                                        <span className="text-[11px] text-amber-700 font-mono font-medium">
-                                          🎟️ {ev.dettagli_extra.orario_e_prezzi}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </td>
-                                  <td className="p-2 text-muted-foreground whitespace-nowrap">
-                                    {ev.data_inizio ? new Date(ev.data_inizio).toLocaleDateString("it-IT") : "N/D"}
-                                  </td>
-                                  <td className="p-2">
-                                    <Badge variant="outline">{ev.fonte}</Badge>
-                                  </td>
-                                  <td className="p-2">
-                                    <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-50">
-                                      {subCount} sotto-eventi
-                                    </Badge>
-                                  </td>
-                                  <td className="p-2">
-                                    <div className="flex items-center gap-1">
-                                      <Button variant="outline" size="sm" onClick={() => openEventDetails(ev, ev.is_pending)} className="h-7 text-xs px-2">
-                                        <Eye className="w-3.5 h-3.5 mr-1" /> Dettagli
-                                      </Button>
-                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" title="Elimina" onClick={() => {
-                                        if (ev.is_pending) {
-                                          const next = previewEvents.filter(e => e.titolo !== ev.titolo);
-                                          setPreviewEvents(next);
-                                          updatePreviewCache(next);
-                                        } else {
-                                          deleteEvent(ev.id, false);
-                                        }
-                                      }}>
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </Button>
-                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-orange-600 hover:bg-orange-50" title="Elimina e scarta" onClick={() => {
-                                        if (ev.is_pending) {
-                                          const next = previewEvents.filter(e => e.titolo !== ev.titolo);
-                                          setPreviewEvents(next);
-                                          updatePreviewCache(next);
-                                        } else {
-                                          deleteEvent(ev.id, true);
-                                        }
-                                      }}>
-                                        <AlertTriangle className="w-3.5 h-3.5" />
-                                      </Button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    );
-                  };
-
-                  return (
-                    <div className="flex flex-col gap-6">
-                      {/* Banner Legenda & Azioni Massive sui Filtrati per Analizzati */}
-                      <div className="bg-muted/40 p-3 rounded-lg border border-border flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span className="font-semibold text-foreground">Totale Analizzati: {allAnalyzed.length}</span>
-                          <span>|</span>
-                          <span className="font-semibold text-blue-600">Filtrati: {filteredAnalyzed.length}</span>
-                          <span>|</span>
-                          <span>Selezionati: {selectedAnIds.size}</span>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Button size="sm" variant="secondary" className="h-7 text-xs px-3" onClick={handleAnAnalyzeAllFiltered}>
-                            <Brain className="w-3.5 h-3.5 mr-1" /> Rianalizza Tutti Filtrati ({filteredAnalyzed.length})
-                          </Button>
-                          <Button size="sm" className="h-7 text-xs px-3 bg-green-600 hover:bg-green-700 text-white" onClick={handleAnPublishAllFiltered}>
-                            <CheckCircle2 className="w-4 h-4 mr-1" /> Pubblica Tutti Filtrati ({filteredAnalyzed.length})
-                          </Button>
-                          <Button size="sm" variant="destructive" className="h-7 text-xs px-3" onClick={() => handleAnDeleteAllFiltered(false)}>
-                            <Trash2 className="w-3.5 h-3.5 mr-1" /> Elimina Tutti Filtrati ({filteredAnalyzed.length})
-                          </Button>
-                          <Button size="sm" variant="destructive" className="h-7 text-xs px-3 bg-orange-600 hover:bg-orange-700 text-white border-none" onClick={() => handleAnDeleteAllFiltered(true)}>
-                            <AlertTriangle className="w-3.5 h-3.5 mr-1" /> Elimina & Scarta Tutti ({filteredAnalyzed.length})
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Toolbar Selezionati per Analizzati */}
-                      {selectedAnIds.size > 0 && (
-                        <div className="bg-muted p-2 rounded-md flex items-center justify-between border">
-                          <span className="text-xs font-semibold ml-2">{selectedAnIds.size} eventi selezionati</span>
-                          <div className="flex gap-2">
-                            <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={handleAnBulkAnalyze}>
-                              <Brain className="w-3.5 h-3.5 mr-1" /> Rianalizza Selezionati
-                            </Button>
-                            <Button size="sm" className="h-7 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={handleAnBulkPubblica}>
-                              <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Pubblica Selezionati
-                            </Button>
-                            <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={() => handleAnBulkElimina(false)}>
-                              <Trash2 className="w-3.5 h-3.5 mr-1" /> Elimina Selezionati
-                            </Button>
-                            <Button size="sm" variant="destructive" className="h-7 text-xs bg-orange-600 hover:bg-orange-700 text-white border-none" onClick={() => handleAnBulkElimina(true)}>
-                              <AlertTriangle className="w-3.5 h-3.5 mr-1" /> Elimina & Scarta Selezionati
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Filter Box per Analizzati */}
-                      <div className="flex flex-wrap gap-2 items-center bg-muted/50 p-2 rounded border border-border">
-                        <Input placeholder="Filtra titolo…" value={anFilterTitolo} onChange={(e) => setAnFilterTitolo(e.target.value)} className="h-8 text-xs w-40 bg-background" />
-                        <Input placeholder="Filtra fonte…" value={anFilterFonte} onChange={(e) => setAnFilterFonte(e.target.value)} className="h-8 text-xs w-32 bg-background" />
-                        <Input type="date" value={anFilterDataFrom} onChange={(e) => setAnFilterDataFrom(e.target.value)} className="h-8 text-xs w-32 bg-background" />
-                        <Input type="date" value={anFilterDataTo} onChange={(e) => setAnFilterDataTo(e.target.value)} className="h-8 text-xs w-32 bg-background" />
-                        <Button size="sm" className="h-8 text-xs px-3" onClick={applyAnFilters}><Search className="w-3 h-3 mr-1" /> Applica</Button>
-                        <Button variant="ghost" size="sm" className="h-8 text-xs px-3" onClick={clearAnFilters}>Azzera</Button>
-                      </div>
-
-                      <div>
-                        <h3 className="font-semibold text-sm text-foreground mb-3 flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
-                          Eventi Futuri ({futureAnalyzed.length})
-                        </h3>
-                        {renderTable(futureAnalyzed, "Nessun evento futuro analizzato trovato.")}
-                      </div>
-
-                      <div className="pt-4 border-t border-border">
-                        <h3 className="font-semibold text-sm text-muted-foreground mb-3 flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full bg-muted-foreground"></span>
-                          Eventi Passati ({pastAnalyzed.length})
-                        </h3>
-                        {renderTable(pastAnalyzed, "Nessun evento passato analizzato trovato.")}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </CardContent>
-            </Card>
+            <AnalyzedEventsTable
+              previewEvents={previewEvents}
+              publishedEvents={publishedEvents}
+              appliedAnFilters={appliedAnFilters}
+              selectedAnIds={selectedAnIds}
+              setSelectedAnIds={setSelectedAnIds}
+              imageUrl={imageUrl}
+              openEventDetails={openEventDetails}
+              setPreviewEvents={setPreviewEvents}
+              updatePreviewCache={updatePreviewCache}
+              deleteEvent={deleteEvent}
+              handleAnAnalyzeAllFiltered={handleAnAnalyzeAllFiltered}
+              handleAnPublishAllFiltered={handleAnPublishAllFiltered}
+              handleAnDeleteAllFiltered={handleAnDeleteAllFiltered}
+              handleAnBulkAnalyze={handleAnBulkAnalyze}
+              handleAnBulkPubblica={handleAnBulkPubblica}
+              handleAnBulkElimina={handleAnBulkElimina}
+              anFilterTitolo={anFilterTitolo}
+              setAnFilterTitolo={setAnFilterTitolo}
+              anFilterFonte={anFilterFonte}
+              setAnFilterFonte={setAnFilterFonte}
+              anFilterDataFrom={anFilterDataFrom}
+              setAnFilterDataFrom={setAnFilterDataFrom}
+              anFilterDataTo={anFilterDataTo}
+              setAnFilterDataTo={setAnFilterDataTo}
+              applyAnFilters={applyAnFilters}
+              clearAnFilters={clearAnFilters}
+            />
           </TabsContent>
 
           {/* ── PUBLISHED TAB ── */}
           <TabsContent value="published" className="mt-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">{publishedEvents.length} eventi pubblicati</CardTitle>
-                    <CardDescription>
-                      Gestisci gli eventi già sulla mappa. Filtra, seleziona ed elimina.
-                    </CardDescription>
-                  </div>
-                  {loadingPublished && <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />}
-                </div>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3">
-                {/* Banner Legenda & Azioni Massive sui Filtrati per Pubblicati */}
-                <div className="bg-muted/40 p-3 rounded-lg border border-border flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span className="font-semibold text-foreground">Totale Pubblicati: {publishedEvents.length}</span>
-                    <span>|</span>
-                    <span>Selezionati Eliminazione: {selectedPubIds.size}</span>
-                    <span>|</span>
-                    <span>Selezionati Analisi: {selectedPubAnalyzeIds.size}</span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button size="sm" variant="outline" className="h-7 text-xs border-blue-500 text-blue-600 hover:bg-blue-50" onClick={handleAnalyzeAllPublishedFiltered}>
-                      <Brain className="w-3.5 h-3.5 mr-1" /> Analizza Tutti Filtrati ({publishedEvents.length})
-                    </Button>
-                    <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={() => handleDeleteAllPublishedFiltered(false)}>
-                      <Trash2 className="w-3.5 h-3.5 mr-1" /> Elimina Tutti Filtrati ({publishedEvents.length})
-                    </Button>
-                    <Button size="sm" variant="destructive" className="h-7 text-xs bg-orange-600 hover:bg-orange-700 text-white border-none" onClick={() => handleDeleteAllPublishedFiltered(true)}>
-                      <AlertTriangle className="w-3.5 h-3.5 mr-1" /> Elimina & Scarta Tutti ({publishedEvents.length})
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Bulk actions */}
-                {(selectedPubIds.size > 0 || selectedPubAnalyzeIds.size > 0) && (
-                  <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
-                    {selectedPubIds.size > 0 && (
-                      <span className="text-sm font-medium">{selectedPubIds.size} da eliminare</span>
-                    )}
-                    {selectedPubAnalyzeIds.size > 0 && (
-                      <span className="text-sm font-medium ml-4">{selectedPubAnalyzeIds.size} da analizzare</span>
-                    )}
-                    <div className="flex-1"></div>
-                    {selectedPubAnalyzeIds.size > 0 && (
-                      <>
-                        <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1 bg-background text-xs">
-                          <span className="text-muted-foreground text-xs">Provider:</span>
-                          <select 
-                            value={aiProvider} 
-                            onChange={(e) => setAiProvider(e.target.value as any)}
-                            className="bg-transparent border-none outline-none font-semibold text-foreground cursor-pointer text-xs"
-                          >
-                            <option value="direct">Chiave Diretta</option>
-                            <option value="replit">Proxy Replit</option>
-                          </select>
-                        </div>
-                        <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1 bg-background text-xs">
-                          <span className="text-muted-foreground text-xs">Analizza:</span>
-                          <select 
-                            value={analysisTarget} 
-                            onChange={(e) => setAnalysisTarget(e.target.value as any)}
-                            className="bg-transparent border-none outline-none font-semibold text-foreground cursor-pointer text-xs"
-                          >
-                            <option value="both">Locandina + Testo Breve</option>
-                            <option value="both_source">Locandina + Pagina Fonte (Link)</option>
-                            <option value="image">Solo Locandina</option>
-                            <option value="text">Solo Testo Breve</option>
-                            <option value="source_page">Solo Pagina Fonte (Link)</option>
-                          </select>
-                        </div>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={handleAnalyzePublished}
-                          disabled={analyzingStep !== "idle"}
-                        >
-                          {analyzingStep === "published" && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                          Analizza ({selectedPubAnalyzeIds.size})
-                        </Button>
-                      </>
-                    )}
-                    {selectedPubIds.size > 0 && (
-                      <>
-                        <Button variant="destructive" size="sm" onClick={() => bulkDelete(false)}>
-                          <Trash2 className="w-4 h-4 mr-1" /> Elimina
-                        </Button>
-                        <Button variant="destructive" size="sm" onClick={() => bulkDelete(true)}>
-                          <AlertTriangle className="w-4 h-4 mr-1" /> Elimina e scarta
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                )}
-
-                {/* Unified Filters Box */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 bg-muted/40 p-3 rounded-lg border border-border">
-                  <Input
-                    placeholder="Filtra titolo…"
-                    value={filterTitolo}
-                    onChange={(e) => setFilterTitolo(e.target.value)}
-                    className="h-8 text-xs bg-background"
-                  />
-                  <div className="flex gap-1">
-                    <Input type="date" value={filterDataFrom} onChange={(e) => setFilterDataFrom(e.target.value)} className="h-8 text-xs px-1 bg-background" />
-                    <Input type="date" value={filterDataTo} onChange={(e) => setFilterDataTo(e.target.value)} className="h-8 text-xs px-1 bg-background" />
-                  </div>
-                  <Input
-                    placeholder="Filtra luogo…"
-                    value={filterLuogo}
-                    onChange={(e) => setFilterLuogo(e.target.value)}
-                    className="h-8 text-xs bg-background"
-                  />
-                  <Input
-                    placeholder="Filtra fonte…"
-                    value={filterFonte}
-                    onChange={(e) => setFilterFonte(e.target.value)}
-                    className="h-8 text-xs bg-background"
-                  />
-                  <div className="flex gap-1">
-                    <Button size="sm" className="h-8 text-xs px-2 flex-1" onClick={applyFilters}>
-                      <Search className="w-3 h-3 mr-1" /> Applica
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-8 text-xs px-2" onClick={clearFilters}>
-                      Azzera
-                    </Button>
-                  </div>
-                </div>
-
-                {(() => {
-                  const todayStr = new Date().toISOString().split("T")[0];
-                  const futurePublished = publishedEvents.filter(ev => !ev.data_inizio || ev.data_inizio >= todayStr);
-                  const pastPublished = publishedEvents.filter(ev => ev.data_inizio && ev.data_inizio < todayStr);
-
-                  const renderPublishedTable = (list: typeof publishedEvents, emptyMessage: string) => {
-                    if (list.length === 0) {
-                      return (
-                        <div className="p-8 text-center text-muted-foreground border rounded-md text-sm bg-background">
-                          {emptyMessage}
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div className="overflow-auto border rounded-md bg-background">
-                        <table className="w-full text-sm">
-                          <thead className="bg-muted sticky top-0">
-                            <tr>
-                              <th className="w-10 p-2">
-                                <Checkbox
-                                  checked={list.length > 0 && list.every((e) => selectedPubIds.has(e.id))}
-                                  onCheckedChange={(v) => {
-                                    const next = new Set(selectedPubIds);
-                                    list.forEach((e) => {
-                                      if (v === true) next.add(e.id);
-                                      else next.delete(e.id);
-                                    });
-                                    setSelectedPubIds(next);
-                                  }}
-                                />
-                              </th>
-                              <th className="w-10 p-2">
-                                <Checkbox
-                                  checked={list.length > 0 && list.every((e) => selectedPubAnalyzeIds.has(e.id))}
-                                  onCheckedChange={(v) => {
-                                    const next = new Set(selectedPubAnalyzeIds);
-                                    list.forEach((e) => {
-                                      if (v === true) next.add(e.id);
-                                      else next.delete(e.id);
-                                    });
-                                    setSelectedPubAnalyzeIds(next);
-                                  }}
-                                />
-                              </th>
-                              <th className="p-2 text-left text-xs font-semibold">Immagine</th>
-                              <th className="p-2 text-left text-xs font-semibold">Titolo</th>
-                              <th className="p-2 text-left text-xs font-semibold">Data</th>
-                              <th className="p-2 text-left text-xs font-semibold">Luogo</th>
-                              <th className="p-2 text-left text-xs font-semibold">Fonte</th>
-                              <th className="p-2 text-left text-xs font-semibold">Sotto-eventi</th>
-                              <th className="p-2 text-left text-xs font-semibold">Azioni</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {list.map((ev) => {
-                              const img = imageUrl(ev);
-                              const subCount = publishedEvents.filter((child) => child.parent_id === ev.id).length;
-                              return (
-                                <tr key={ev.id} className="border-t border-border hover:bg-muted/40">
-                                  <td className="p-2">
-                                    <Checkbox
-                                      checked={selectedPubIds.has(ev.id)}
-                                      onCheckedChange={(v) => {
-                                        const next = new Set(selectedPubIds);
-                                        if (v === true) next.add(ev.id);
-                                        else next.delete(ev.id);
-                                        setSelectedPubIds(next);
-                                      }}
-                                    />
-                                  </td>
-                                  <td className="p-2">
-                                    <Checkbox
-                                      checked={selectedPubAnalyzeIds.has(ev.id)}
-                                      onCheckedChange={(v) => {
-                                        const next = new Set(selectedPubAnalyzeIds);
-                                        if (v === true) next.add(ev.id);
-                                        else next.delete(ev.id);
-                                        setSelectedPubAnalyzeIds(next);
-                                      }}
-                                    />
-                                  </td>
-                                  <td className="p-2">
-                                    {img ? (
-                                      <img src={img} alt={ev.titolo} className="w-16 h-12 object-cover rounded border" loading="lazy" />
-                                    ) : (
-                                      <div className="w-16 h-12 bg-muted rounded border flex items-center justify-center text-xs text-muted-foreground">—</div>
-                                    )}
-                                  </td>
-                                  <td className="p-2 font-medium max-w-xs truncate">
-                                    {ev.link ? (
-                                      <a href={ev.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{ev.titolo}</a>
-                                    ) : ev.titolo}
-                                    {ev.testo_estratto && <Badge variant="outline" className="ml-2 border-green-500 text-green-500">Analizzato</Badge>}
-                                  </td>
-                                  <td className="p-2 text-muted-foreground whitespace-nowrap">
-                                    {ev.data_inizio ?? "—"}
-                                    {ev.data_fine && ev.data_fine !== ev.data_inizio ? <span className="text-xs"> → {ev.data_fine}</span> : null}
-                                  </td>
-                                  <td className="p-2 text-muted-foreground">
-                                    {ev.luogo ?? "—"}
-                                    {ev.latitudine != null && ev.longitudine != null && <span className="text-xs text-green-600 ml-1">✓</span>}
-                                  </td>
-                                  <td className="p-2">
-                                    <Badge variant="secondary">{ev.fonte}</Badge>
-                                  </td>
-                                  <td className="p-2">
-                                    {subCount > 0 ? (
-                                      <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-50">
-                                        {subCount} sotto-eventi
-                                      </Badge>
-                                    ) : (
-                                      <span className="text-muted-foreground text-xs">—</span>
-                                    )}
-                                  </td>
-                                  <td className="p-2">
-                                    <div className="flex items-center gap-1">
-                                      <Button variant="ghost" size="sm" onClick={() => openEventDetails(ev, false)} title="Vedi dettagli" className="h-7 px-2 text-xs">
-                                        <Eye className="w-4 h-4 mr-1" /> Dettagli
-                                      </Button>
-                                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Elimina" onClick={() => deleteEvent(ev.id, false)}>
-                                        <Trash2 className="w-4 h-4 text-destructive" />
-                                      </Button>
-                                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Elimina e scarta" onClick={() => deleteEvent(ev.id, true)}>
-                                        <AlertTriangle className="w-4 h-4 text-orange-500" />
-                                      </Button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    );
-                  };
-
-                  return (
-                    <div className="flex flex-col gap-6">
-                      <div>
-                        <h3 className="font-semibold text-sm text-foreground mb-3 flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
-                          Eventi Futuri ({futurePublished.length})
-                        </h3>
-                        {renderPublishedTable(futurePublished, "Nessun evento futuro trovato con i filtri attuali.")}
-                      </div>
-
-                      <div className="pt-4 border-t border-border">
-                        <h3 className="font-semibold text-sm text-muted-foreground mb-3 flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full bg-muted-foreground"></span>
-                          Eventi Passati ({pastPublished.length})
-                        </h3>
-                        {renderPublishedTable(pastPublished, "Nessun evento passato trovato con i filtri attuali.")}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </CardContent>
-            </Card>
+            <PublishedEventsTable
+              publishedEvents={publishedEvents}
+              loadingPublished={loadingPublished}
+              selectedPubIds={selectedPubIds}
+              setSelectedPubIds={setSelectedPubIds}
+              selectedPubAnalyzeIds={selectedPubAnalyzeIds}
+              setSelectedPubAnalyzeIds={setSelectedPubAnalyzeIds}
+              handleAnalyzeAllPublishedFiltered={handleAnalyzeAllPublishedFiltered}
+              handleDeleteAllPublishedFiltered={handleDeleteAllPublishedFiltered}
+              aiProvider={aiProvider}
+              setAiProvider={setAiProvider}
+              analysisTarget={analysisTarget}
+              setAnalysisTarget={setAnalysisTarget}
+              handleAnalyzePublished={handleAnalyzePublished}
+              analyzingStep={analyzingStep}
+              bulkDelete={bulkDelete}
+              filterTitolo={filterTitolo}
+              setFilterTitolo={setFilterTitolo}
+              filterDataFrom={filterDataFrom}
+              setFilterDataFrom={setFilterDataFrom}
+              filterDataTo={filterDataTo}
+              setFilterDataTo={setFilterDataTo}
+              filterLuogo={filterLuogo}
+              setFilterLuogo={setFilterLuogo}
+              filterFonte={filterFonte}
+              setFilterFonte={setFilterFonte}
+              applyFilters={applyFilters}
+              clearFilters={clearFilters}
+              imageUrl={imageUrl}
+              openEventDetails={openEventDetails}
+              deleteEvent={deleteEvent}
+            />
           </TabsContent>
 
           {/* ── REJECTED TAB ── */}
           <TabsContent value="rejected" className="mt-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">{rejectedEvents.length} eventi scartati</CardTitle>
-                    <CardDescription>
-                      Eventi aggiunti alla blacklist. Lo scraper li ignorerà. Puoi ripristinarli.
-                    </CardDescription>
-                  </div>
-                  {loadingRejected && <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-auto border rounded-md">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted sticky top-0">
-                      <tr>
-                        <th className="p-2 text-left text-xs font-semibold"><div className="flex items-center gap-1"><Search className="w-3 h-3" /> Titolo</div></th>
-                        <th className="p-2 text-left text-xs font-semibold"><div className="flex items-center gap-1"><Globe className="w-3 h-3" /> Fonte</div></th>
-                        <th className="p-2 text-left text-xs font-semibold"><div className="flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Motivo</div></th>
-                        <th className="p-2 text-left text-xs font-semibold"><div className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Scartato il</div></th>
-                        <th className="p-2 text-left text-xs font-semibold">Azione</th>
-                      </tr>
-                      <tr className="border-t border-border">
-                        <th className="p-1">
-                          <Input placeholder="Filtra titolo…" value={rejFilterTitolo} onChange={(e) => setRejFilterTitolo(e.target.value)} className="h-7 text-xs" />
-                        </th>
-                        <th className="p-1">
-                          <Input placeholder="Filtra fonte…" value={rejFilterFonte} onChange={(e) => setRejFilterFonte(e.target.value)} className="h-7 text-xs" />
-                        </th>
-                        <th className="p-1">
-                          <Input placeholder="Filtra motivo…" value={rejFilterMotivo} onChange={(e) => setRejFilterMotivo(e.target.value)} className="h-7 text-xs" />
-                        </th>
-                        <th className="p-1">
-                          <div className="flex gap-1">
-                            <Input type="date" value={rejFilterDataFrom} onChange={(e) => setRejFilterDataFrom(e.target.value)} className="h-7 text-xs px-1" />
-                            <Input type="date" value={rejFilterDataTo} onChange={(e) => setRejFilterDataTo(e.target.value)} className="h-7 text-xs px-1" />
-                          </div>
-                        </th>
-                        <th className="p-1">
-                          <div className="flex gap-1">
-                            <Button size="sm" className="h-7 text-xs px-2 shrink-0" onClick={applyRejFilters}><Search className="w-3 h-3 mr-1" /> Applica</Button>
-                            <Button variant="ghost" size="sm" className="h-7 text-xs px-2 shrink-0" onClick={clearRejFilters}>Azzera</Button>
-                          </div>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredRejectedEvents.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="p-8 text-center text-muted-foreground">
-                            {loadingRejected ? "Caricamento…" : "Nessun evento scartato trovato."}
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredRejectedEvents.map((ev) => (
-                          <tr key={ev.id} className="border-t border-border hover:bg-muted/40">
-                            <td className="p-2 font-medium">{ev.titolo}</td>
-                            <td className="p-2"><Badge variant="secondary">{ev.fonte}</Badge></td>
-                            <td className="p-2 text-muted-foreground">{ev.motivo ?? "—"}</td>
-                            <td className="p-2 text-muted-foreground whitespace-nowrap">
-                              {new Date(ev.rifiutato_il).toLocaleDateString("it-IT")}
-                            </td>
-                            <td className="p-2">
-                              <Button variant="ghost" size="sm" onClick={() => restoreRejected(ev.id)}>
-                                <RotateCcw className="w-4 h-4 mr-1" /> Ripristina
-                              </Button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
+            <RejectedEventsTable
+              rejectedEvents={rejectedEvents}
+              loadingRejected={loadingRejected}
+              rejFilterTitolo={rejFilterTitolo}
+              setRejFilterTitolo={setRejFilterTitolo}
+              rejFilterFonte={rejFilterFonte}
+              setRejFilterFonte={setRejFilterFonte}
+              rejFilterMotivo={rejFilterMotivo}
+              setRejFilterMotivo={setRejFilterMotivo}
+              rejFilterDataFrom={rejFilterDataFrom}
+              setRejFilterDataFrom={setRejFilterDataFrom}
+              rejFilterDataTo={rejFilterDataTo}
+              setRejFilterDataTo={setRejFilterDataTo}
+              applyRejFilters={applyRejFilters}
+              clearRejFilters={clearRejFilters}
+              filteredRejectedEvents={filteredRejectedEvents}
+              restoreRejected={restoreRejected}
+            />
           </TabsContent>
 
           {/* ── ANALYZED TAB ── */}
@@ -2659,353 +1668,34 @@ export function Admin() {
         </Tabs>
 
         {/* Detail Modal */}
-        {inspectingEvent && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-            <Card className="w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl relative bg-card">
-              <CardHeader className="pb-3 border-b border-border">
-                <div className="flex items-start justify-between">
-                  <div className="w-full mr-4">
-                    <div className="flex items-center gap-2">
-                      <Badge variant={inspectingEvent.is_pending ? "secondary" : "default"} className={inspectingEvent.is_pending ? "bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200" : ""}>
-                        {inspectingEvent.is_pending ? "In Attesa" : "Pubblicato"}
-                      </Badge>
-                      <Badge variant="outline">{inspectingEvent.fonte}</Badge>
-                    </div>
-                    {isEditingEvent ? (
-                      <Input 
-                        value={inspectingEvent.titolo} 
-                        onChange={e => setInspectingEvent({...inspectingEvent, titolo: e.target.value})}
-                        className="text-lg font-bold mt-2 font-sans h-12 px-3"
-                      />
-                    ) : (
-                      <div className="flex flex-col mt-1">
-                        <CardTitle className="text-lg font-bold">{inspectingEvent.titolo}</CardTitle>
-                        {inspectingEvent.dettagli_extra?.festival_padre && (
-                          <span className="text-xs font-medium text-amber-600 uppercase tracking-wide mt-1">
-                            ★ {inspectingEvent.dettagli_extra.festival_padre}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    <CardDescription className="mt-1">
-                      {inspectingEvent.data_inizio ? new Date(inspectingEvent.data_inizio).toLocaleDateString("it-IT") : "N/D"}
-                      {inspectingEvent.data_fine && inspectingEvent.data_fine !== inspectingEvent.data_inizio ? ` - ${new Date(inspectingEvent.data_fine).toLocaleDateString("it-IT")}` : ""}
-                    </CardDescription>
-                  </div>
-                  <Button variant="ghost" onClick={() => setInspectingEvent(null)} className="h-8 w-8 p-0 shrink-0">
-                    <XCircle className="w-6 h-6 text-muted-foreground" />
-                  </Button>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
-                {/* Image & Description */}
-                <div className="flex flex-col sm:flex-row gap-4">
-                  {imageUrl(inspectingEvent) && (
-                    <img
-                      src={imageUrl(inspectingEvent)!}
-                      alt={inspectingEvent.titolo}
-                      className="w-full sm:w-48 h-36 object-cover rounded-md border"
-                    />
-                  )}
-                  <div className="flex-1 flex flex-col gap-3">
-                    <div className="flex-1">
-                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Descrizione Originale</h4>
-                      {isEditingEvent ? (
-                        <AutoResizeTextarea 
-                          value={inspectingEvent.descrizione || ""} 
-                          onChange={(e: any) => setInspectingEvent({...inspectingEvent, descrizione: e.target.value})}
-                          className="w-full min-h-[144px] text-sm bg-background border border-input rounded-md p-3 leading-relaxed"
-                        />
-                      ) : (
-                        <p className="text-sm text-foreground line-clamp-6 leading-relaxed">{inspectingEvent.descrizione || "Nessuna descrizione fornita."}</p>
-                      )}
-                    </div>
-                    {inspectingEvent.link && (
-                      <div>
-                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Sito Fonte (Riservato Admin)</h4>
-                        <a href={inspectingEvent.link} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1 w-fit">
-                          <Globe className="w-3.5 h-3.5" /> Apri Sito Fonte
-                        </a>
-                      </div>
-                    )}
-                    {(isEditingEvent || inspectingEvent.link_organizzatore) && (
-                      <div>
-                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Sito Organizzatore</h4>
-                        {isEditingEvent ? (
-                          <Input 
-                            value={inspectingEvent.link_organizzatore || ""} 
-                            onChange={e => setInspectingEvent({...inspectingEvent, link_organizzatore: e.target.value})}
-                            className="h-10 text-xs font-mono px-3"
-                            placeholder="https://..."
-                          />
-                        ) : (
-                          <a href={inspectingEvent.link_organizzatore} target="_blank" rel="noopener noreferrer" className="text-xs text-amber-600 hover:underline flex items-center gap-1 w-fit font-medium">
-                            <Globe className="w-3.5 h-3.5" /> Apri Sito Organizzatore
-                          </a>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Extracted Text */}
-                <div>
-                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Testo Estratto dalla Locandina</h4>
-                  {isEditingEvent ? (
-                    <AutoResizeTextarea 
-                      value={inspectingEvent.testo_estratto || ""} 
-                      onChange={(e: any) => setInspectingEvent({...inspectingEvent, testo_estratto: e.target.value})}
-                      className="w-full bg-muted p-4 rounded-md font-mono text-xs border min-h-48 focus:outline-none leading-relaxed"
-                    />
-                  ) : (
-                    <div className="bg-muted p-4 rounded-md font-mono text-xs max-h-64 overflow-y-auto border whitespace-pre-wrap leading-relaxed">
-                      {inspectingEvent.testo_estratto || "Nessun testo estratto."}
-                    </div>
-                  )}
-                </div>
-
-                {/* Tags & Dettagli Extra */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-border pt-4">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tags</h4>
-                    </div>
-                    {isEditingEvent ? (
-                      <div className="flex flex-col gap-2">
-                        <div className="flex flex-wrap gap-2">
-                          {editingTags.map((tag, i) => (
-                            <Badge key={i} variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-200">
-                              {tag}
-                              <button onClick={() => setEditingTags(prev => prev.filter((_, idx) => idx !== i))} className="ml-1 hover:text-red-500">
-                                <XCircle className="w-3 h-3" />
-                              </button>
-                            </Badge>
-                          ))}
-                        </div>
-                        <div className="flex gap-2 mt-2">
-                          <Input value={newTagValue} onChange={e => setNewTagValue(e.target.value)} placeholder="Nuovo tag..." className="h-10 text-sm" />
-                          <Button size="sm" variant="secondary" className="h-10 px-4" onClick={() => {
-                            if (newTagValue.trim()) {
-                              setEditingTags(prev => [...prev, newTagValue.trim()]);
-                              setNewTagValue("");
-                            }
-                          }}>Aggiungi</Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {inspectingEvent.tags && inspectingEvent.tags.length > 0 ? inspectingEvent.tags.map((tag: string, i: number) => (
-                          <Badge key={i} variant="secondary" className="bg-blue-50 text-blue-700">{tag}</Badge>
-                        )) : <span className="text-sm text-muted-foreground italic">Nessun tag</span>}
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Dettagli Extra</h4>
-                    {isEditingEvent ? (
-                      <div className="flex flex-col gap-3">
-                        {Object.entries(editingDettagli).map(([key, value]) => (
-                          <div key={key} className="flex gap-2 items-start">
-                            <Input value={key} disabled className="h-10 text-sm w-1/3 bg-muted font-semibold mt-0.5" />
-                            {String(value).length > 60 || key.toLowerCase().includes('bio') ? (
-                              <AutoResizeTextarea 
-                                value={value as string} 
-                                onChange={(e: any) => setEditingDettagli(prev => ({ ...prev, [key]: e.target.value }))} 
-                                className="text-sm bg-background border border-input rounded-md p-3 flex-1 min-h-[120px] leading-relaxed" 
-                              />
-                            ) : (
-                              <Input 
-                                value={value as string} 
-                                onChange={e => setEditingDettagli(prev => ({ ...prev, [key]: e.target.value }))} 
-                                className="h-10 text-sm flex-1 mt-0.5 px-3" 
-                              />
-                            )}
-                            <Button size="icon" variant="ghost" className="h-10 w-10 mt-0.5 text-destructive" onClick={() => {
-                              const next = { ...editingDettagli };
-                              delete next[key];
-                              setEditingDettagli(next);
-                            }}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        ))}
-                        <div className="flex gap-2 items-center mt-3 border-t border-border pt-3">
-                          <Input value={newDettaglioKey} onChange={e => setNewDettaglioKey(e.target.value)} placeholder="Es. Artisti" className="h-10 text-sm w-1/3" />
-                          <Input value={newDettaglioValue} onChange={e => setNewDettaglioValue(e.target.value)} placeholder="Valore" className="h-10 text-sm flex-1" />
-                          <Button size="sm" variant="secondary" className="h-10 px-4" onClick={() => {
-                            if (newDettaglioKey.trim() && newDettaglioValue.trim()) {
-                              setEditingDettagli(prev => ({ ...prev, [newDettaglioKey.trim()]: newDettaglioValue.trim() }));
-                              setNewDettaglioKey("");
-                              setNewDettaglioValue("");
-                            }
-                          }}>Add</Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-2">
-                        {inspectingEvent.dettagli_extra && Object.keys(inspectingEvent.dettagli_extra).length > 0 ? (
-                          Object.entries(inspectingEvent.dettagli_extra).map(([key, value]) => (
-                            <div key={key} className="bg-muted/50 p-2 rounded border border-border/50 text-sm">
-                              <span className="font-semibold text-foreground capitalize mr-2">{key.replace(/_/g, ' ')}:</span>
-                              <span className="text-muted-foreground">
-                                {key === "_usage" && typeof value === "object" && value !== null
-                                  ? `Input: ${(value as any).input_tokens || 0} | Output: ${(value as any).output_tokens || 0} | Totale: ${(value as any).total_tokens || 0}`
-                                  : String(value)}
-                              </span>
-                            </div>
-                          ))
-                        ) : <span className="text-sm text-muted-foreground italic">Nessun dettaglio extra</span>}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Sub-events (Sotto-eventi) */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Sotto-eventi Rilevati ({inspectingEvent.sub_events_list?.length || 0})
-                    </h4>
-                    {inspectingEvent.sub_events_list && inspectingEvent.sub_events_list.length > 0 && inspectingEvent.is_pending && (
-                      <Button size="sm" variant="outline" className="h-7 text-xs border-amber-500 text-amber-700 hover:bg-amber-50" onClick={() => {
-                        const newCards = inspectingEvent.sub_events_list.map((se: any) => ({
-                          titolo: se.titolo,
-                          data_inizio: se.data_inizio || inspectingEvent.data_inizio,
-                          data_fine: se.data_fine || inspectingEvent.data_fine,
-                          luogo: se.luogo || inspectingEvent.luogo,
-                          latitudine: se.latitudine || inspectingEvent.latitudine,
-                          longitudine: se.longitudine || inspectingEvent.longitudine,
-                          link: se.link || inspectingEvent.link,
-                          descrizione: se.descrizione || inspectingEvent.descrizione,
-                          immagine: se.immagine || inspectingEvent.immagine,
-                          fonte: inspectingEvent.fonte,
-                          is_new: true,
-                          testo_estratto: se.descrizione || inspectingEvent.testo_estratto,
-                        }));
-                        setPreviewEvents(prev => [...prev, ...newCards]);
-                        updatePreviewCache([...previewEvents, ...newCards]);
-                        alert(`Generati ${newCards.length} nuovi eventi singoli in In Attesa!`);
-                      }}>
-                        <Brain className="w-3.5 h-3.5 mr-1" /> Genera Card Singole in "In Attesa"
-                      </Button>
-                    )}
-                  </div>
-                  {inspectingEvent.sub_events_list && inspectingEvent.sub_events_list.length > 0 ? (
-                    <div className="flex flex-col gap-2">
-                      {inspectingEvent.sub_events_list.map((se: any, idx: number) => (
-                        <div key={idx} className="p-3 bg-muted/40 rounded-lg border border-border/50 text-sm">
-                          <div className="flex flex-col">
-                            <div className="font-semibold text-foreground">{se.titolo}</div>
-                            {se.dettagli_extra?.festival_padre && (
-                              <div className="text-[11px] font-medium text-amber-600 uppercase tracking-wide mt-0.5">
-                                ★ {se.dettagli_extra.festival_padre}
-                              </div>
-                            )}
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-1 flex gap-3 items-center justify-between">
-                            <div className="flex gap-3">
-                              <span className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                {se.data_inizio ? new Date(se.data_inizio).toLocaleDateString("it-IT") : "N/D"}
-                                {se.data_fine && se.data_fine !== se.data_inizio ? ` - ${new Date(se.data_fine).toLocaleDateString("it-IT")}` : ""}
-                              </span>
-                              {se.luogo && (
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="w-3 h-3" /> {se.luogo}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Button size="sm" variant="outline" className="h-6 text-[11px] px-2" onClick={async () => {
-                                const singlePayload = {
-                                  titolo: se.titolo,
-                                  data_inizio: se.data_inizio || inspectingEvent.data_inizio,
-                                  data_fine: se.data_fine || inspectingEvent.data_fine,
-                                  luogo: se.luogo || inspectingEvent.luogo,
-                                  link: se.link || inspectingEvent.link,
-                                  descrizione: se.descrizione || inspectingEvent.descrizione,
-                                  immagine: se.immagine || inspectingEvent.immagine,
-                                  fonte: inspectingEvent.fonte
-                                };
-                                await handlePublishAnalyzed([singlePayload]);
-                                alert(`Sotto-evento '${se.titolo}' pubblicato con successo!`);
-                              }}>
-                                <CheckCircle2 className="w-3 h-3 mr-1 text-green-600" /> Pubblica Singolo
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">Nessun sotto-evento rilevato o inserito.</p>
-                  )}
-                </div>
-              </CardContent>
-              
-              <div className="p-4 border-t border-border flex flex-wrap items-center justify-end gap-3 bg-muted/20">
-                {!isEditingEvent && (
-                  <>
-                    <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1 bg-background text-xs">
-                      <span className="text-muted-foreground">Analizza:</span>
-                      <select 
-                        value={analysisTarget} 
-                        onChange={(e) => setAnalysisTarget(e.target.value as any)}
-                        className="bg-transparent border-none outline-none font-semibold text-foreground cursor-pointer text-xs"
-                      >
-                        <option value="both">Locandina + Testo</option>
-                        <option value="both_source">Locandina + Fonte</option>
-                        <option value="image">Solo Locandina</option>
-                        <option value="text">Solo Testo</option>
-                        <option value="source_page">Solo Fonte</option>
-                      </select>
-                    </div>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={handleAnalyzeSingleFromModal}
-                      disabled={analyzingStep !== "idle"}
-                    >
-                      {(analyzingStep === "preview" || analyzingStep === "published") ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Eye className="w-4 h-4 mr-1" />}
-                      Analizza
-                    </Button>
-                    
-                    {inspectingEvent.is_pending && inspectingEvent.sub_events_list && inspectingEvent.sub_events_list.length > 0 && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={handleAnalyzeGroupFromModal}
-                        disabled={analyzingStep !== "idle"}
-                        className="bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-300"
-                      >
-                        <Brain className="w-4 h-4 mr-1" /> Analizza Padre + {inspectingEvent.sub_events_list.length} Figli
-                      </Button>
-                    )}
-                  </>
-                )}
-                
-                {isEditingEvent ? (
-                  <>
-                    <Button variant="outline" onClick={() => {
-                      setIsEditingEvent(false);
-                      setEditingTags(inspectingEvent.tags || []);
-                      setEditingDettagli(inspectingEvent.dettagli_extra || {});
-                    }}>Annulla</Button>
-                    <Button onClick={handleSaveEventDetails} disabled={savingEvent}>
-                      {savingEvent && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Salva Modifiche
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button variant="secondary" size="sm" onClick={() => setIsEditingEvent(true)}>Modifica Dettagli</Button>
-                    <Button size="sm" onClick={() => setInspectingEvent(null)}>Chiudi</Button>
-                  </>
-                )}
-              </div>
-            </Card>
-          </div>
-        )}
+        <EventDetailsModal
+          inspectingEvent={inspectingEvent}
+          setInspectingEvent={setInspectingEvent}
+          isEditingEvent={isEditingEvent}
+          setIsEditingEvent={setIsEditingEvent}
+          imageUrl={imageUrl}
+          editingTags={editingTags}
+          setEditingTags={setEditingTags}
+          newTagValue={newTagValue}
+          setNewTagValue={setNewTagValue}
+          editingDettagli={editingDettagli}
+          setEditingDettagli={setEditingDettagli}
+          newDettaglioKey={newDettaglioKey}
+          setNewDettaglioKey={setNewDettaglioKey}
+          newDettaglioValue={newDettaglioValue}
+          setNewDettaglioValue={setNewDettaglioValue}
+          setPreviewEvents={setPreviewEvents}
+          updatePreviewCache={updatePreviewCache}
+          previewEvents={previewEvents}
+          handlePublishAnalyzed={handlePublishAnalyzed}
+          analysisTarget={analysisTarget}
+          setAnalysisTarget={setAnalysisTarget}
+          handleAnalyzeSingleFromModal={handleAnalyzeSingleFromModal}
+          analyzingStep={analyzingStep}
+          handleAnalyzeGroupFromModal={handleAnalyzeGroupFromModal}
+          handleSaveEventDetails={handleSaveEventDetails}
+          savingEvent={savingEvent}
+        />
 
         {/* Global error */}
         {error && (
