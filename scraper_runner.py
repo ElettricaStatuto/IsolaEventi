@@ -420,32 +420,61 @@ def main():
         for obj in events_to_save:
             ev = obj["ev"]
             
-            # Se è uno scraping URL libero, esegui subito l'analisi AI
+            # Se è uno scraping URL libero, esegui subito l'estrazione AI dei sotto-eventi (Extractor mode)
             if args.url:
-                emit_log(f"Esecuzione AI sull'evento estratto in corso...")
+                emit_log(f"Esecuzione AI Extractor sull'evento in corso (Estrazione Sotto-Eventi)...")
                 extra_kwargs = {"force_festival": True} if args.force_festival else {}
-                ai_result = analyze_event(ev.to_dict(), **extra_kwargs)
-                if ai_result:
-                    if "_usage" in ai_result:
-                        u = ai_result["_usage"]
-                        emit_log(f"⚡ Token Consumati: {u['total_tokens']} (Prompt: {u['prompt_tokens']}, Risposta: {u['candidates_tokens']})")
-                        if getattr(ev, 'dettagli_extra', None) is None:
-                            ev.dettagli_extra = {}
-                        ev.dettagli_extra["_usage"] = u
+                ai_result = analyze_event(ev.to_dict(), mode="extract", **extra_kwargs)
+                
+                # In mode="extract" ai_result is a JSON object with info_festival_padre and eventi_figli_estratti
+                extracted_list = []
+                info_padre = {}
+                if isinstance(ai_data := ai_result, dict):
+                    extracted_list = ai_data.get("eventi_figli_estratti", [])
+                    info_padre = ai_data.get("info_festival_padre", {})
+                elif isinstance(ai_data, list):
+                    extracted_list = ai_data
 
-                    ev.testo_estratto = ai_result.get("testo_estratto", "")
-                    ev.is_festival = ai_result.get("is_festival", False)
-                    ev.link_organizzatore = ai_result.get("link_organizzatore")
+                ev.is_festival = len(extracted_list) > 0 or args.force_festival
+                
+                # Se l'AI ha trovato informazioni sul Festival, aggiorniamo l'evento contenitore
+                if info_padre.get("titolo_festival"):
+                    ev.titolo = info_padre.get("titolo_festival")
+                if info_padre.get("descrizione_introduttiva"):
+                    ev.testo_estratto = info_padre.get("descrizione_introduttiva")
+                if info_padre.get("data_inizio_generale"):
+                    ev.data_inizio = _parse_mixed_date(info_padre.get("data_inizio_generale"))
+                if info_padre.get("data_fine_generale"):
+                    ev.data_fine = _parse_mixed_date(info_padre.get("data_fine_generale"))
+                
+                sotto_eventi_objs = []
+                for se in extracted_list:
+                    # Map the flat JSON back to SottoEvento
+                    se_obj = SottoEvento(
+                        titolo=se.get("titolo", "Evento Senza Titolo"),
+                        data_inizio=se.get("data_inizio", ""),
+                        data_fine=se.get("data_fine", ""),
+                        date_testuali=se.get("data_inizio", ""),
+                        luogo=se.get("luogo", ""),
+                        url=se.get("url_riferimento", ""),
+                        descrizione=se.get("pezzo_di_testo_di_riferimento", "")
+                    )
+                    sotto_eventi_objs.append(se_obj)
                     
-                    sotto_eventi_dicts = ai_result.get("sotto_eventi", [])
-                    ev.sotto_eventi = [SottoEvento(**se) for se in sotto_eventi_dicts]
-                    emit_log(f"AI ha trovato {len(ev.sotto_eventi)} sotto-eventi.")
+                ev.sotto_eventi = sotto_eventi_objs
+                emit_log(f"L'AI Extractor ha trovato {len(ev.sotto_eventi)} sotto-eventi grezzi.")
 
-            events_preview.append({
+            # Genera un ID temporaneo per mantenere i legami
+            import uuid
+            temp_id = f"temp_{uuid.uuid4().hex[:8]}"
+
+            parent_dict = {
                 "titolo": ev.titolo,
                 "data_inizio": obj["data_inizio"],
                 "data_fine": obj["data_fine"],
+                "date_originali": ev.date_testuali,
                 "luogo": ev.luogo,
+                "luogo_originale": ev.luogo,
                 "latitudine": obj["lat"],
                 "longitudine": obj["lon"],
                 "link": ev.url,
@@ -456,10 +485,45 @@ def main():
                 "testo_estratto": ev.testo_estratto,
                 "is_festival": ev.is_festival,
                 "parent_id": getattr(ev, 'parent_id', None),
-                "sotto_eventi": [se.__dict__ for se in ev.sotto_eventi],
                 "tags": getattr(ev, 'tags', []),
-                "dettagli_extra": getattr(ev, 'dettagli_extra', {})
-            })
+                "dettagli_extra": {
+                    **getattr(ev, 'dettagli_extra', {}),
+                    "id_key": temp_id,
+                    "parent_temp_id": None,
+                    "metodo_estrazione": f"Estrattore URL (sito: {args.url})" if args.url else (f"Estrattore PDF" if getattr(args, 'pdf', None) else "Scraper Automatico")
+                }
+            }
+            events_preview.append(parent_dict)
+
+            if ev.sotto_eventi:
+                for se in ev.sotto_eventi:
+                    child_dict = {
+                        "titolo": se.titolo,
+                        "data_inizio": _parse_mixed_date(se.data_inizio),
+                        "data_fine": _parse_mixed_date(se.data_fine) if se.data_fine else _parse_mixed_date(se.data_inizio),
+                        "date_originali": se.date_testuali,
+                        "luogo": se.luogo or ev.luogo,
+                        "luogo_originale": se.luogo or ev.luogo,
+                        "latitudine": obj["lat"],
+                        "longitudine": obj["lon"],
+                        "link": ev.url,
+                        "descrizione": se.descrizione,
+                        "immagine": ev.immagine,
+                        "fonte": ev.fonte or "",
+                        "is_new": obj["is_new"],
+                        "testo_estratto": None,
+                        "is_festival": False,
+                        "parent_id": None,
+                        "tags": [],
+                        "dettagli_extra": {
+                            "festival_padre": ev.titolo,
+                            "is_extracted": True,
+                            "id_key": f"temp_{uuid.uuid4().hex[:8]}",
+                            "parent_temp_id": temp_id,
+                            "metodo_estrazione": f"Estrattore URL (sito: {args.url})" if args.url else (f"Estrattore PDF" if getattr(args, 'pdf', None) else "Scraper Automatico")
+                        }
+                    }
+                    events_preview.append(child_dict)
         conn.close()
         result = {
             "success": True,
@@ -508,13 +572,13 @@ def main():
                 cur.execute(
                     """
                     UPDATE events
-                    SET data_inizio=%s, data_fine=%s, luogo=%s,
+                    SET data_inizio=%s, data_fine=%s, date_originali=%s, luogo=%s, luogo_originale=%s,
                         latitudine=%s, longitudine=%s, link=%s,
                         descrizione=%s, immagine=%s, testo_estratto=%s, tags=%s, dettagli_extra=%s, aggiornato_il=now()
                     WHERE id=%s
                     """,
                     (
-                        data_inizio, data_fine, ev.luogo,
+                        data_inizio, data_fine, ev.date_testuali, ev.luogo, ev.luogo,
                         lat, lon, ev.url, ev.descrizione,
                         image_filename or ev.immagine,
                         ev.testo_estratto,
@@ -528,13 +592,13 @@ def main():
                 cur.execute(
                     """
                     INSERT INTO events
-                        (titolo, data_inizio, data_fine, luogo, latitudine, longitudine,
+                        (titolo, data_inizio, data_fine, date_originali, luogo, luogo_originale, latitudine, longitudine,
                          link, descrizione, immagine, fonte, testo_estratto, tags, dettagli_extra, parent_id, aggiornato_il)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
                     RETURNING id
                     """,
                     (
-                        ev.titolo, data_inizio, data_fine, ev.luogo,
+                        ev.titolo, data_inizio, data_fine, ev.date_testuali, ev.luogo, ev.luogo,
                         lat, lon, ev.url, ev.descrizione, None, ev.fonte or "",
                         ev.testo_estratto,
                         json.dumps(getattr(ev, 'tags', [])) if getattr(ev, 'tags', []) else None,
@@ -554,12 +618,12 @@ def main():
                         cur.execute(
                             """
                             INSERT INTO events
-                                (titolo, data_inizio, data_fine, luogo, parent_id, fonte, link, descrizione, aggiornato_il)
-                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,now())
+                                (titolo, data_inizio, data_fine, date_originali, luogo, luogo_originale, parent_id, fonte, link, descrizione, aggiornato_il)
+                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
                             """,
                             (
                                 f"{ev.titolo} - {se.titolo}", se_inizio, se_fine,
-                                se.luogo or ev.luogo, event_id, ev.fonte or "", getattr(se, 'url', None), getattr(se, 'descrizione', None)
+                                se.date_testuali, se.luogo or ev.luogo, se.luogo or ev.luogo, event_id, ev.fonte or "", getattr(se, 'url', None), getattr(se, 'descrizione', None)
                             )
                         )
 

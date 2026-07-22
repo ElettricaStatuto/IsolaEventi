@@ -372,7 +372,11 @@ components:
           type: ["string", "null"]
         data_fine:
           type: ["string", "null"]
+        date_originali:
+          type: ["string", "null"]
         luogo:
+          type: ["string", "null"]
+        luogo_originale:
           type: ["string", "null"]
         latitudine:
           type: ["number", "null"]

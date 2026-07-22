@@ -768,7 +768,7 @@ export function Admin() {
           titolo: ev.titolo,
           descrizione: ev.descrizione,
           immagine: ev.immagine,
-          link: ev.link,
+          link: ev.link, dettagli_extra: ev.dettagli_extra, data_inizio: ev.data_inizio, data_fine: ev.data_fine, luogo: ev.luogo, fonte: ev.fonte,
         }];
 
         abortControllerRef.current = new AbortController();
@@ -866,7 +866,7 @@ export function Admin() {
           titolo: ev.titolo,
           descrizione: ev.descrizione,
           immagine: ev.immagine,
-          link: ev.link,
+          link: ev.link, dettagli_extra: ev.dettagli_extra, data_inizio: ev.data_inizio, data_fine: ev.data_fine, luogo: ev.luogo, fonte: ev.fonte,
         }];
 
         abortControllerRef.current = new AbortController();
@@ -1161,7 +1161,7 @@ export function Admin() {
           titolo: ev.titolo,
           descrizione: ev.descrizione,
           immagine: ev.immagine,
-          link: ev.link,
+          link: ev.link, dettagli_extra: ev.dettagli_extra, data_inizio: ev.data_inizio, data_fine: ev.data_fine, luogo: ev.luogo, fonte: ev.fonte,
         }];
 
         abortControllerRef.current = new AbortController();
@@ -1218,7 +1218,7 @@ export function Admin() {
   const openEventDetails = (ev: any, isPending: boolean) => {
     let subEvents: any[] = [];
     if (isPending) {
-      subEvents = ev.sotto_eventi || [];
+      subEvents = previewEvents.filter(e => e.dettagli_extra?.parent_temp_id === ev.dettagli_extra?.id_key);
     } else {
       subEvents = publishedEvents
         .filter((child) => child.parent_id === ev.id)
@@ -1280,6 +1280,17 @@ export function Admin() {
     }
   };
 
+  const handleAnalyzeGroupFromModal = () => {
+    if (!inspectingEvent || !inspectingEvent.is_pending) return;
+    const parentIdx = previewEvents.findIndex(ev => ev.dettagli_extra?.id_key === inspectingEvent.dettagli_extra?.id_key);
+    if (parentIdx === -1) return;
+    const parentEv = { ...previewEvents[parentIdx], original_idx: parentIdx, is_pending: true };
+    const childrenToAnalyze = previewEvents
+      .map((ev, i) => ({ ...ev, original_idx: i, is_pending: true }))
+      .filter(ev => ev.dettagli_extra?.parent_temp_id === inspectingEvent.dettagli_extra?.id_key);
+    handleAnalyzeEventsMixed([parentEv, ...childrenToAnalyze]);
+  };
+
   const handleAnalyzeSingleFromModal = async () => {
     if (!inspectingEvent) return;
     setAnalyzingStep(inspectingEvent.is_pending ? "preview" : "published");
@@ -1301,6 +1312,11 @@ export function Admin() {
         descrizione: inspectingEvent.descrizione,
         immagine: inspectingEvent.immagine,
         link: inspectingEvent.link,
+        dettagli_extra: inspectingEvent.dettagli_extra,
+        data_inizio: inspectingEvent.data_inizio,
+        data_fine: inspectingEvent.data_fine,
+        luogo: inspectingEvent.luogo,
+        fonte: inspectingEvent.fonte,
       }];
 
       abortControllerRef.current = new AbortController();
@@ -2064,7 +2080,14 @@ export function Admin() {
                                   <td className="p-2 font-medium">
                                     <div className="flex flex-col gap-1 max-w-md">
                                       <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span className="font-bold text-foreground text-sm">{ev.titolo}</span>
+                                        <div className="flex flex-col">
+                                          <span className="font-bold text-foreground text-sm">{ev.titolo}</span>
+                                          {ev.dettagli_extra?.festival_padre && (
+                                            <span className="text-[11px] font-medium text-amber-600 uppercase tracking-wide">
+                                              ★ {ev.dettagli_extra.festival_padre}
+                                            </span>
+                                          )}
+                                        </div>
                                         {ev.categoria && <Badge variant="secondary" className="bg-purple-100 text-purple-800 text-[10px]">{ev.categoria}</Badge>}
                                         {ev.tags && Array.isArray(ev.tags) && ev.tags.map((t: string, ti: number) => (
                                           <Badge key={ti} variant="outline" className="text-[10px] bg-blue-50 text-blue-700">{t}</Badge>
@@ -2865,8 +2888,15 @@ export function Admin() {
                     <div className="flex flex-col gap-2">
                       {inspectingEvent.sub_events_list.map((se: any, idx: number) => (
                         <div key={idx} className="p-3 bg-muted/40 rounded-lg border border-border/50 text-sm">
-                          <div className="font-semibold text-foreground">{se.titolo}</div>
-                          <div className="text-xs text-muted-foreground mt-0.5 flex gap-3 items-center justify-between">
+                          <div className="flex flex-col">
+                            <div className="font-semibold text-foreground">{se.titolo}</div>
+                            {se.dettagli_extra?.festival_padre && (
+                              <div className="text-[11px] font-medium text-amber-600 uppercase tracking-wide mt-0.5">
+                                ★ {se.dettagli_extra.festival_padre}
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1 flex gap-3 items-center justify-between">
                             <div className="flex gap-3">
                               <span className="flex items-center gap-1">
                                 <Calendar className="w-3 h-3" />
@@ -2907,9 +2937,9 @@ export function Admin() {
                 </div>
               </CardContent>
               
-              <div className="p-4 border-t border-border flex items-center justify-between gap-3 bg-muted/20">
-                {!isEditingEvent ? (
-                  <div className="flex items-center gap-2">
+              <div className="p-4 border-t border-border flex flex-wrap items-center justify-end gap-3 bg-muted/20">
+                {!isEditingEvent && (
+                  <>
                     <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1 bg-background text-xs">
                       <span className="text-muted-foreground">Analizza:</span>
                       <select 
@@ -2933,30 +2963,38 @@ export function Admin() {
                       {(analyzingStep === "preview" || analyzingStep === "published") ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Eye className="w-4 h-4 mr-1" />}
                       Analizza
                     </Button>
-                  </div>
-                ) : (
-                  <div></div>
+                    
+                    {inspectingEvent.is_pending && inspectingEvent.sub_events_list && inspectingEvent.sub_events_list.length > 0 && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleAnalyzeGroupFromModal}
+                        disabled={analyzingStep !== "idle"}
+                        className="bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-300"
+                      >
+                        <Brain className="w-4 h-4 mr-1" /> Analizza Padre + {inspectingEvent.sub_events_list.length} Figli
+                      </Button>
+                    )}
+                  </>
                 )}
                 
-                <div className="flex justify-end gap-3">
-                  {isEditingEvent ? (
-                    <>
-                      <Button variant="outline" onClick={() => {
-                        setIsEditingEvent(false);
-                        setEditingTags(inspectingEvent.tags || []);
-                        setEditingDettagli(inspectingEvent.dettagli_extra || {});
-                      }}>Annulla</Button>
-                      <Button onClick={handleSaveEventDetails} disabled={savingEvent}>
-                        {savingEvent && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Salva Modifiche
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button variant="secondary" onClick={() => setIsEditingEvent(true)}>Modifica Dettagli</Button>
-                      <Button onClick={() => setInspectingEvent(null)}>Chiudi</Button>
-                    </>
-                  )}
-                </div>
+                {isEditingEvent ? (
+                  <>
+                    <Button variant="outline" onClick={() => {
+                      setIsEditingEvent(false);
+                      setEditingTags(inspectingEvent.tags || []);
+                      setEditingDettagli(inspectingEvent.dettagli_extra || {});
+                    }}>Annulla</Button>
+                    <Button onClick={handleSaveEventDetails} disabled={savingEvent}>
+                      {savingEvent && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Salva Modifiche
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="secondary" size="sm" onClick={() => setIsEditingEvent(true)}>Modifica Dettagli</Button>
+                    <Button size="sm" onClick={() => setInspectingEvent(null)}>Chiudi</Button>
+                  </>
+                )}
               </div>
             </Card>
           </div>

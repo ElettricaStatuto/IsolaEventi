@@ -19,10 +19,12 @@ def main():
             events = payload.get("events", [])
             target = payload.get("target", "both")
             use_proxy = payload.get("use_proxy", False)
+            mode = payload.get("mode", "analyze")
         else:
             events = payload
             target = "both"
             use_proxy = False
+            mode = "analyze"
 
         results = []
         total = len(events)
@@ -33,15 +35,31 @@ def main():
             
             try:
                 # Add link to context for source page extraction if target is source_page
-                ai_data = analyze_event(ev, target=target, use_proxy=use_proxy)
+                ai_data = analyze_event(ev, target=target, use_proxy=use_proxy, mode=mode)
                 
                 if "_usage" in ai_data:
                     u = ai_data["_usage"]
                     usage_msg = f"⚡ Token Consumati: {u['total_tokens']} (Prompt: {u['prompt_tokens']}, Risposta: {u['candidates_tokens']})"
                     print(json.dumps({"log": usage_msg}), flush=True)
+                    
+                if mode == "extract":
+                    extract_list = []
+                    if isinstance(ai_data, list):
+                        extract_list = ai_data
+                    elif isinstance(ai_data, dict) and "sotto_eventi" in ai_data:
+                        extract_list = ai_data.get("sotto_eventi", [])
+                    else:
+                        extract_list = [ai_data]
+                        
+                    for sub in extract_list:
+                        sub["parent_id"] = ev.get("id")
+                        sub["parent_tmp_id"] = ev.get("tmp_id")
+                        sub["is_extracted"] = True
+                        results.append(sub)
+                    continue
                 
                 # If we parsed a source page or both, let's verify if we need to pass the link
-                testo_finale = ai_data.get("testo_estratto")
+                testo_finale = ai_data.get("dati_curati_ai", {}).get("testo_estratto")
                 
                 # Salviamo il testo grezzo estratto dall'IA in un file di testo (utile per PDF grafici o immagini)
                 if testo_finale:
@@ -55,22 +73,27 @@ def main():
                     except Exception as e:
                         pass
 
-                dettagli = ai_data.get("dettagli_extra", {})
+                original_dettagli = ev.get("dettagli_extra", {})
+                dettagli = {**original_dettagli, **ai_data.get("approfondimenti_extra", {})}
+                dettagli["diario_di_bordo_ai"] = ai_data.get("diario_di_bordo_ai", [])
+                dettagli["metadati_operazioni"] = ai_data.get("metadati_operazioni", {})
                 if "_usage" in ai_data:
                     dettagli["_usage"] = ai_data["_usage"]
                     
                 results.append({
-                    "id": ev.get("id"), # Can be null if preview
-                    "tmp_id": ev.get("tmp_id"), # Unique frontend identifier for previews
-                    "titolo": ai_data.get("titolo"),
-                    "categoria": ai_data.get("categoria"),
+                    "id": ev.get("id"),
+                    "tmp_id": ev.get("tmp_id"),
+                    "titolo": ai_data.get("dati_curati_ai", {}).get("titolo"),
+                    "categoria": ai_data.get("dati_curati_ai", {}).get("categoria"),
                     "testo_estratto": testo_finale,
-                    "is_festival": ai_data.get("is_festival", False),
-                    "sotto_eventi": ai_data.get("sotto_eventi", []),
-                    "link_organizzatore": ai_data.get("link_organizzatore"),
-                    "tags": ai_data.get("tags", []),
-                    "dettagli_extra": dettagli,
-                    "testo_grezzo_url": ai_data.get("testo_grezzo_url")
+                    "data_inizio": ai_data.get("dati_curati_ai", {}).get("data_inizio"),
+                    "data_fine": ai_data.get("dati_curati_ai", {}).get("data_fine"),
+                    "luogo": ai_data.get("dati_curati_ai", {}).get("luogo"),
+                    "link_organizzatore": ai_data.get("dati_curati_ai", {}).get("link_organizzatore"),
+                    "tags": ai_data.get("dati_curati_ai", {}).get("tags", []),
+                    "is_festival": ai_data.get("gestione_gerarchia", {}).get("is_festival_padre", False),
+                    "sotto_eventi": ai_data.get("lista_sotto_eventi_estratti", []),
+                    "dettagli_extra": dettagli
                 })
             except Exception as e:
                 # Append error info but continue to next event

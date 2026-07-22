@@ -82,7 +82,11 @@ export interface EventPreview {
   /** @nullable */
   data_fine?: string | null;
   /** @nullable */
+  date_originali?: string | null;
+  /** @nullable */
   luogo?: string | null;
+  /** @nullable */
+  luogo_originale?: string | null;
   /** @nullable */
   latitudine?: number | null;
   /** @nullable */

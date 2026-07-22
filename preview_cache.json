@@ -1,95 +1,130 @@
 [
   {
-    "titolo": "Concerto: Valeria Sturba",
-    "data_inizio": "2026-07-19T19:30:00",
-    "data_fine": "2026-07-19T21:00:00",
-    "luogo": "Residenza a Cova, Carloforte",
+    "titolo": "Ittiritmi - XXXI Rassegna di musica etnica e world music",
+    "data_inizio": null,
+    "data_fine": null,
+    "date_originali": null,
+    "luogo": null,
+    "luogo_originale": null,
     "latitudine": null,
     "longitudine": null,
-    "link": "https://bottidushcoggiu.com/evento/sun-daixia-2026/",
-    "descrizione": "Performance poliedrica di Valeria Sturba, che tra violino, theremin ed elettronica esplora i confini della sperimentazione sonora.",
+    "link": "https://www.ittiritmi.it/",
+    "descrizione": "=== Contenuto pagina principale (https://www.ittiritmi.it/) ===\n# ittiritmi\n\nXXXI Rassegna di musica etnica e world music 2026\n\nITTIRI, 7_8 AGOSTO 2026\n\nGIARDINI PUBBLICI ORE 21:30\n\nINGRESSO LIBERO\n\n## NESSUNA CULTURA E’ UN’ISOLA\n\nVENERDI 7 AGOSTO\n\nDavide Casu (Sardegna)  \nShkodra Elektronike (Albania)\n\nSABATO 8 AGOSTO\n\nMatteo Leone (Sardegna)  \nDobet Gnahoré (Costa d’Avorio)\n\n\n",
     "immagine": null,
-    "fonte": "bottidushcoggiu.com",
+    "fonte": "ittiritmi.it",
     "is_new": true,
-    "testo_estratto": "Un'esperienza sonora di rara suggestione attende il pubblico con la performance di Valeria Sturba, artista poliedrica capace di tessere trame musicali innovative. Attraverso un sapiente intreccio tra la classicità del violino, le atmosfere eteree del theremin e le infinite possibilità della manipolazione elettronica, Sturba conduce l'ascoltatore in un viaggio esplorativo ai confini della sperimentazione, dove il suono si fa materia viva, emozionante e profondamente contemporanea.",
-    "categoria": "Musica",
-    "tags": [
-      "Musica",
-      "Musica Elettronica"
-    ],
+    "testo_estratto": "XXXI Rassegna di musica etnica e world music 2026, con il tema 'Nessuna cultura è un'isola'.",
+    "is_festival": true,
+    "parent_id": null,
+    "tags": [],
     "dettagli_extra": {
-      "artista": "Valeria Sturba",
-      "strumentazione": "Violino, Theremin, Elettronica",
-      "_usage": {
-        "prompt_tokens": 845,
-        "candidates_tokens": 244,
-        "total_tokens": 1089
-      }
-    },
-    "is_festival": false,
-    "sotto_eventi": [],
-    "link_organizzatore": null
+      "id_key": "temp_df20da61",
+      "parent_temp_id": null,
+      "metodo_estrazione": "Estrattore URL (sito: https://www.ittiritmi.it/)"
+    }
   },
   {
-    "titolo": "Concerto: REVA – The Living Memory",
-    "data_inizio": "2026-07-29T19:30:00",
-    "data_fine": "2026-07-29T21:00:00",
-    "luogo": "Residenza a Cova, Carloforte",
+    "titolo": "Concerto: Davide Casu",
+    "data_inizio": "2026-08-07",
+    "data_fine": "2026-08-07",
+    "date_originali": "2026-08-07",
+    "luogo": "Giardini Pubblici, Ittiri",
+    "luogo_originale": "Giardini Pubblici, Ittiri",
     "latitudine": null,
     "longitudine": null,
-    "link": "https://bottidushcoggiu.com/evento/sun-daixia-2026/",
-    "descrizione": "Un viaggio nel suono del kanun che intreccia tradizione araba, jazz e musica d'autore con il progetto 'REVA – The Living Memory'.",
+    "link": "https://www.ittiritmi.it/",
+    "descrizione": "VENERDI 7 AGOSTO\nDavide Casu (Sardegna)",
     "immagine": null,
-    "fonte": "bottidushcoggiu.com",
+    "fonte": "ittiritmi.it",
     "is_new": true,
-    "testo_estratto": "Un'affascinante esplorazione sonora che attraversa i confini tra la millenaria tradizione del kanun e le vibrazioni contemporanee del jazz e della musica d'autore. Il progetto 'REVA – The Living Memory' si propone come un ponte culturale capace di tessere trame melodiche dal sapore antico, rilette attraverso una lente moderna. Un'esperienza immersiva pensata per chi desidera lasciarsi trasportare in un viaggio introspettivo, dove la memoria diventa materia viva e il suono diviene narrazione profonda e poetica.",
-    "categoria": "Musica",
-    "tags": [
-      "Musica",
-      "Jazz"
-    ],
-    "dettagli_extra": {
-      "strumento_principale": "Kanun",
-      "genere_fusione": "Musica araba, jazz, musica d'autore",
-      "_usage": {
-        "prompt_tokens": 849,
-        "candidates_tokens": 258,
-        "total_tokens": 1107
-      }
-    },
+    "testo_estratto": null,
     "is_festival": false,
-    "sotto_eventi": [],
-    "link_organizzatore": null
+    "parent_id": null,
+    "tags": [],
+    "dettagli_extra": {
+      "festival_padre": "Ittiritmi - XXXI Rassegna di musica etnica e world music",
+      "is_extracted": true,
+      "id_key": "temp_b98bebd0",
+      "parent_temp_id": "temp_df20da61",
+      "metodo_estrazione": "Estrattore URL (sito: https://www.ittiritmi.it/)"
+    }
   },
   {
-    "titolo": "Concerto: Ensemble di musica da camera",
-    "data_inizio": "2026-08-03T19:30:00",
-    "data_fine": "2026-08-03T21:00:00",
-    "luogo": "Residenza a Cova, Carloforte",
+    "titolo": "Concerto: Shkodra Elektronike",
+    "data_inizio": "2026-08-07",
+    "data_fine": "2026-08-07",
+    "date_originali": "2026-08-07",
+    "luogo": "Giardini Pubblici, Ittiri",
+    "luogo_originale": "Giardini Pubblici, Ittiri",
     "latitudine": null,
     "longitudine": null,
-    "link": "https://bottidushcoggiu.com/evento/sun-daixia-2026/",
-    "descrizione": "Concerto di musica da camera con una delle formazioni emergenti più interessanti del panorama europeo, tra repertorio classico e contemporaneità.",
+    "link": "https://www.ittiritmi.it/",
+    "descrizione": "VENERDI 7 AGOSTO\nShkodra Elektronike (Albania)",
     "immagine": null,
-    "fonte": "bottidushcoggiu.com",
+    "fonte": "ittiritmi.it",
     "is_new": true,
-    "testo_estratto": "Un appuntamento imperdibile per gli amanti della grande musica colta. La serata vede protagonista una delle formazioni emergenti più promettenti del panorama cameristico europeo, impegnata in un programma raffinato che tesse un dialogo armonioso tra i capisaldi del repertorio classico e le suggestioni sonore della contemporaneità. Un'occasione preziosa per apprezzare il virtuosismo e l'intensità interpretativa di un ensemble che sta ridefinendo i confini del genere con freschezza e rigore accademico.",
-    "categoria": "Musica",
-    "tags": [
-      "Musica",
-      "Musica Classica"
-    ],
-    "dettagli_extra": {
-      "target_pubblico": "Appassionati di musica classica e contemporanea",
-      "approccio": "Analisi culturale ed estetica",
-      "_usage": {
-        "prompt_tokens": 852,
-        "candidates_tokens": 255,
-        "total_tokens": 1107
-      }
-    },
+    "testo_estratto": null,
     "is_festival": false,
-    "sotto_eventi": [],
-    "link_organizzatore": null
+    "parent_id": null,
+    "tags": [],
+    "dettagli_extra": {
+      "festival_padre": "Ittiritmi - XXXI Rassegna di musica etnica e world music",
+      "is_extracted": true,
+      "id_key": "temp_b841966d",
+      "parent_temp_id": "temp_df20da61",
+      "metodo_estrazione": "Estrattore URL (sito: https://www.ittiritmi.it/)"
+    }
+  },
+  {
+    "titolo": "Concerto: Matteo Leone",
+    "data_inizio": "2026-08-08",
+    "data_fine": "2026-08-08",
+    "date_originali": "2026-08-08",
+    "luogo": "Giardini Pubblici, Ittiri",
+    "luogo_originale": "Giardini Pubblici, Ittiri",
+    "latitudine": null,
+    "longitudine": null,
+    "link": "https://www.ittiritmi.it/",
+    "descrizione": "SABATO 8 AGOSTO\nMatteo Leone (Sardegna)",
+    "immagine": null,
+    "fonte": "ittiritmi.it",
+    "is_new": true,
+    "testo_estratto": null,
+    "is_festival": false,
+    "parent_id": null,
+    "tags": [],
+    "dettagli_extra": {
+      "festival_padre": "Ittiritmi - XXXI Rassegna di musica etnica e world music",
+      "is_extracted": true,
+      "id_key": "temp_172b8286",
+      "parent_temp_id": "temp_df20da61",
+      "metodo_estrazione": "Estrattore URL (sito: https://www.ittiritmi.it/)"
+    }
+  },
+  {
+    "titolo": "Concerto: Dobet Gnahoré",
+    "data_inizio": "2026-08-08",
+    "data_fine": "2026-08-08",
+    "date_originali": "2026-08-08",
+    "luogo": "Giardini Pubblici, Ittiri",
+    "luogo_originale": "Giardini Pubblici, Ittiri",
+    "latitudine": null,
+    "longitudine": null,
+    "link": "https://www.ittiritmi.it/",
+    "descrizione": "SABATO 8 AGOSTO\nDobet Gnahoré (Costa d’Avorio)",
+    "immagine": null,
+    "fonte": "ittiritmi.it",
+    "is_new": true,
+    "testo_estratto": null,
+    "is_festival": false,
+    "parent_id": null,
+    "tags": [],
+    "dettagli_extra": {
+      "festival_padre": "Ittiritmi - XXXI Rassegna di musica etnica e world music",
+      "is_extracted": true,
+      "id_key": "temp_9119456e",
+      "parent_temp_id": "temp_df20da61",
+      "metodo_estrazione": "Estrattore URL (sito: https://www.ittiritmi.it/)"
+    }
   }
 ]

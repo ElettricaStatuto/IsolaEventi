@@ -3,6 +3,9 @@ import re
 from urllib.parse import urlparse, urljoin
 import html2text
 from concurrent.futures import ThreadPoolExecutor
+import json
+import os
+from datetime import datetime, timezone
 
 from ..base import BaseScraper
 from ..models import Evento
@@ -71,6 +74,9 @@ class GenericUrlScraper(BaseScraper):
         full_text = f"=== Contenuto pagina principale ({self.target_url}) ===\n" + main_text + "\n\n"
         
         # Estrai i link dalla pagina principale per fare deep scraping
+        # Log dati
+        orario_inizio = datetime.now(timezone.utc).isoformat()
+        link_scartati = []
         links_found = set()
         links_to_visit = []
         
@@ -84,13 +90,21 @@ class GenericUrlScraper(BaseScraper):
             # Filtri Smart
             # 1. Stesso dominio
             if urlparse(full_url).netloc != urlparse(self.target_url).netloc:
+                link_scartati.append({"url": full_url, "motivo": "Dominio esterno"})
                 continue
             # 2. Ignora la pagina stessa
             if full_url == self.target_url:
+                link_scartati.append({"url": full_url, "motivo": "Pagina principale"})
                 continue
             # 3. Filtri negativi
             lower_url = full_url.lower()
-            if any(x in lower_url for x in ['privacy', 'cookie', 'tag', 'category', 'author', 'login', 'cart', 'checkout']):
+            scartato = False
+            for x in ['privacy', 'cookie', 'tag', 'category', 'author', 'login', 'cart', 'checkout']:
+                if x in lower_url:
+                    link_scartati.append({"url": full_url, "motivo": f"Parola chiave vietata: '{x}'"})
+                    scartato = True
+                    break
+            if scartato:
                 continue
             
             if full_url not in links_found:
@@ -114,16 +128,31 @@ class GenericUrlScraper(BaseScraper):
                         testo_pulito = re.sub(r'\n{3,}', '\n\n', testo_sub)
                         full_text += f"=== Contenuto estratto da: {url} ===\n{testo_pulito}\n\n"
         
-        # Salvataggio debug
+        # Salvataggio debug e log JSON
         try:
-            import os
             os.makedirs(os.path.join("data", "raw_texts"), exist_ok=True)
+            os.makedirs(os.path.join("data", "logs"), exist_ok=True)
             safe_name = "".join(c for c in self.target_url if c.isalnum() or c in ('-', '_')).rstrip()
+            
+            # Text debug
             file_path = os.path.join("data", "raw_texts", f"{safe_name[:50]}_scraped.txt")
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(full_text)
+                
+            # JSON log (Radiografia)
+            log_data = {
+                "target_url": self.target_url,
+                "orario_inizio_scraping": orario_inizio,
+                "orario_fine_scraping": datetime.now(timezone.utc).isoformat(),
+                "link_utilizzati": urls_to_fetch,
+                "link_scartati": link_scartati
+            }
+            log_path = os.path.join("data", "logs", f"scraping_{self.nome_fonte}_{safe_name[:10]}_{datetime.now().strftime('%Y%m%d%H%M%S')}.json")
+            with open(log_path, "w", encoding="utf-8") as f:
+                json.dump(log_data, f, indent=2, ensure_ascii=False)
+                
         except Exception as e:
-            logger.warning(f"Impossibile salvare il testo grezzo: {e}")
+            logger.warning(f"Impossibile salvare i log dello scraper: {e}")
 
         evento = Evento(
             titolo=titolo,

@@ -657,14 +657,22 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
       .select({ id: eventsTable.id, titolo: eventsTable.titolo })
       .from(eventsTable);
 
-    for (const ev of events as any[]) {
+    const tempIdMap: Record<string, number> = {};
+
+    // First pass: Process parents (those without parent_temp_id)
+    const parents = (events as any[]).filter(ev => !ev.dettagli_extra?.parent_temp_id);
+    const children = (events as any[]).filter(ev => ev.dettagli_extra?.parent_temp_id);
+
+    for (const ev of parents) {
       try {
         const match = existingEvents.find(e => areTitlesSimilar(ev.titolo, e.titolo));
         const existingId = match?.id;
 
-        let { dataInizio, dataFine } = getFestivalDateRange(ev.data_inizio, ev.data_fine, ev.sotto_eventi || []);
+        // Since we flattened, sotto_eventi is empty, getFestivalDateRange just returns the event's dates
+        let { dataInizio, dataFine } = getFestivalDateRange(ev.data_inizio, ev.data_fine, []);
 
         if (existingId) {
+          if (ev.dettagli_extra?.id_key) tempIdMap[ev.dettagli_extra.id_key] = existingId;
           await db.update(eventsTable)
             .set({
               titolo: ev.titolo,
@@ -672,7 +680,9 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
               categoria: ev.categoria || null,
               dataInizio: dataInizio,
               dataFine: dataFine,
+              dateOriginali: ev.date_originali || null,
               luogo: ev.luogo,
+              luogoOriginale: ev.luogo_originale || ev.luogo,
               latitudine: ev.latitudine,
               longitudine: ev.longitudine,
               link: ev.link,
@@ -687,24 +697,6 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
             })
             .where(eq(eventsTable.id, existingId));
 
-          // If it is a festival, let's create the sub-events
-          if (ev.is_festival && ev.sotto_eventi && ev.sotto_eventi.length > 0) {
-            // Delete old sub-events to avoid duplicate entries
-            await db.delete(eventsTable).where(eq(eventsTable.parentId, existingId));
-            for (const se of ev.sotto_eventi) {
-              await db.insert(eventsTable).values({
-                titolo: se.titolo ? `${ev.titolo} - ${se.titolo}` : `${ev.titolo}`,
-                titoloOriginale: se.titolo || null,
-                categoria: ev.categoria || null,
-                dataInizio: se.data_inizio,
-                dataFine: se.data_fine || se.data_inizio,
-                luogo: se.luogo || ev.luogo,
-                parentId: existingId,
-                fonte: ev.fonte || "",
-                linkOrganizzatore: ev.link_organizzatore || null,
-              });
-            }
-          }
           aggiornati++;
         } else {
           const [inserted] = await db.insert(eventsTable).values({
@@ -713,7 +705,9 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
             categoria: ev.categoria || null,
             dataInizio: dataInizio,
             dataFine: dataFine,
+            dateOriginali: ev.date_originali || null,
             luogo: ev.luogo,
+            luogoOriginale: ev.luogo_originale || ev.luogo,
             latitudine: ev.latitudine,
             longitudine: ev.longitudine,
             link: ev.link,
@@ -729,29 +723,78 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
 
           const parentId = inserted?.id;
           if (parentId) {
-            // Aggiungi l'evento appena inserito in memoria così se nello stesso batch c'è un duplicato viene fuso!
+            if (ev.dettagli_extra?.id_key) tempIdMap[ev.dettagli_extra.id_key] = parentId;
             existingEvents.push({ id: parentId, titolo: ev.titolo });
-
-            if (ev.is_festival && ev.sotto_eventi && ev.sotto_eventi.length > 0) {
-              for (const se of ev.sotto_eventi) {
-                await db.insert(eventsTable).values({
-                  titolo: se.titolo ? `${ev.titolo} - ${se.titolo}` : `${ev.titolo}`,
-                  titoloOriginale: se.titolo || null,
-                  categoria: ev.categoria || null,
-                  dataInizio: se.data_inizio,
-                  dataFine: se.data_fine || se.data_inizio,
-                  luogo: se.luogo || ev.luogo,
-                  parentId,
-                  fonte: ev.fonte || "",
-                  linkOrganizzatore: ev.link_organizzatore || null,
-                });
-              }
-            }
           }
           nuovi++;
         }
-      } catch (e) {
-        req.log.error({ err: e, event: ev.titolo }, "Approval insert/update failed");
+      } catch (err) {
+        req.log.error({ err, ev }, "Error processing parent event approval");
+        errori++;
+      }
+    }
+
+    // Second pass: Process children (those with parent_temp_id)
+    for (const ev of children) {
+      try {
+        const match = existingEvents.find(e => areTitlesSimilar(ev.titolo, e.titolo));
+        const existingId = match?.id;
+
+        // Link to real parent ID if available in the map
+        const mappedParentId = tempIdMap[ev.dettagli_extra.parent_temp_id] || ev.parent_id || null;
+
+        if (existingId) {
+          await db.update(eventsTable)
+            .set({
+              titolo: ev.titolo,
+              titoloOriginale: ev.titolo_originale || ev.titolo,
+              categoria: ev.categoria || null,
+              dataInizio: ev.data_inizio,
+              dataFine: ev.data_fine,
+              dateOriginali: ev.date_originali || null,
+              luogo: ev.luogo,
+              luogoOriginale: ev.luogo_originale || ev.luogo,
+              latitudine: ev.latitudine,
+              longitudine: ev.longitudine,
+              link: ev.link,
+              descrizione: ev.descrizione,
+              immagine: ev.immagine,
+              testoEstratto: ev.testo_estratto || null,
+              parentId: mappedParentId,
+              linkOrganizzatore: ev.link_organizzatore || null,
+              tags: ev.tags || null,
+              dettagliExtra: ev.dettagli_extra || null,
+              aggiornatoIl: new Date(),
+            })
+            .where(eq(eventsTable.id, existingId));
+
+          aggiornati++;
+        } else {
+          await db.insert(eventsTable).values({
+            titolo: ev.titolo,
+            titoloOriginale: ev.titolo_originale || ev.titolo,
+            categoria: ev.categoria || null,
+            dataInizio: ev.data_inizio,
+            dataFine: ev.data_fine,
+            dateOriginali: ev.date_originali || null,
+            luogo: ev.luogo,
+            luogoOriginale: ev.luogo_originale || ev.luogo,
+            latitudine: ev.latitudine,
+            longitudine: ev.longitudine,
+            link: ev.link,
+            descrizione: ev.descrizione,
+            immagine: ev.immagine,
+            fonte: ev.fonte || "",
+            testoEstratto: ev.testo_estratto || null,
+            parentId: mappedParentId,
+            linkOrganizzatore: ev.link_organizzatore || null,
+            tags: ev.tags || null,
+            dettagliExtra: ev.dettagli_extra || null,
+          });
+          nuovi++;
+        }
+      } catch (err) {
+        req.log.error({ err, ev }, "Error processing child event approval");
         errori++;
       }
     }
@@ -772,7 +815,7 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
 router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> => {
   req.log.info("Starting on-demand AI analysis for events");
 
-  const { events, target, use_proxy } = req.body;
+  const { events, target, use_proxy, mode = "analyze" } = req.body;
   if (!events || !Array.isArray(events) || events.length === 0) {
     res.status(400).json({ error: "No events provided" });
     return;
@@ -790,7 +833,7 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
       env: { ...process.env },
     });
 
-    child.stdin.write(JSON.stringify({ events, target, use_proxy }));
+    child.stdin.write(JSON.stringify({ events, target, use_proxy, mode }));
     child.stdin.end();
 
     let stdoutData = "";
@@ -829,13 +872,41 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
       if (r.error) {
         errori++;
         req.log.error({ err: r.error, event_id: r.id, tmp_id: r.tmp_id }, "AI analysis failed for event");
+      } else if (r.is_extracted && r.parent_id) {
+        // Mode "extract" returns flat extracted sub-events
+        try {
+          const [parent] = await db.select().from(eventsTable).where(eq(eventsTable.id, r.parent_id));
+          if (parent) {
+            await db.insert(eventsTable).values({
+              titolo: r.titolo || "Evento Senza Titolo",
+              titoloOriginale: r.titolo || "Evento Senza Titolo",
+              dataInizio: r.data_inizio ? new Date(r.data_inizio) : parent.dataInizio,
+              dataFine: r.data_fine ? new Date(r.data_fine) : parent.dataFine,
+              luogo: r.luogo || parent.luogo,
+              luogoOriginale: r.luogo || parent.luogoOriginale || parent.luogo,
+              descrizione: r.pezzo_di_testo_di_riferimento || "",
+              parentId: parent.id,
+              fonte: parent.fonte,
+              link: r.url_riferimento || parent.link,
+            });
+          }
+        } catch (e) {
+          req.log.error({ err: e, parent_id: r.parent_id }, "Failed to save AI extracted sub-event to DB");
+          errori++;
+        }
       } else if (r.id) {
         // If it has a real DB ID, update the DB directly
         try {
           // First fetch the parent event to check current dates and details
           const [parent] = await db.select().from(eventsTable).where(eq(eventsTable.id, r.id));
           if (parent) {
-            let { dataInizio, dataFine } = getFestivalDateRange(parent.dataInizio, parent.dataFine, r.sotto_eventi || []);
+            const aiDataInizio = r.data_inizio ? new Date(r.data_inizio) : null;
+            const aiDataFine = r.data_fine ? new Date(r.data_fine) : null;
+            let { dataInizio, dataFine } = getFestivalDateRange(
+              aiDataInizio && !isNaN(aiDataInizio.getTime()) ? aiDataInizio : parent.dataInizio, 
+              aiDataFine && !isNaN(aiDataFine.getTime()) ? aiDataFine : parent.dataFine, 
+              r.sotto_eventi || []
+            );
 
             await db.update(eventsTable)
               .set({
@@ -849,6 +920,7 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
                 descrizione: r.testo_grezzo_url || parent.descrizione,
                 dataInizio: dataInizio,
                 dataFine: dataFine,
+                luogo: r.luogo || parent.luogo,
                 aggiornatoIl: new Date(),
               })
               .where(eq(eventsTable.id, r.id));
@@ -865,7 +937,9 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
                   categoria: r.categoria || null,
                   dataInizio: se.data_inizio,
                   dataFine: se.data_fine || se.data_inizio,
+                  dateOriginali: se.date_testuali || null,
                   luogo: se.luogo || parent.luogo,
+                  luogoOriginale: se.luogo || parent.luogoOriginale || parent.luogo,
                   parentId: parent.id,
                   fonte: parent.fonte,
                   linkOrganizzatore: r.link_organizzatore || null,

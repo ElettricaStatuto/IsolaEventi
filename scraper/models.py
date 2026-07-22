@@ -7,6 +7,7 @@ class SottoEvento:
     titolo: str
     data_inizio: str
     data_fine: str
+    date_testuali: Optional[str] = None
     luogo: Optional[str] = None
     url: Optional[str] = None
     descrizione: Optional[str] = None
@@ -16,6 +17,7 @@ class Evento:
     titolo: str
     data_inizio: Optional[str] = None
     data_fine: Optional[str] = None
+    date_testuali: Optional[str] = None
     luogo: Optional[str] = None
     provincia: Optional[str] = None
     descrizione: Optional[str] = None

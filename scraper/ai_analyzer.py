@@ -142,7 +142,7 @@ Rispondi ESCLUSIVAMENTE in formato JSON usando questo schema esatto:
     except Exception as e:
         return [{"titolo": "Errore AI", "descrizione": str(e)}]
 
-def analyze_event(ev_dict: dict, target: str = "text", force_festival: bool = False, use_proxy: bool = False) -> dict:
+def analyze_event(ev_dict: dict, target: str = "text", force_festival: bool = False, use_proxy: bool = False, mode: str = "analyze") -> dict:
     from google import genai
     from google.genai import types
 
@@ -201,45 +201,96 @@ def analyze_event(ev_dict: dict, target: str = "text", force_festival: bool = Fa
                     
         festival_instruction = ""
         if force_festival:
-            festival_instruction = "\n\nATTENZIONE: L'utente ha confermato che questa pagina rappresenta il programma di un unico FESTIVAL. DEVI obbligatoriamente restituire 'is_festival': true e raggruppare tutti gli eventi trovati dentro l'array 'sotto_eventi'. Non restituire mai la lista vuota se ci sono eventi nel testo."
+            if mode == "extract":
+                festival_instruction = "\n\nATTENZIONE: L'utente ha confermato che questo è il programma di un FESTIVAL. Estrai con massima cura tutti i sotto-eventi presenti nel testo."
+            else:
+                festival_instruction = "\n\nATTENZIONE: L'utente ha confermato che questa pagina rappresenta il programma di un unico FESTIVAL. DEVI obbligatoriamente restituire 'is_festival_padre': true nella gestione_gerarchia."
+        elif dettagli_extra and dettagli_extra.get("festival_padre"):
+            festival_instruction = f"\n\nIMPORTANTE: Questo evento fa parte del festival '{dettagli_extra['festival_padre']}'. Assicurati di menzionarlo chiaramente nell'articolo! Ma assicurati di non cambiare il nome del titolo evento"
         
-        base_instructions = f"""
+        if mode == "extract":
+            base_instructions = f"""
+Sei un estrattore dati specializzato.
+Ti verrà fornito un lungo testo contenente un programma di eventi, un festival o un cartellone.
+Il tuo UNICO compito è frammentare questo lungo testo in TANTI SINGOLI EVENTI separati, e al contempo identificare le informazioni generali del contenitore (il Festival).
+
+REGOLA FONDAMENTALE: 
+Non devi creare un singolo evento riassuntivo. Per OGNI singola serata, concerto, spettacolo, mostra o incontro menzionato nel testo, devi creare un OGGETTO DEDICATO all'interno dell'array `eventi_figli_estratti`. Se ci sono 5 concerti, devi restituire 5 oggetti separati.
+
+Restituisci ESCLUSIVAMENTE questo esatto formato JSON:
+
+{{
+  "is_festival": true,
+  "info_festival_padre": {{
+    "titolo_festival": "Nome ufficiale del Festival o Rassegna (es. Ittiritmi 2026)",
+    "data_inizio_generale": "YYYY-MM-DD",
+    "data_fine_generale": "YYYY-MM-DD",
+    "descrizione_introduttiva": "Testo introduttivo generale o concept del festival..."
+  }},
+  "eventi_figli_estratti": [
+    {{
+      "titolo": "Titolo del singolo evento/concerto (non il nome del festival)",
+      "data_inizio": "YYYY-MM-DD",
+      "data_fine": "YYYY-MM-DD (se presente)",
+      "luogo": "Piazza X (se indicato per questo evento)",
+      "url_riferimento": "https://... (se presente nel frammento di testo)",
+      "pezzo_di_testo_di_riferimento": "COPIA E INCOLLA il frammento di testo esatto che parla SOLO di questo evento. Non riassumerlo."
+    }}
+  ]
+}}
+
+TESTO SORGENTE:
+{descrizione}
+"""
+        else:
+            base_instructions = f"""
 Sei un analista esperto di eventi culturali in Sardegna.
-Analizza il seguente testo (ed eventualmente l'immagine allegata) di un evento.
+Analizza ESCLUSIVAMENTE il testo fornito. Non inventare informazioni non presenti o non deducibili.
 {festival_instruction}
 
-Il tuo obiettivo è estrarre:
-1. Un titolo espanso ed elaborato ('titolo'). Se il titolo originale consiste solo nel nome di un artista, di un gruppo o di uno spettacolo (es. 'Satoyama', 'Bandakadabra'), espandilo aggiungendo la tipologia, come ad esempio 'Concerto: Satoyama' o 'Spettacolo: Bandakadabra'. Se l'evento fa parte di un festival, NON inserire il nome del festival nel titolo (es. NON scrivere 'al Time in Jazz') poiché verrà gestito separatamente tramite associazione del festival.
-2. La categoria principale dell'evento ('categoria'). Scegli uno tra: ["Musica", "Teatro", "Cinema", "Arte", "Incontro", "Enogastronomia", "Folklore", "Sport", "Bambini", "Altro"].
-3. Un riassunto chiaro e accattivante ('testo_estratto') specificamente per questa serata/evento. Scrivi come se fossi un giornalista culturale: usa un tono coinvolgente, professionale ed elegante, mettendo in risalto il valore artistico e culturale dell'evento. Non usare elenchi puntati freddi, ma crea una narrazione fluida.
-4. Trova se è presente un indirizzo o link del sito web ufficiale dell'organizzatore.
-5. Seleziona i TAG (categorie secondarie) per l'evento. Devi scegliere:
-   - ESATTAMENTE 1 "Tag Primario" da questa lista: ["Musica", "Teatro", "Cinema", "Arte e Mostre", "Enogastronomia", "Folklore e Tradizione", "Letteratura e Incontri", "Sport", "Bambini e Famiglie", "Altro"]
-   - DA 0 A 2 "Tag Secondari" da questa lista: ["Musica Elettronica", "Jazz", "Musica Classica", "Rock/Pop", "DJ Set", "Danza", "Stand-up Comedy", "Cinema d'Autore", "Documentario", "Cortometraggio", "Degustazione", "Mercato", "Escursione", "Festa Patronale", "Fotografia", "Workshop", "Festival"]
+COMPITO:
+Genera un output JSON strutturato secondo lo schema esatto qui sotto. 
+Usa `null` per i campi mancanti o vuoti (non ometterli).
+Se modifichi date o titoli in base a tue deduzioni logiche, DEVI obbligatoriamente dichiararlo nell'array `diario_di_bordo_ai`.
+Nella sezione `dati_curati_ai`, `categoria` deve essere una tra: ["Musica", "Teatro", "Cinema", "Arte", "Incontro", "Enogastronomia", "Folklore", "Sport", "Bambini", "Altro"].
+Nella sezione `dati_curati_ai`, `testo_estratto` deve essere un articolo giornalistico narrativo e accattivante (no elenchi puntati freddi).
 
-6. Se il testo si riferisce chiaramente all'intero cartellone o rassegna con tanti eventi diversi (o se è forzato come festival), imposta "is_festival" a true ed elenca i concerti/appuntamenti nell'array "sotto_eventi". Assicurati di estrarre anche il "url" specifico del sotto-evento e la "descrizione" (se presenti nel testo, marcati da `--- Link: ---` o simili).
-
-Rispondi ESCLUSIVAMENTE in formato JSON valido:
+STRUTTURA JSON OBBLIGATORIA:
 {{
-  "titolo": "Titolo espanso ed elaborato dell'evento",
-  "categoria": "Categoria principale",
-  "testo_estratto": "Riassunto completo della serata...",
-  "is_festival": false,
-  "sotto_eventi": [
+  "metadati_operazioni": {{
+    "timestamp_analisi_ai": "YYYY-MM-DDTHH:MM:SSZ",
+    "modello_utilizzato": "{MODEL}"
+  }},
+  "gestione_gerarchia": {{
+    "is_festival_padre": false,
+    "is_sotto_evento": false,
+    "nome_festival_riferimento": null
+  }},
+  "dati_curati_ai": {{
+    "titolo": "IL TITOLO - (ORIGINALE INVARIATO) - Titolo Eventopadre  (NON MODIFICARE IN NESSUN CASO)",
+    "categoria": "Categoria principale",
+    "testo_estratto": "Articolo giornalistico completo e accattivante...",
+    "data_inizio": "YYYY-MM-DD",
+    "data_fine": "YYYY-MM-DD",
+    "luogo": "Luogo fisico",
+    "link_organizzatore": "URL ufficiale o null",
+    "tags": ["Tag primario", "Tag secondario"]
+  }},
+  "approfondimenti_extra": {{
+    "bio_artisti": "Biografie se presenti...",
+    "crediti_regia_autori": "Regia, cast...",
+    "orari_dettagliati": "Apertura ore...",
+    "info_biglietti": "Prezzi...",
+    "contatti_utili": "Telefono, email..."
+  }},
+  "diario_di_bordo_ai": [
     {{
-      "titolo": "...",
-      "data_inizio": "...",
-      "data_fine": "...",
-      "luogo": "...",
-      "url": "...",
-      "descrizione": "..."
+      "campo_modificato": "nome del campo es. data_inizio",
+      "tipo_intervento": "DEDOTTO o GENERATO",
+      "motivazione": "Spiegazione sintetica della deduzione"
     }}
   ],
-  "link_organizzatore": "URL ufficiale o null",
-  "tags": ["Tag1", "Tag2"],
-  "dettagli_extra": {{
-     "chiave": "valore"
-  }}
+  "lista_sotto_eventi_estratti": []
 }}
 
 TESTO SORGENTE:
