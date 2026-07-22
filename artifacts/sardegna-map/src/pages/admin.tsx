@@ -2678,7 +2678,14 @@ export function Admin() {
                         className="text-lg font-bold mt-2 font-sans h-12 px-3"
                       />
                     ) : (
-                      <CardTitle className="text-lg font-bold mt-1">{inspectingEvent.titolo}</CardTitle>
+                      <div className="flex flex-col mt-1">
+                        <CardTitle className="text-lg font-bold">{inspectingEvent.titolo}</CardTitle>
+                        {inspectingEvent.dettagli_extra?.festival_padre && (
+                          <span className="text-xs font-medium text-amber-600 uppercase tracking-wide mt-1">
+                            ★ {inspectingEvent.dettagli_extra.festival_padre}
+                          </span>
+                        )}
+                      </div>
                     )}
                     <CardDescription className="mt-1">
                       {inspectingEvent.data_inizio ? new Date(inspectingEvent.data_inizio).toLocaleDateString("it-IT") : "N/D"}
