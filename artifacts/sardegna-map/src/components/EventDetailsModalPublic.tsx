@@ -3,6 +3,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { XCircle, Globe, Calendar, MapPin, Clock } from "lucide-react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 export interface EventDetailsModalPublicProps {
   event: any;
@@ -23,6 +25,41 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
 
   const [subEvents, setSubEvents] = React.useState<any[]>([]);
   const [isLoadingSubEvents, setIsLoadingSubEvents] = React.useState(false);
+  const miniMapRef = React.useRef<HTMLDivElement>(null);
+  const leafletMiniMap = React.useRef<any>(null);
+
+  React.useEffect(() => {
+    if (!miniMapRef.current || event.latitudine == null || event.longitudine == null) return;
+
+    if (leafletMiniMap.current) {
+      leafletMiniMap.current.remove();
+      leafletMiniMap.current = null;
+    }
+
+    try {
+      const map = L.map(miniMapRef.current, {
+        center: [event.latitudine, event.longitudine],
+        zoom: 14,
+        zoomControl: true,
+        attributionControl: false,
+      });
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+      L.marker([event.latitudine, event.longitudine]).addTo(map);
+
+      leafletMiniMap.current = map;
+    } catch (err) {
+      console.error("Error creating mini map:", err);
+    }
+
+    return () => {
+      if (leafletMiniMap.current) {
+        leafletMiniMap.current.remove();
+        leafletMiniMap.current = null;
+      }
+    };
+  }, [event.id, event.latitudine, event.longitudine]);
 
   React.useEffect(() => {
     if (!event.id) return;
@@ -230,6 +267,19 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
             </div>
           )}
 
+          {/* Mappa Posizione (Pannello Quadrato) */}
+          {event.latitudine != null && event.longitudine != null && (
+            <div className="border-t border-border pt-4">
+              <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
+                Posizione sulla Mappa
+              </h4>
+              <div 
+                ref={miniMapRef} 
+                className="w-full aspect-square max-w-[240px] h-[240px] rounded-lg border border-border shadow-sm overflow-hidden z-10"
+              />
+            </div>
+          )}
+
           {/* Sotto-eventi (Programma del Festival) */}
           {isLoadingSubEvents && (
             <div className="border-t border-border pt-4 text-center py-4 text-muted-foreground text-xs">
@@ -242,7 +292,7 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
               <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mb-3">
                 Programma del Festival ({subEvents.length} eventi)
               </h4>
-              <div className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-1">
+              <div className="flex flex-col gap-2 pr-1">
                 {subEvents.map((se) => (
                   <div
                     key={se.id}
