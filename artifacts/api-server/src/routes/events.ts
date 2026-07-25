@@ -838,7 +838,16 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
         const existingId = match?.id;
 
         // Link to real parent ID if available in the map
-        const mappedParentId = tempIdMap[ev.dettagli_extra.parent_temp_id] || ev.parent_id || null;
+        let mappedParentId = tempIdMap[ev.dettagli_extra.parent_temp_id] || ev.parent_id || null;
+        if (!mappedParentId && ev.dettagli_extra.parent_temp_id) {
+          const [foundParent] = await db
+            .select({ id: eventsTable.id })
+            .from(eventsTable)
+            .where(sql`${eventsTable.dettagliExtra}->>'id_key' = ${ev.dettagli_extra.parent_temp_id}`);
+          if (foundParent) {
+            mappedParentId = foundParent.id;
+          }
+        }
 
         if (existingId) {
           await db.update(eventsTable)
