@@ -123,7 +123,7 @@ Analizza ESCLUSIVAMENTE il testo e le immagini forniti. Non inventare informazio
 COMPITO:
 Genera un output JSON strutturato secondo lo schema esatto qui sotto.
 Usa `null` per i campi mancanti o vuoti (non ometterli).
-Se modifichi date, orari o titoli in base a tue deduzioni logiche, DEVI obbligatoriamente dichiararlo nell'array `diario_di_bordo_ai`.
+Se modifichi date o titoli in base a tue deduzioni logiche (ad esempio ricavando l'anno mancante dal giorno della settimana), DEVI obbligatoriamente dichiararlo nell'array `diario_di_bordo_ai`. Ricorda che questa regola NON si applica mai all'orario di fine: per l'orario di fine è assolutamente vietata qualsiasi deduzione, deve rimanere null se non scritto esplicitamente.
 
 ======================================================================
 REGOLE TASSATIVE DI FORMATTAZIONE E GESTIONE FESTIVAL / SOTTO-EVENTI:
@@ -131,7 +131,7 @@ REGOLE TASSATIVE DI FORMATTAZIONE E GESTIONE FESTIVAL / SOTTO-EVENTI:
 
 1. REGOLA FORMATO DATE E ORARI (TASSATIVO):
    - `data_inizio` e `data_fine`: Formato ISO 8601 strictly `YYYY-MM-DD` (es. "2026-08-15"). MAI testo libero tipo "15 Agosto" o "15/08/2026".
-   - `ora_inizio` e `ora_fine`: Formato 24 ore strictly `HH:MM` (es. "21:30", "19:00", "09:30"). Usa `null` se l'orario non è presente. NON ipotizzare o dedurre mai l'orario di fine. Se non è specificato in modo esplicito, imposta `ora_fine` rigorosamente a `null`.
+   - `ora_inizio` e `ora_fine`: Formato 24 ore strictly `HH:MM` (es. "21:30", "19:00", "09:30"). Usa `null` se l'orario non è presente. L'ORARIO DI FINE (ora_fine) DEVE ESSERE IMPOSTATO A NULL A MENO CHE non sia esplicitamente scritto nel testo/immagine (es. 'fino alle 20:00' o '18:00 - 20:00'). È SEVERAMENTE VIETATO dedurre o ipotizzare l'orario di fine (ora_fine) basandosi su orari navette, stime di durata o altri elementi di contorno. Se non è scritto in chiaro, imposta ora_fine a null.
 
 2. REGOLA TASSATIVA GESTIONE FESTIVAL E GERARCHIA (`lista_sotto_eventi_estratti`):
    - SE il testo/locandina contiene più date, un programma su più giornate, o più concerti/spettacoli/mostre/laboratori distinti:

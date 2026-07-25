@@ -353,14 +353,27 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 text-sm text-foreground">
-                  <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <span className="font-semibold">
-                    {inspectingEvent.data_inizio ? new Date(inspectingEvent.data_inizio).toLocaleDateString("it-IT") : "N/D"}
-                    {inspectingEvent.data_fine && inspectingEvent.data_fine !== inspectingEvent.data_inizio
-                      ? ` - ${new Date(inspectingEvent.data_fine).toLocaleDateString("it-IT")}`
-                      : ""}
-                  </span>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2 text-sm text-foreground">
+                    <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="font-semibold">
+                      {inspectingEvent.data_inizio ? new Date(inspectingEvent.data_inizio).toLocaleDateString("it-IT") : "N/D"}
+                      {inspectingEvent.data_fine && inspectingEvent.data_fine !== inspectingEvent.data_inizio
+                        ? ` - ${new Date(inspectingEvent.data_fine).toLocaleDateString("it-IT")}`
+                        : ""}
+                    </span>
+                  </div>
+                  {inspectingEvent.dettagli_extra?.ora_inizio && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground ml-6">
+                      <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                      <span>
+                        Inizia alle ore <strong className="text-foreground">{inspectingEvent.dettagli_extra.ora_inizio}</strong>
+                        {inspectingEvent.dettagli_extra.ora_fine && (
+                          <> fino alle <strong className="text-foreground">{inspectingEvent.dettagli_extra.ora_fine}</strong></>
+                        )}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

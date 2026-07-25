@@ -919,7 +919,10 @@ export function Admin() {
                 titolo: res.titolo || nextEvents[idx].titolo,
                 categoria: res.categoria || (nextEvents[idx] as any).categoria,
                 tags: res.tags || (nextEvents[idx] as any).tags,
-                dettagli_extra: res.dettagli_extra || (nextEvents[idx] as any).dettagli_extra,
+                dettagli_extra: {
+                  ...((nextEvents[idx] as any).dettagli_extra || {}),
+                  ...(res.dettagli_extra || {}),
+                },
                 testo_estratto: res.testo_estratto,
                 is_festival: res.is_festival,
                 sotto_eventi: res.sotto_eventi,
@@ -1486,11 +1489,14 @@ export function Admin() {
             sub_events_list: res.sotto_eventi || inspectingEvent.sub_events_list,
             link_organizzatore: res.link_organizzatore,
             tags: res.tags,
-            dettagli_extra: res.dettagli_extra,
+            dettagli_extra: {
+              ...(inspectingEvent.dettagli_extra || {}),
+              ...(res.dettagli_extra || {}),
+            },
           };
           setInspectingEvent(updatedEvent);
           setEditingTags(res.tags || []);
-          setEditingDettagli(res.dettagli_extra || {});
+          setEditingDettagli(updatedEvent.dettagli_extra || {});
           
           if (inspectingEvent.is_pending) {
             const nextEvents = [...previewEvents];
