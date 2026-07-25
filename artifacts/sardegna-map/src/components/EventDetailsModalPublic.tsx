@@ -21,13 +21,28 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
 }) => {
   if (!event) return null;
 
-  // Trova eventuale festival padre o sotto-eventi
+  const [subEvents, setSubEvents] = React.useState<any[]>([]);
+  const [isLoadingSubEvents, setIsLoadingSubEvents] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!event.id) return;
+    setIsLoadingSubEvents(true);
+    fetch(`/api/events/${event.id}/children`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setSubEvents(data);
+        }
+      })
+      .catch((err) => console.error("Error fetching sub-events:", err))
+      .finally(() => setIsLoadingSubEvents(false));
+  }, [event.id]);
+
+  // Trova eventuale festival padre
   const parentEvent = event.parent_id ? allEvents.find((e) => e.id === event.parent_id) : null;
-  const subEvents = allEvents.filter((e) => e.parent_id === event.id);
 
   const img = imageUrl(event);
 
-  // Filtra i dettagli extra escludendo metadati interni, dati sensibili e chiavi vuote.
   // Esclude anche la bio artisti/artista se questo evento è un festival (isFestival = true).
   const isFestival = Boolean(
     event.is_festival ||
@@ -216,6 +231,12 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
           )}
 
           {/* Sotto-eventi (Programma del Festival) */}
+          {isLoadingSubEvents && (
+            <div className="border-t border-border pt-4 text-center py-4 text-muted-foreground text-xs">
+              Caricamento programma del festival...
+            </div>
+          )}
+
           {subEvents.length > 0 && (
             <div className="border-t border-border pt-4">
               <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mb-3">
