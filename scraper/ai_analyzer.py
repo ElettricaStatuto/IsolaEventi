@@ -272,6 +272,12 @@ REGOLE TASSATIVE DI FORMATTAZIONE E GESTIONE FESTIVAL / SOTTO-EVENTI:
    - `categoria` deve essere ESATTAMENTE una tra: ["Musica", "Teatro", "Cinema", "Arte", "Incontro", "Enogastronomia", "Folklore", "Sport", "Bambini", "Altro"].
    - `testo_estratto` deve essere un articolo giornalistico narrativo e accattivante (no elenchi puntati freddi).
 
+4. REGOLA TASSATIVA LUOGO E PRECISIONE GEOGRAFICA (`luogo`):
+   - DEVI essere il più preciso possibile nell'estrazione del luogo.
+   - DEVI indicare tassativamente PRIMA il Comune/Città della Sardegna e POI il luogo specifico/piazza/struttura separati da virgola.
+   - Formato obbligatorio: "Città, Luogo Specifico" (es. "Carbonia, Campo sportivo", "Oristano, Piazza Cattedrale", "Alghero, Anfiteatro Maria Pia", "Cagliari, Parco della Musica").
+   - Questa regola vale sia per l'evento principale in `dati_curati_ai` che per ogni singolo sotto-evento in `lista_sotto_eventi_estratti`.
+
 STRUTTURA JSON OBBLIGATORIA:
 {{
   "metadati_operazioni": {{
@@ -291,7 +297,7 @@ STRUTTURA JSON OBBLIGATORIA:
     "data_fine": "YYYY-MM-DD",
     "ora_inizio": "HH:MM",
     "ora_fine": "HH:MM",
-    "luogo": "Luogo fisico o Comune",
+    "luogo": "Città, Luogo Specifico (es. Carbonia, Campo sportivo)",
     "link_organizzatore": "URL ufficiale o null",
     "tags": ["Tag primario", "Tag secondario"]
   }},
@@ -317,7 +323,7 @@ STRUTTURA JSON OBBLIGATORIA:
       "data_fine": "YYYY-MM-DD",
       "ora_inizio": "HH:MM",
       "ora_fine": "HH:MM",
-      "luogo": "Piazza o luogo specifico di questo sotto-evento",
+      "luogo": "Città, Luogo Specifico di questo sotto-evento",
       "descrizione": "Descrizione sintetica del singolo concerto o spettacolo",
       "artisti": ["Nome Artista 1"]
     }}
