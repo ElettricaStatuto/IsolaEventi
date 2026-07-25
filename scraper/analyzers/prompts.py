@@ -6,15 +6,30 @@ Questo file contiene i testi delle istruzioni (prompt) inviati a Gemini AI.
 Separare le istruzioni testuali dal codice logico rende la manutenzione immediata.
 
 I prompt presenti sono suddivisi per la specifica azione che svolgono:
-1. PROMPT_ANALISI_PDF               -> Estrazione e trascrizione eventi da file PDF
-2. PROMPT_ESTRAZIONE_FESTIVAL       -> Suddivisione e frammentazione di programmi lunghi
-3. PROMPT_ANALISI_STANDARD_EVENT    -> Analisi di singole locandine (immagini/post)
+
+1. PROMPT_ANALISI_PDF
+   - FASE: Caricamento e importazione da brochure o programmi cartacei.
+   - TRIGGER (PULSANTE): Avviato quando clicchi su "Carica PDF" nel pannello
+     Admin (Sezione "Preview eventi" -> Drag & Drop PDF).
+
+2. PROMPT_ESTRAZIONE_PROGRAMMA_FESTIVAL
+   - FASE: Suddivisione e frammentazione di programmi complessi/cartelloni in eventi singoli.
+   - TRIGGER (PULSANTE): Avviato in automatico durante lo "Scraping URL" se
+     spunti la casella "Forza Festival", oppure quando avvii l'estrazione AI
+     dei sotto-eventi su un testo lungo contenente più serate.
+
+3. PROMPT_ANALISI_LOCANDINA_STANDARD
+   - FASE: Creazione definitiva dell'articolo e della scheda geolocalizzata.
+   - TRIGGER (PULSANTE): Avviato quando premi il pulsante "Analizza" (o "Rianalizza")
+     su una card nella tabella "In Attesa" o "Analizzati". Elabora l'immagine
+     della locandina e/o il testo per compilare i campi del database.
 ================================================================================
 """
 
 # ==============================================================================
 #  1. PROMPT_ANALISI_PDF
-#  Scopo: Elaborare i PDF caricati nell'admin (es. brochure, volantini, pieghevoli)
+#  Fase: Importazione da PDF
+#  Trigger (Pulsante): "Carica PDF" (Area Admin -> Caricamento File)
 # ==============================================================================
 PROMPT_ANALISI_PDF = """Sei un analista esperto di eventi culturali in Sardegna.
 Il tuo obiettivo è esaminare il PDF allegato ed estrarre il programma completo.
@@ -50,7 +65,8 @@ Rispondi ESCLUSIVAMENTE in formato JSON usando questo schema esatto:
 
 # ==============================================================================
 #  2. PROMPT_ESTRAZIONE_PROGRAMMA_FESTIVAL
-#  Scopo: Frammentare programmi complessi o interi festival in singoli sotto-eventi
+#  Fase: Estrazione Sotto-Eventi / Frammentazione Cartellone
+#  Trigger (Pulsante): "Scrape URL" (con spunta su "Forza Festival") o "Estrai Sotto-eventi"
 # ==============================================================================
 PROMPT_ESTRAZIONE_PROGRAMMA_FESTIVAL = """Sei un estrattore dati specializzato in eventi culturali in Sardegna.
 Ti verrà fornito un lungo testo o locandina contenente un programma di eventi, un festival o un cartellone.
