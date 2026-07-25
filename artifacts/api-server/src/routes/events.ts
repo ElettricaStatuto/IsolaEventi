@@ -633,6 +633,55 @@ router.put("/events/refresh/preview/cache", requireAdminKey, (req, res): void =>
   }
 });
 
+// ---------------------------------------------------------------------------
+// Geocoding helper: chiama il geocoder Nominatim via Python se mancano le
+// coordinate. Usa la stessa funzione geocode() di scraper_runner.py.
+// ---------------------------------------------------------------------------
+async function geocodeIfMissing(ev: any, workspaceRoot: string, log: any): Promise<{ latitudine: number | null; longitudine: number | null }> {
+  // Se ha già entrambe le coordinate, non fare nulla
+  if (ev.latitudine != null && ev.longitudine != null) {
+    return { latitudine: ev.latitudine, longitudine: ev.longitudine };
+  }
+
+  const luogo = ev.luogo;
+  if (!luogo) {
+    return { latitudine: null, longitudine: null };
+  }
+
+  try {
+    // Chiama un piccolo script Python inline che usa la funzione geocode() di scraper_runner
+    const geocodeScript = `
+import sys, os
+sys.path.insert(0, r'${workspaceRoot.replace(/\\/g, '/')}') 
+try:
+    from scraper_runner import geocode
+    result = geocode(sys.argv[1])
+    if result:
+        print(f"{result[0]},{result[1]}")
+    else:
+        print("null")
+except Exception as e:
+    print("null")
+`;
+    const { stdout } = await execFileAsync("python", ["-c", geocodeScript, luogo], {
+      timeout: 15000,
+      cwd: workspaceRoot,
+    });
+    const out = stdout.trim();
+    if (out && out !== "null" && out.includes(",")) {
+      const [lat, lon] = out.split(",").map(Number);
+      if (!isNaN(lat) && !isNaN(lon)) {
+        log.info({ luogo, lat, lon }, "Geocoding automatico riuscito");
+        return { latitudine: lat, longitudine: lon };
+      }
+    }
+  } catch (err) {
+    log.warn({ err, luogo }, "Geocoding automatico fallito");
+  }
+
+  return { latitudine: null, longitudine: null };
+}
+
 function normalizeTitle(title: string): string {
   if (!title) return "";
   const stopWords = new Set(["festa", "sagra", "di", "a", "da", "in", "con", "su", "per", "tra", "fra", "il", "lo", "la", "i", "gli", "le", "un", "uno", "una", "del", "dello", "della", "dei", "degli", "delle", "al", "allo", "alla", "ai", "agli", "alle", "dal", "dallo", "dalla", "dai", "dagli", "dalle", "nel", "nello", "nella", "nei", "negli", "nelle", "sul", "sullo", "sulla", "sui", "sugli", "sulle", "col", "coi"]);
@@ -693,9 +742,23 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
 
     const tempIdMap: Record<string, number> = {};
 
+    const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
+      ? path.resolve(process.cwd(), "../..")
+      : process.cwd();
+
     // First pass: Process parents (those without parent_temp_id)
     const parents = (events as any[]).filter(ev => !ev.dettagli_extra?.parent_temp_id);
     const children = (events as any[]).filter(ev => ev.dettagli_extra?.parent_temp_id);
+
+    // Geocoding automatico: riempi lat/lon su tutti gli eventi che ne sono privi
+    req.log.info("Avvio geocoding automatico per eventi senza coordinate...");
+    for (const ev of [...parents, ...children]) {
+      if (ev.latitudine == null || ev.longitudine == null) {
+        const coords = await geocodeIfMissing(ev, workspaceRoot, req.log);
+        ev.latitudine = coords.latitudine;
+        ev.longitudine = coords.longitudine;
+      }
+    }
 
     for (const ev of parents) {
       try {
