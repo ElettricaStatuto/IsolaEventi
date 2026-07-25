@@ -187,6 +187,28 @@ export function EventList({
                           </div>
                         )}
                         
+                        {isFestival && (() => {
+                          const associatedEvents = events.filter(e => e.parent_id === evt.id);
+                          if (associatedEvents.length === 0) return null;
+                          return (
+                            <div className="mt-2.5 pt-2 border-t border-amber-200/50 flex flex-col gap-1 text-[11px] text-amber-900/80">
+                              <span className="font-semibold flex items-center gap-1">
+                                📅 Programma ({associatedEvents.length} eventi):
+                              </span>
+                              <ul className="list-disc pl-3.5 space-y-0.5 max-h-24 overflow-y-auto pr-1">
+                                {associatedEvents.map(se => (
+                                  <li key={se.id} className="truncate hover:underline cursor-pointer text-amber-800 hover:text-amber-950 font-medium" onClick={(e) => {
+                                    e.stopPropagation();
+                                    onSelectEvent(se.id);
+                                  }}>
+                                    {se.titolo}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          );
+                        })()}
+
                         {isFestival ? (
                           <div className="flex flex-col gap-2 mt-3 pt-2 border-t border-amber-200/50">
                             <Link href={`/festival/${evt.id}`}>
