@@ -743,7 +743,26 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
           )}
         </CardContent>
 
-        <div className="p-4 border-t border-border flex flex-wrap items-center justify-end gap-3 bg-muted/20">
+        <div className="p-4 border-t border-border flex flex-wrap items-center justify-between gap-3 bg-muted/20">
+          <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 flex-wrap">
+            {inspectingEvent.dettagli_extra?.metadati_operazioni?.modello_utilizzato && (
+              <span>Modello: <strong className="text-foreground">{inspectingEvent.dettagli_extra.metadati_operazioni.modello_utilizzato}</strong></span>
+            )}
+            {inspectingEvent.dettagli_extra?._usage && (
+              <>
+                {inspectingEvent.dettagli_extra?.metadati_operazioni?.modello_utilizzato && <span className="text-border">|</span>}
+                <span>
+                  Token: <strong className="text-foreground">{inspectingEvent.dettagli_extra._usage.total_tokens || inspectingEvent.dettagli_extra._usage.total || 0}</strong>
+                  <span className="opacity-80">
+                    {" "}(in: {inspectingEvent.dettagli_extra._usage.prompt_tokens || inspectingEvent.dettagli_extra._usage.input || 0} • 
+                    out: {inspectingEvent.dettagli_extra._usage.candidates_tokens || inspectingEvent.dettagli_extra._usage.output || 0})
+                  </span>
+                </span>
+              </>
+            )}
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-3">
           {!isEditingEvent && (
             <>
               <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1 bg-background text-xs">
@@ -809,6 +828,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               </Button>
             </>
           )}
+          </div>
         </div>
       </Card>
     </div>
