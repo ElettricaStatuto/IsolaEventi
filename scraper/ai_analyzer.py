@@ -70,13 +70,19 @@ def struttura_eventi_da_pdf(pdf_path: str, use_proxy: bool = False) -> list[dict
             return [{"titolo": "Errore", "descrizione": "Chiave API Gemini mancante per PDF."}]
         client = genai.Client(api_key=api_key)
 
-    base_instructions = """Sei un assistente AI.
-Il tuo obiettivo è esaminare il PDF allegato.
-1. Estrai e trascrivi TUTTO IL TESTO rilevante presente in tutte le pagine (il programma, le descrizioni, ecc.). Inseriscilo nel campo 'testo_integrale_pdf'.
-2. Identifica tutti gli eventi menzionati. Fai particolare attenzione a eventi secondari come MOSTRE (esposizioni d'arte, fotografia) o LABORATORI (workshop, seminari, attività didattiche) e trattali come eventi a sé stanti.
-3. Se è un festival o ci sono più date, dividi ogni giornata in un evento separato. Se c'è un nome generale per l'evento, crea anche un evento "Padre".
-4. FAI MOLTA ATTENZIONE ALLE DATE: se un evento indica un periodo continuo (es. "da Venerdì 17 a Domenica 19 Luglio"), DEVI assolutamente valorizzare sia "data_inizio" (2026-07-17) che "data_fine" (2026-07-19). Se è un giorno singolo, "data_fine" può essere uguale a "data_inizio" o omesso.
-5. Per ogni evento trovato (incluso il padre, le mostre e i laboratori), fornisci SOLO queste informazioni base: "titolo", "data_inizio" (YYYY-MM-DD), "data_fine" (YYYY-MM-DD), e "luogo". Dovrai calcolare l'anno in corso o logico se non è esplicito.
+    base_instructions = """Sei un analista esperto di eventi culturali in Sardegna.
+Il tuo obiettivo è esaminare il PDF allegato ed estrarre il programma completo.
+
+REGOLE TASSATIVE DI FORMATTAZIONE E COMPLETEZZA:
+1. FORMATO DATE E ORARI:
+   - `data_inizio` e `data_fine`: Formato ISO 8601 strictly `YYYY-MM-DD` (es. "2026-08-15"). MAI testo libero tipo "15 Agosto".
+   - `ora_inizio` e `ora_fine`: Formato 24 ore strictly `HH:MM` (es. "21:30", "19:00"). Usa `null` se non specificato.
+2. FORMATO LUOGO (PRECISIONE GEOGRAFICA):
+   - Formato obbligatorio: "Città, Luogo Specifico" (es. "Carbonia, Campo sportivo", "Oristano, Piazza Cattedrale").
+3. COMPLETEZZA ASSOLUTA (ZERO OMISSIONI):
+   - Estrai TUTTI gli eventi, concerti, spettacoli, mostre o laboratori menzionati nel PDF, SENZA TRASCURARNE NESSUNO. Se ce ne sono 4 ad orari o giorni diversi, DEVI restituire 4 oggetti separati nell'array 'eventi'.
+4. PERIODO CONTINUO:
+   - Se un evento indica un periodo (es. "da Venerdì 17 a Domenica 19 Luglio"), DEVI assolutamente valorizzare sia "data_inizio" (2026-07-17) che "data_fine" (2026-07-19).
 
 Rispondi ESCLUSIVAMENTE in formato JSON usando questo schema esatto:
 {
@@ -84,9 +90,12 @@ Rispondi ESCLUSIVAMENTE in formato JSON usando questo schema esatto:
   "eventi": [
     {
       "titolo": "Titolo Evento o Serata",
+      "categoria": "Musica | Teatro | Cinema | Arte | Enogastronomia | ...",
       "data_inizio": "YYYY-MM-DD",
       "data_fine": "YYYY-MM-DD",
-      "luogo": "Luogo dell'evento"
+      "ora_inizio": "HH:MM",
+      "ora_fine": "HH:MM",
+      "luogo": "Città, Luogo Specifico"
     }
   ]
 }
@@ -210,12 +219,18 @@ def analyze_event(ev_dict: dict, target: str = "text", force_festival: bool = Fa
         
         if mode == "extract":
             base_instructions = f"""
-Sei un estrattore dati specializzato.
-Ti verrà fornito un lungo testo contenente un programma di eventi, un festival o un cartellone.
-Il tuo UNICO compito è frammentare questo lungo testo in TANTI SINGOLI EVENTI separati, e al contempo identificare le informazioni generali del contenitore (il Festival).
+Sei un estrattore dati specializzato in eventi culturali in Sardegna.
+Ti verrà fornito un lungo testo o locandina contenente un programma di eventi, un festival o un cartellone.
+Il tuo UNICO compito è frammentare questo testo in TANTI SINGOLI EVENTI separati, identificando anche le informazioni generali del Festival Padre.
 
-REGOLA FONDAMENTALE: 
-Non devi creare un singolo evento riassuntivo. Per OGNI singola serata, concerto, spettacolo, mostra o incontro menzionato nel testo, devi creare un OGGETTO DEDICATO all'interno dell'array `eventi_figli_estratti`. Se ci sono 5 concerti, devi restituire 5 oggetti separati.
+REGOLE TASSATIVE:
+1. COMPLETEZZA ASSOLUTA (ZERO OMISSIONI):
+   Non creare mai un unico evento riassuntivo. Per OGNI singola serata, concerto, spettacolo, mostra o laboratorio menzionato nel testo, DEVI creare un OGGETTO DEDICATO dentro l'array `eventi_figli_estratti`. Se ad esempio ci sono 5 concerti, DEVI restituire 5 oggetti separati.
+2. FORMATO DATE E ORARI:
+   - `data_inizio_generale`, `data_fine_generale`, `data_inizio`, `data_fine`: Formato ISO 8601 strictly `YYYY-MM-DD` (es. "2026-08-15").
+   - `ora_inizio`, `ora_fine`: Formato 24 ore strictly `HH:MM` (es. "21:30", "19:00").
+3. FORMATO LUOGO (PRECISIONE GEOGRAFICA):
+   - Formato obbligatorio: "Città, Luogo Specifico" (es. "Carbonia, Campo sportivo", "Oristano, Piazza Cattedrale").
 
 Restituisci ESCLUSIVAMENTE questo esatto formato JSON:
 
@@ -229,12 +244,15 @@ Restituisci ESCLUSIVAMENTE questo esatto formato JSON:
   }},
   "eventi_figli_estratti": [
     {{
-      "titolo": "Titolo del singolo evento/concerto (non il nome del festival)",
+      "titolo": "Titolo del singolo evento/concerto (non il nome generale del festival)",
+      "categoria": "Musica | Teatro | Cinema | Arte | Enogastronomia | ...",
       "data_inizio": "YYYY-MM-DD",
-      "data_fine": "YYYY-MM-DD (se presente)",
-      "luogo": "Piazza X (se indicato per questo evento)",
-      "url_riferimento": "https://... (se presente nel frammento di testo)",
-      "pezzo_di_testo_di_riferimento": "COPIA E INCOLLA il frammento di testo esatto che parla SOLO di questo evento. Non riassumerlo."
+      "data_fine": "YYYY-MM-DD",
+      "ora_inizio": "HH:MM",
+      "ora_fine": "HH:MM",
+      "luogo": "Città, Luogo Specifico di questo sotto-evento",
+      "url_riferimento": "https://... (se presente)",
+      "pezzo_di_testo_di_riferimento": "COPIA E INCOLLA il frammento di testo esatto che parla SOLO di questo evento."
     }}
   ]
 }}
