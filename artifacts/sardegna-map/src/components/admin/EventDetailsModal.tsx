@@ -226,44 +226,47 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
 
         <CardContent className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
           {/* Image & Description */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            {imageUrl(inspectingEvent) ? (
-              <div className="relative shrink-0 w-full sm:w-48 h-36 group">
-                <img
-                  src={imageUrl(inspectingEvent)!}
-                  alt={inspectingEvent.titolo}
-                  className={`w-full h-full object-cover rounded-md border transition-all ${
-                    inspectingEvent.dettagli_extra?.immagine_pulita_e_pubblicabile === false
-                      ? "border-red-600 border-2 shadow-md shadow-red-100 dark:shadow-red-950/20"
-                      : ""
-                  }`}
-                />
-                {inspectingEvent.dettagli_extra?.immagine_pulita_e_pubblicabile === false && (
-                  <div className="absolute top-2 left-2">
-                    <div className="bg-red-600 text-white p-1.5 rounded-full shadow-md cursor-help flex items-center justify-center animate-pulse">
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                    </div>
-                    {/* Tooltip on hover */}
-                    <div className="absolute left-0 top-8 hidden group-hover:block bg-red-600 text-white text-[11px] leading-relaxed p-2.5 rounded-md shadow-xl z-50 w-60 border border-red-500 font-sans">
-                      <p className="font-bold flex items-center gap-1 mb-0.5">
-                        <AlertTriangle className="w-3.5 h-3.5" />
-                        Qualità Immagine Bassa
-                      </p>
-                      <p className="text-white/90">
-                        {inspectingEvent.dettagli_extra?.motivo_immagine_non_pulita ||
-                          "L'AI ha rilevato che questa immagine potrebbe essere una foto cartacea sgranata o poco chiara."}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="w-full sm:w-48 h-36 bg-muted flex items-center justify-center rounded-md border text-muted-foreground text-xs shrink-0">
-                Nessuna Immagine
-              </div>
-            )}
+          <div className="flex flex-col sm:flex-row gap-6">
             
-            <div className="mt-2 flex flex-col gap-2 w-full sm:w-48 shrink-0">
+            {/* Left Column: Image + Upload */}
+            <div className="flex flex-col gap-3 shrink-0 w-full sm:w-64">
+              {imageUrl(inspectingEvent) ? (
+                <div className="relative w-full h-48 sm:h-auto group">
+                  <img
+                    src={imageUrl(inspectingEvent)!}
+                    alt={inspectingEvent.titolo}
+                    className={`w-full aspect-[4/3] object-cover rounded-md border transition-all ${
+                      inspectingEvent.dettagli_extra?.immagine_pulita_e_pubblicabile === false
+                        ? "border-red-600 border-2 shadow-md shadow-red-100 dark:shadow-red-950/20"
+                        : ""
+                    }`}
+                  />
+                  {inspectingEvent.dettagli_extra?.immagine_pulita_e_pubblicabile === false && (
+                    <div className="absolute top-2 left-2">
+                      <div className="bg-red-600 text-white p-1.5 rounded-full shadow-md cursor-help flex items-center justify-center animate-pulse">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                      </div>
+                      {/* Tooltip on hover */}
+                      <div className="absolute left-0 top-8 hidden group-hover:block bg-red-600 text-white text-[11px] leading-relaxed p-2.5 rounded-md shadow-xl z-50 w-60 border border-red-500 font-sans">
+                        <p className="font-bold flex items-center gap-1 mb-0.5">
+                          <AlertTriangle className="w-3.5 h-3.5" />
+                          Qualità Immagine Bassa
+                        </p>
+                        <p className="text-white/90">
+                          {inspectingEvent.dettagli_extra?.motivo_immagine_non_pulita ||
+                            "L'AI ha rilevato che questa immagine potrebbe essere una foto cartacea sgranata o poco chiara."}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="w-full aspect-[4/3] bg-muted flex items-center justify-center rounded-md border text-muted-foreground text-xs shrink-0">
+                  Nessuna Immagine
+                </div>
+              )}
+              
+              <div className="flex flex-col gap-2 w-full">
               <input
                 type="file"
                 ref={fileInputRef}
@@ -322,8 +325,9 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 </label>
               )}
             </div>
+          </div>
             
-            <div className="flex-1 flex flex-col gap-3">
+          <div className="flex-1 flex flex-col gap-3">
               <div className="flex-1">
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                   Descrizione Originale
