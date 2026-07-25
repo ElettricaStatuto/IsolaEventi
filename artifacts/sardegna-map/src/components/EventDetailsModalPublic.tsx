@@ -205,78 +205,105 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
                 </div>
               )}
             </div>
-          </div>
+          {/* Data, Orario, Luogo & Mappa */}
+          {event.latitudine != null && event.longitudine != null ? (
+            <div className="flex flex-col sm:flex-row gap-4 border-t border-border pt-4">
+              {/* Left Column: Mini Map */}
+              <div className="flex flex-col gap-2 shrink-0">
+                <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  Posizione sulla Mappa
+                </h4>
+                <div 
+                  ref={miniMapRef} 
+                  className="w-full aspect-square sm:w-[240px] sm:h-[240px] h-[200px] rounded-lg border border-border shadow-sm overflow-hidden z-10"
+                />
+              </div>
 
-          {/* Data, Orario e Luogo */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Luogo */}
-            <div className="p-4 rounded-lg border border-border bg-card">
-              <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">
-                Dove
-              </h4>
-              <div className="flex items-start gap-2 text-sm text-foreground">
-                <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                <span className="font-semibold">{event.luogo || "Non specificato"}</span>
+              {/* Right Column: Dove & Quando Stacked */}
+              <div className="flex-1 flex flex-col gap-3 justify-between">
+                {/* Luogo */}
+                <div className="p-4 rounded-lg border border-border bg-card flex-1 flex flex-col justify-center">
+                  <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">
+                    Dove
+                  </h4>
+                  <div className="flex items-start gap-2 text-sm text-foreground">
+                    <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                    <span className="font-semibold">{event.luogo || "Non specificato"}</span>
+                  </div>
+                </div>
+
+                {/* Date e Orari */}
+                <div className="p-4 rounded-lg border border-border bg-card flex-1 flex flex-col justify-center">
+                  <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">
+                    Quando
+                  </h4>
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2 text-sm text-foreground">
+                      <Calendar className="w-4 h-4 text-primary shrink-0" />
+                      <span className="font-semibold">
+                        {event.data_inizio ? new Date(event.data_inizio).toLocaleDateString("it-IT") : "N/D"}
+                        {event.data_fine && event.data_fine !== event.data_inizio
+                          ? ` - ${new Date(event.data_fine).toLocaleDateString("it-IT")}`
+                          : ""}
+                      </span>
+                    </div>
+                    {event.dettagli_extra?.ora_inizio && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground ml-6">
+                        <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                        <span>
+                          Inizio ore <strong className="text-foreground">{event.dettagli_extra.ora_inizio}</strong>
+                          {event.dettagli_extra.ora_fine && (
+                            <> fino alle <strong className="text-foreground">{event.dettagli_extra.ora_fine}</strong></>
+                          )}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
-
-            {/* Date e Orari */}
-            <div className="p-4 rounded-lg border border-border bg-card">
-              <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">
-                Quando
-              </h4>
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center gap-2 text-sm text-foreground">
-                  <Calendar className="w-4 h-4 text-primary shrink-0" />
-                  <span className="font-semibold">
-                    {event.data_inizio ? new Date(event.data_inizio).toLocaleDateString("it-IT") : "N/D"}
-                    {event.data_fine && event.data_fine !== event.data_inizio
-                      ? ` - ${new Date(event.data_fine).toLocaleDateString("it-IT")}`
-                      : ""}
-                  </span>
+          ) : (
+            /* Fallback when no coordinates: classic 2-column grid */
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border pt-4">
+              {/* Luogo */}
+              <div className="p-4 rounded-lg border border-border bg-card">
+                <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">
+                  Dove
+                </h4>
+                <div className="flex items-start gap-2 text-sm text-foreground">
+                  <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                  <span className="font-semibold">{event.luogo || "Non specificato"}</span>
                 </div>
-                {event.dettagli_extra?.ora_inizio && (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground ml-6">
-                    <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                    <span>
-                      Inizio ore <strong className="text-foreground">{event.dettagli_extra.ora_inizio}</strong>
-                      {event.dettagli_extra.ora_fine && (
-                        <> fino alle <strong className="text-foreground">{event.dettagli_extra.ora_fine}</strong></>
-                      )}
+              </div>
+
+              {/* Date e Orari */}
+              <div className="p-4 rounded-lg border border-border bg-card">
+                <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">
+                  Quando
+                </h4>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2 text-sm text-foreground">
+                    <Calendar className="w-4 h-4 text-primary shrink-0" />
+                    <span className="font-semibold">
+                      {event.data_inizio ? new Date(event.data_inizio).toLocaleDateString("it-IT") : "N/D"}
+                      {event.data_fine && event.data_fine !== event.data_inizio
+                        ? ` - ${new Date(event.data_fine).toLocaleDateString("it-IT")}`
+                        : ""}
                     </span>
                   </div>
-                )}
+                  {event.dettagli_extra?.ora_inizio && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground ml-6">
+                      <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                      <span>
+                        Inizio ore <strong className="text-foreground">{event.dettagli_extra.ora_inizio}</strong>
+                        {event.dettagli_extra.ora_fine && (
+                          <> fino alle <strong className="text-foreground">{event.dettagli_extra.ora_fine}</strong></>
+                        )}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          </div>
-
-          {/* Dettagli Extra */}
-          {extraDetails.length > 0 && (
-            <div className="border-t border-border pt-4">
-              <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
-                Dettagli Utili
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {extraDetails.map(([key, value]) => (
-                  <div key={key} className="bg-muted/30 p-2.5 rounded border border-border/40 text-xs">
-                    <span className="font-semibold capitalize text-muted-foreground mr-1.5">{key.replace(/_/g, " ")}:</span>
-                    <span className="text-foreground">{String(value)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Mappa Posizione (Pannello Quadrato) */}
-          {event.latitudine != null && event.longitudine != null && (
-            <div className="border-t border-border pt-4">
-              <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
-                Posizione sulla Mappa
-              </h4>
-              <div 
-                ref={miniMapRef} 
-                className="w-full aspect-square max-w-[240px] h-[240px] rounded-lg border border-border shadow-sm overflow-hidden z-10"
-              />
             </div>
           )}
 
