@@ -2,9 +2,18 @@ import React from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { XCircle, Globe, Calendar, MapPin, Clock } from "lucide-react";
+import { XCircle, Globe, Calendar, MapPin, Clock, FileText } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+
+// Fix Leaflet default icon with CDN URLs (avoids Vite bundler issues)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
 
 export interface EventDetailsModalPublicProps {
   event: any;
@@ -166,6 +175,19 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
                 </div>
               )}
 
+              {/* Locandina PDF (Flyer) Button */}
+              {event.dettagli_extra?.pdf_path && (
+                <a
+                  href={`/api/event-pdfs/${String(event.dettagli_extra.pdf_path).split('/').pop()}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-center gap-2 w-full py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-sm transition-all hover:scale-[1.01] text-xs uppercase tracking-wider"
+                >
+                  <FileText className="w-4 h-4" />
+                  Visualizza Locandina PDF
+                </a>
+              )}
+
               {/* Tags */}
               {event.tags && event.tags.length > 0 && (
                 <div className="bg-muted/40 p-3 rounded-lg border border-border/60">
@@ -205,6 +227,7 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
                 </div>
               )}
             </div>
+          </div>
           {/* Data, Orario, Luogo & Mappa */}
           {event.latitudine != null && event.longitudine != null ? (
             <div className="flex flex-col sm:flex-row gap-4 border-t border-border pt-4">
@@ -331,8 +354,8 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
                       <span className="text-xs text-muted-foreground truncate">{se.luogo}</span>
                     </div>
                     <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                      <span className="text-xs font-mono font-medium text-primary">
-                        {se.data_inizio ? new Date(se.data_inizio).toLocaleDateString("it-IT") : ""}
+                      <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 capitalize">
+                        {se.data_inizio ? new Date(se.data_inizio).toLocaleDateString("it-IT", { day: 'numeric', month: 'long', year: 'numeric' }) : ""}
                       </span>
                       {se.dettagli_extra?.ora_inizio && (
                         <span className="text-[10px] text-muted-foreground">
