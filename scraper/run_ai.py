@@ -77,6 +77,14 @@ def main():
                 dettagli = {**original_dettagli, **ai_data.get("approfondimenti_extra", {})}
                 dettagli["diario_di_bordo_ai"] = ai_data.get("diario_di_bordo_ai", [])
                 dettagli["metadati_operazioni"] = ai_data.get("metadati_operazioni", {})
+                
+                # Salvataggio ora_inizio e ora_fine estratti dall'AI nei dettagli_extra
+                dati_curati = ai_data.get("dati_curati_ai", {})
+                if dati_curati.get("ora_inizio"):
+                    dettagli["ora_inizio"] = dati_curati.get("ora_inizio")
+                if dati_curati.get("ora_fine"):
+                    dettagli["ora_fine"] = dati_curati.get("ora_fine")
+
                 if "_usage" in ai_data:
                     dettagli["_usage"] = ai_data["_usage"]
                     

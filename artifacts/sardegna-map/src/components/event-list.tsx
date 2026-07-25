@@ -159,6 +159,7 @@ export function EventList({
                               {evt.data_fine && evt.data_fine !== evt.data_inizio
                                 ? ` - ${format(new Date(evt.data_fine), "dd/MM/yyyy")}`
                                 : ""}
+                              {evt.dettagli_extra?.ora_inizio && ` alle ore ${evt.dettagli_extra.ora_inizio}`}
                             </span>
                           </div>
                         )}

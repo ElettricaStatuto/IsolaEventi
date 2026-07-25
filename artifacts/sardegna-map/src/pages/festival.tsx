@@ -135,7 +135,10 @@ export function FestivalPage() {
                         {date && (
                           <div className="flex items-center gap-2 text-primary font-medium text-sm">
                             <Clock className="w-4 h-4" />
-                            <span className="capitalize">{format(date, "EEEE d MMMM yyyy", { locale: it })}</span>
+                            <span className="capitalize">
+                              {format(date, "EEEE d MMMM yyyy", { locale: it })}
+                              {se.dettagli_extra?.ora_inizio && ` alle ore ${se.dettagli_extra.ora_inizio}`}
+                            </span>
                           </div>
                         )}
                         <h3 className="text-lg font-bold leading-tight">{se.titolo}</h3>

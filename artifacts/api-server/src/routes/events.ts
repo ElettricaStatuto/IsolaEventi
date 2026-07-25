@@ -943,6 +943,10 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
                   parentId: parent.id,
                   fonte: parent.fonte,
                   linkOrganizzatore: r.link_organizzatore || null,
+                  dettagliExtra: {
+                    ora_inizio: se.ora_inizio || null,
+                    ora_fine: se.ora_fine || null
+                  }
                 });
               }
             }
