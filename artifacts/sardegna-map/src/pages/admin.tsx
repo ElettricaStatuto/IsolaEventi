@@ -914,14 +914,17 @@ export function Admin() {
             successi++;
             if (ev.is_pending) {
               const idx = ev.original_idx;
+              const isChild = !!((nextEvents[idx] as any).dettagli_extra?.parent_temp_id);
               const updatedEvent = {
                 ...nextEvents[idx],
-                titolo: res.titolo || nextEvents[idx].titolo,
+                titolo: isChild ? nextEvents[idx].titolo : (res.titolo || nextEvents[idx].titolo),
                 categoria: res.categoria || (nextEvents[idx] as any).categoria,
                 tags: res.tags || (nextEvents[idx] as any).tags,
                 dettagli_extra: {
                   ...((nextEvents[idx] as any).dettagli_extra || {}),
                   ...(res.dettagli_extra || {}),
+                  // Forza il mantenimento del parent_temp_id se esisteva
+                  parent_temp_id: (nextEvents[idx] as any).dettagli_extra?.parent_temp_id || res.dettagli_extra?.parent_temp_id,
                 },
                 testo_estratto: res.testo_estratto,
                 is_festival: res.is_festival,
@@ -1496,6 +1499,7 @@ export function Admin() {
             dettagli_extra: {
               ...(inspectingEvent.dettagli_extra || {}),
               ...(res.dettagli_extra || {}),
+              parent_temp_id: inspectingEvent.dettagli_extra?.parent_temp_id || res.dettagli_extra?.parent_temp_id,
             },
           };
           setInspectingEvent(updatedEvent);

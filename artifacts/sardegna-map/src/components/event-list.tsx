@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MapPin, Calendar, ExternalLink, Loader2, Flag, Share2, Globe, FileText } from "lucide-react";
+import { MapPin, Calendar, ExternalLink, Loader2, Flag, Share2, Globe, FileText, Clock } from "lucide-react";
 import { format } from "date-fns";
 import type { Event } from "@workspace/api-client-react";
 import { Link } from "wouter";
@@ -159,7 +159,14 @@ export function EventList({
                               {evt.data_fine && evt.data_fine !== evt.data_inizio
                                 ? ` - ${format(new Date(evt.data_fine), "dd/MM/yyyy")}`
                                 : ""}
-                              {evt.dettagli_extra?.ora_inizio && ` alle ore ${evt.dettagli_extra.ora_inizio}`}
+                            </span>
+                          </div>
+                        )}
+                        {evt.dettagli_extra?.ora_inizio && (
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <Clock className={`w-3.5 h-3.5 flex-shrink-0 ${isFestival ? "text-amber-600" : "text-muted-foreground"}`} />
+                            <span className="font-medium text-foreground">
+                              Ore {evt.dettagli_extra.ora_inizio}
                             </span>
                           </div>
                         )}

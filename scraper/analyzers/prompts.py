@@ -37,7 +37,7 @@ Il tuo obiettivo è esaminare il PDF allegato ed estrarre il programma completo.
 REGOLE TASSATIVE DI FORMATTAZIONE E COMPLETEZZA:
 1. FORMATO DATE E ORARI:
    - `data_inizio` e `data_fine`: Formato ISO 8601 strictly `YYYY-MM-DD` (es. "2026-08-15"). MAI testo libero tipo "15 Agosto".
-   - `ora_inizio` e `ora_fine`: Formato 24 ore strictly `HH:MM` (es. "21:30", "19:00"). Usa `null` se non specificato.
+   - `ora_inizio` e `ora_fine`: Formato 24 ore strictly `HH:MM` (es. "21:30", "19:00"). Usa `null` se l'orario non è presente. L'ORARIO DI FINE (ora_fine) DEVE ESSERE IMPOSTATO A NULL A MENO CHE non sia esplicitamente scritto. È SEVERAMENTE VIETATO dedurre o ipotizzare l'orario di fine. Se non è scritto in chiaro, imposta ora_fine a null.
 2. FORMATO LUOGO (PRECISIONE GEOGRAFICA):
    - Formato obbligatorio: "Città, Luogo Specifico" (es. "Carbonia, Campo sportivo", "Oristano, Piazza Cattedrale").
 3. COMPLETEZZA ASSOLUTA (ZERO OMISSIONI):
