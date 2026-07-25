@@ -10,6 +10,7 @@ import { useEventsFilter } from "../hooks/use-events-filter";
 import { DateFilter } from "../components/date-filter";
 import { EventList } from "../components/event-list";
 import { MapContainer } from "../components/map-container";
+import { EventDetailsModalPublic } from "../components/EventDetailsModalPublic";
 
 export function Home() {
   const queryClient = useQueryClient();
@@ -204,6 +205,25 @@ export function Home() {
           </div>
         )}
       </div>
+
+      {/* Public Event Details Overlay */}
+      {(() => {
+        const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) : null;
+        const getImageUrl = (ev: any) => {
+          if (!ev?.immagine) return null;
+          return ev.immagine.startsWith("http") ? ev.immagine : `/api/event-images/${ev.immagine}`;
+        };
+
+        return selectedEvent ? (
+          <EventDetailsModalPublic
+            event={selectedEvent}
+            onClose={() => setLocation("/")}
+            allEvents={events}
+            onSelectEvent={handleSelectEvent}
+            imageUrl={getImageUrl}
+          />
+        ) : null;
+      })()}
     </div>
   );
 }
