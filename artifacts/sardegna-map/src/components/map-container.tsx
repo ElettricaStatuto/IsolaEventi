@@ -3,13 +3,17 @@ import "leaflet/dist/leaflet.css";
 import { useEffect, useRef } from "react";
 import type { Event } from "@workspace/api-client-react";
 
-// Fix Leaflet default icon with CDN URLs (avoids Vite bundler issues)
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
+
+// Fix Leaflet default icon using local bundled assets (avoids Vite bundler issues)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
 });
 
 interface MapContainerProps {
@@ -91,60 +95,14 @@ export function MapContainer({
     events.forEach((evt) => {
       if (evt.latitudine == null || evt.longitudine == null) return;
 
-      const isFestival = (evt as any).children_count > 0;
-      const isChild = !!evt.parent_id;
-      
-      const categoryStyles: Record<string, { color: string; icon: string }> = {
-        Musica: { color: "#3b82f6", icon: "🎵" },
-        Teatro: { color: "#8b5cf6", icon: "🎭" },
-        Cinema: { color: "#ec4899", icon: "🎬" },
-        Arte: { color: "#10b981", icon: "🎨" },
-        Incontro: { color: "#f59e0b", icon: "🗣️" },
-        Enogastronomia: { color: "#ea580c", icon: "🍷" },
-        Folklore: { color: "#dc2626", icon: "🥁" },
-        Sport: { color: "#06b6d4", icon: "🏆" },
-        Bambini: { color: "#84cc16", icon: "🎈" },
-        Altro: { color: "#6b7280", icon: "📍" },
-      };
-
-      const cat = evt.categoria || "Altro";
-      const style = categoryStyles[cat] || categoryStyles.Altro;
-      let icon = new L.Icon.Default();
-
-      if (isFestival) {
-        icon = L.divIcon({
-          className: "custom-div-icon-festival",
-          html: `<div style="background-color: #c0661b; color: white; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(0,0,0,0.4); border: 2px solid white;"><span style="transform: rotate(45deg); font-size:16px;">🎪</span></div>`,
-          iconSize: [34, 34],
-          iconAnchor: [17, 34],
-          popupAnchor: [0, -34]
-        });
-      } else if (isChild) {
-        icon = L.divIcon({
-          className: "custom-div-icon-child",
-          html: `<div style="background-color: ${style.color}; border-radius: 50%; width: 22px; height: 22px; border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.35); display:flex;align-items:center;justify-content:center;font-size:11px;color:white;">${style.icon}</div>`,
-          iconSize: [22, 22],
-          iconAnchor: [11, 11],
-          popupAnchor: [0, -11]
-        });
-      } else {
-        icon = L.divIcon({
-          className: "custom-div-icon-standard",
-          html: `<div style="background-color: ${style.color}; color: white; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.35); border: 2px solid white;"><span style="transform: rotate(45deg); font-size:14px; display:block;">${style.icon}</span></div>`,
-          iconSize: [32, 32],
-          iconAnchor: [16, 32],
-          popupAnchor: [0, -32]
-        });
-      }
-
-      const marker = L.marker([evt.latitudine, evt.longitudine], { icon });
+      const marker = L.marker([evt.latitudine, evt.longitudine]);
 
       const dateStr = evt.data_inizio
         ? `${evt.data_inizio}${evt.data_fine && evt.data_fine !== evt.data_inizio ? " – " + evt.data_fine : ""}`
         : "";
         
       const parentLink = evt.parent_id ? `<a href="/festival/${evt.parent_id}" style="font-size:11px;color:#6b21a8;text-decoration:underline;display:block;margin-top:4px;">↑ Vedi Festival Padre</a>` : '';
-      const festivalLink = isFestival ? `<a href="/festival/${evt.id}" style="font-size:11px;color:white;font-weight:bold;display:block;margin-top:6px;background:#c0661b;padding:6px 10px;border-radius:4px;text-align:center;text-decoration:none;box-shadow: 0 1px 3px rgba(0,0,0,0.15);">🏆 Vedi Programma Festival</a>` : '';
+      const festivalLink = (evt as any).children_count > 0 ? `<a href="/festival/${evt.id}" style="font-size:11px;color:white;font-weight:bold;display:block;margin-top:6px;background:#c0661b;padding:6px 10px;border-radius:4px;text-align:center;text-decoration:none;box-shadow: 0 1px 3px rgba(0,0,0,0.15);">🏆 Vedi Programma Festival</a>` : '';
 
       marker.bindPopup(`
         <div style="min-width:190px;font-family:sans-serif;">
