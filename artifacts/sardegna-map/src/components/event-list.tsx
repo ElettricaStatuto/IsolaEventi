@@ -123,8 +123,8 @@ export function EventList({
                     className={`cursor-pointer transition-all duration-300 ${
                       isFestival
                         ? selectedEventId === evt.id
-                          ? "border-amber-500 shadow-md bg-amber-500/5 ring-1 ring-amber-500/30"
-                          : "border-amber-200 hover:border-amber-400 bg-amber-50/30 shadow-sm hover:shadow-md hover:-translate-y-0.5"
+                          ? "border-orange-500 shadow-md bg-orange-500/5 ring-1 ring-orange-500/30"
+                          : "border-orange-300 dark:border-orange-900/60 hover:border-orange-500 bg-orange-50/10 dark:bg-orange-950/5 shadow-sm hover:shadow-md hover:-translate-y-0.5"
                         : selectedEventId === evt.id
                           ? "border-primary shadow-sm bg-primary/5"
                           : "bg-card hover:border-primary/50"
@@ -133,8 +133,8 @@ export function EventList({
                   >
                     <CardContent className="p-4 relative">
                       {isFestival && (
-                        <div className="absolute top-4 right-4 bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider flex items-center gap-1 uppercase">
-                          <Flag className="w-3 h-3 text-amber-600 fill-amber-600" />
+                        <div className="absolute top-4 right-4 bg-orange-100 dark:bg-orange-950/30 text-orange-800 dark:text-orange-300 border border-orange-200 dark:border-orange-900/30 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider flex items-center gap-1 uppercase">
+                          <Flag className="w-3 h-3 text-orange-600 fill-orange-600" />
                           Festival
                         </div>
                       )}
@@ -210,10 +210,10 @@ export function EventList({
                         })()}
 
                         {isFestival ? (
-                          <div className="flex flex-col gap-2 mt-3 pt-2 border-t border-amber-200/50">
+                          <div className="flex flex-col gap-2 mt-3 pt-2 border-t border-orange-200/50">
                             <Link href={`/festival/${evt.id}`}>
                               <a 
-                                className="flex items-center gap-1.5 text-white font-semibold bg-amber-600 hover:bg-amber-700 transition-colors w-fit px-3 py-1.5 rounded-md text-xs shadow-sm hover:shadow" 
+                                className="flex items-center gap-1.5 text-white font-semibold bg-orange-600 hover:bg-orange-700 transition-colors w-fit px-3 py-1.5 rounded-md text-xs shadow-sm hover:shadow" 
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <Flag className="w-3.5 h-3.5" />
