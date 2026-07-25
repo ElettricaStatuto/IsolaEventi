@@ -35,6 +35,29 @@ export function Home() {
   // Derive selectedEventId from URL
   const selectedEventId = params?.idAndSlug ? parseInt(params.idAndSlug.split("-")[0], 10) : null;
 
+  const [selectedEventDetail, setSelectedEventDetail] = useState<any | null>(null);
+
+  // Fetch full details of the selected event if not present in the pre-loaded list (e.g. sub-events)
+  useEffect(() => {
+    if (!selectedEventId) {
+      setSelectedEventDetail(null);
+      return;
+    }
+    const localMatch = events.find((e) => e.id === selectedEventId);
+    if (localMatch) {
+      setSelectedEventDetail(localMatch);
+    } else {
+      fetch(`/api/events/${selectedEventId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && !data.error) {
+            setSelectedEventDetail(data);
+          }
+        })
+        .catch((err) => console.error("Error fetching single event:", err));
+    }
+  }, [selectedEventId, events]);
+
   // Client-side date range filtering
   const {
     filteredEvents,
@@ -55,7 +78,9 @@ export function Home() {
         .replace(/(^-|-$)/g, "");
       setLocation(`/eventi/${id}-${slug}`);
     } else {
-      setLocation("/");
+      // For sub-events or events not currently in list, redirect using generic slug
+      // The router matches the ID and the useEffect loads it dynamically
+      setLocation(`/eventi/${id}-evento`);
     }
   };
 
@@ -208,15 +233,14 @@ export function Home() {
 
       {/* Public Event Details Overlay */}
       {(() => {
-        const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) : null;
         const getImageUrl = (ev: any) => {
           if (!ev?.immagine) return null;
           return ev.immagine.startsWith("http") ? ev.immagine : `/api/event-images/${ev.immagine}`;
         };
 
-        return selectedEvent ? (
+        return selectedEventDetail ? (
           <EventDetailsModalPublic
-            event={selectedEvent}
+            event={selectedEventDetail}
             onClose={() => setLocation("/")}
             allEvents={events}
             onSelectEvent={handleSelectEvent}
