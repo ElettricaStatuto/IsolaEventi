@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Switch, Route, Link, Router as WouterRouter } from "wouter";
+import { Switch, Route, Link, useLocation, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,6 +16,8 @@ const Admin = lazy(() => import("./pages/admin").then((m) => ({ default: m.Admin
 const queryClient = new QueryClient();
 
 function Layout({ children }: { children: React.ReactNode }) {
+  const [location, setLocation] = useLocation();
+
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans">
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border shadow-sm">
@@ -26,7 +28,13 @@ function Layout({ children }: { children: React.ReactNode }) {
           </Link>
           <nav className="flex gap-4">
             <button
-              onClick={() => window.dispatchEvent(new CustomEvent("toggle-map-view"))}
+              onClick={() => {
+                if (location !== "/" && !location.startsWith("/eventi/")) {
+                  setLocation("/");
+                } else {
+                  window.dispatchEvent(new CustomEvent("toggle-map-view"));
+                }
+              }}
               className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted text-sm font-medium transition-colors cursor-pointer bg-transparent border-none"
             >
               <Map className="w-4 h-4 text-primary" /> Mappa
