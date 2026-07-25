@@ -851,7 +851,7 @@ export function Admin() {
     }
   };
 
-  const handleAnalyzeEventsMixed = async (toAnalyze: any[]) => {
+  const handleAnalyzeEventsMixed = async (toAnalyze: any[], currentPreviewEvents?: any[]) => {
     if (toAnalyze.length === 0) return;
 
     setAnalyzingStep("preview");
@@ -860,7 +860,7 @@ export function Admin() {
     isAbortedRef.current = false;
 
     const total = toAnalyze.length;
-    let nextEvents = [...previewEvents];
+    let nextEvents = currentPreviewEvents ? [...currentPreviewEvents] : [...previewEvents];
     let successi = 0;
     let erroriCount = 0;
     let reloadPublished = false;
@@ -1419,7 +1419,10 @@ export function Admin() {
         is_pending: true
       }));
       
-      handleAnalyzeEventsMixed([{ ...updatedParent, original_idx: parentIdx, is_pending: true }, ...childrenToAnalyze]);
+      handleAnalyzeEventsMixed(
+        [{ ...updatedParent, original_idx: parentIdx, is_pending: true }, ...childrenToAnalyze],
+        combinedEvents
+      );
       return;
     }
     
