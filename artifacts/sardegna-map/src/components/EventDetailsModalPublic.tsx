@@ -29,7 +29,13 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
 
   // Filtra i dettagli extra escludendo metadati interni, dati sensibili e chiavi vuote.
   // Esclude anche la bio artisti/artista se questo evento è un festival (isFestival = true).
-  const isFestival = Boolean(event.is_festival || subEvents.length > 0);
+  const isFestival = Boolean(
+    event.is_festival ||
+    event.dettagli_extra?.is_festival ||
+    subEvents.length > 0 ||
+    event.titolo?.toLowerCase().includes("festival") ||
+    event.titolo?.toLowerCase().includes("sagra")
+  );
   const extraDetails = event.dettagli_extra
     ? Object.entries(event.dettagli_extra).filter(
         ([key, value]) =>
