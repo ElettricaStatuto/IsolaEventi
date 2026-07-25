@@ -1331,20 +1331,32 @@ export function Admin() {
 
   const handleAnalyzeGroupFromModal = () => {
     if (!inspectingEvent || !inspectingEvent.is_pending) return;
-    const parentIdx = previewEvents.findIndex(ev => ev.dettagli_extra?.id_key === inspectingEvent.dettagli_extra?.id_key);
-    if (parentIdx === -1) return;
+    
+    // Trova l'indice del padre usando prima id_key, poi ricadendo su idx/tmp_id
+    let parentIdx = -1;
+    if (inspectingEvent.dettagli_extra?.id_key) {
+      parentIdx = previewEvents.findIndex(ev => ev.dettagli_extra?.id_key === inspectingEvent.dettagli_extra?.id_key);
+    }
+    if (parentIdx === -1) {
+      const idxStr = inspectingEvent.tmp_id;
+      parentIdx = typeof inspectingEvent.idx === 'number' ? inspectingEvent.idx : parseInt(idxStr, 10);
+    }
+    
+    if (parentIdx === -1 || !previewEvents[parentIdx]) return;
     
     const parentEv = { ...previewEvents[parentIdx], original_idx: parentIdx, is_pending: true };
+    const parentIdKey = parentEv.dettagli_extra?.id_key || `temp_parent_${Math.random().toString(36).substring(2, 10)}`;
     
-    // Filtra i figli già esistenti
-    let childrenToAnalyze = previewEvents
-      .map((ev, i) => ({ ...ev, original_idx: i, is_pending: true }))
-      .filter(ev => ev.dettagli_extra?.parent_temp_id === inspectingEvent.dettagli_extra?.id_key);
+    // Filtra i figli già esistenti (solo se il padre ha un id_key)
+    let childrenToAnalyze: any[] = [];
+    if (parentEv.dettagli_extra?.id_key) {
+      childrenToAnalyze = previewEvents
+        .map((ev, i) => ({ ...ev, original_idx: i, is_pending: true }))
+        .filter(ev => ev.dettagli_extra?.parent_temp_id === parentEv.dettagli_extra?.id_key);
+    }
       
     // Se non ci sono ancora card figlie generate per questo festival, le creiamo al volo!
     if (childrenToAnalyze.length === 0 && inspectingEvent.sub_events_list && inspectingEvent.sub_events_list.length > 0) {
-      const parentIdKey = inspectingEvent.dettagli_extra?.id_key || `temp_parent_${Math.random().toString(36).substring(2, 10)}`;
-      
       let updatedParent = { ...previewEvents[parentIdx] };
       if (!updatedParent.dettagli_extra || !updatedParent.dettagli_extra.id_key) {
         updatedParent.dettagli_extra = {
