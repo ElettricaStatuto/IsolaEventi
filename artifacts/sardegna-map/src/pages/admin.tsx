@@ -937,7 +937,10 @@ export function Admin() {
                   (inspectingEvent.tmp_id === ev.tmp_id || inspectingEvent.dettagli_extra?.id_key === ev.dettagli_extra?.id_key)) {
                 
                 // Recuperiamo la lista aggiornata dei sotto-eventi
-                const subEvents = nextEvents.filter(e => e.dettagli_extra?.parent_temp_id === updatedEvent.dettagli_extra?.id_key);
+                let subEvents = nextEvents.filter(e => e.dettagli_extra?.parent_temp_id === updatedEvent.dettagli_extra?.id_key);
+                if (subEvents.length === 0 && updatedEvent.sotto_eventi && updatedEvent.sotto_eventi.length > 0) {
+                  subEvents = updatedEvent.sotto_eventi;
+                }
                 setInspectingEvent({
                   ...updatedEvent,
                   is_pending: true,
@@ -1268,6 +1271,9 @@ export function Admin() {
     let subEvents: any[] = [];
     if (isPending) {
       subEvents = previewEvents.filter(e => e.dettagli_extra?.parent_temp_id === ev.dettagli_extra?.id_key);
+      if (subEvents.length === 0 && ev.sotto_eventi && ev.sotto_eventi.length > 0) {
+        subEvents = ev.sotto_eventi;
+      }
     } else {
       subEvents = publishedEvents
         .filter((child) => child.parent_id === ev.id)

@@ -119,8 +119,16 @@ def analyze_standard_event(
     festival_instruction = ""
     if force_festival:
         festival_instruction = "\n\nATTENZIONE: L'utente ha confermato che questa pagina rappresenta il programma di un unico FESTIVAL. DEVI obbligatoriamente restituire 'is_festival_padre': true nella gestione_gerarchia."
-    elif dettagli_extra and dettagli_extra.get("festival_padre"):
-        festival_instruction = f"\n\nIMPORTANTE: Questo evento fa parte del festival '{dettagli_extra['festival_padre']}'. Assicurati di menzionarlo chiaramente nell'articolo! Ma assicurati di non cambiare il nome del titolo evento"
+    elif dettagli_extra and (dettagli_extra.get("festival_padre") or dettagli_extra.get("parent_temp_id")):
+        parent_name = dettagli_extra.get("festival_padre") or "Festival"
+        festival_instruction = (
+            f"\n\nATTENZIONE - QUESTO E UN SOTTO-EVENTO (EVENTO FIGLIO):\n"
+            f"- Questo evento fa parte del festival '{parent_name}'.\n"
+            f"- E un evento singolo di una serata specifica, NON un festival intero.\n"
+            f"- IMPONE: Imposta 'is_festival_padre': false in gestione_gerarchia e 'lista_sotto_eventi_estratti': [].\n"
+            f"- IMPONE: MANTIENI ASSOLUTAMENTE COME TITOLO dell'evento '{titolo}'. Non cambiarlo con il titolo del festival generale.\n"
+            f"- Concentrati solo ed esclusivamente sulle informazioni relative a questa specifica serata/attività: '{titolo}'."
+        )
 
     prompt = PROMPT_ANALISI_LOCANDINA_STANDARD.format(
         festival_instruction=festival_instruction,
