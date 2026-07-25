@@ -155,6 +155,11 @@ REGOLE TASSATIVE DI FORMATTAZIONE E GESTIONE FESTIVAL / SOTTO-EVENTI:
    - Se ci sono diverse cose ad orari differenti o su giornate differenti (es. 4 concerti o 4 attività nel pomeriggio/sera), DEVI creare un sotto-evento dedicato per CIASCUNA di esse.
    - È SEVERAMENTE VIETATO accorpare o tralasciare eventi minori o secondari. Se sono 4, DEVI estrarli tutti e 4!
 
+6. VALUTAZIONE QUALITÀ IMMAGINE SORGENTE (TASSATIVO):
+   - Esamina l'immagine della locandina fornita.
+   - Determina se si tratta di una "grafica pulita e pubblicabile" (file JPG originale esportato dal computer, volantino digitale ben definito, locandina nativa ad alta definizione) o se è una "foto scattata a un foglio/schermo" (foto sgranata con smartphone, presenza di dita, sfondi, angolazione imperfetta, riflessi).
+   - Inserisci il verdetto booleano in `immagine_pulita_e_pubblicabile` e descrivi l'eventuale problema in `motivo_immagine_non_pulita`.
+
 STRUTTURA JSON OBBLIGATORIA:
 {{
   "metadati_operazioni": {{
@@ -183,7 +188,9 @@ STRUTTURA JSON OBBLIGATORIA:
     "crediti_regia_autori": "Regia, cast o null",
     "orari_dettagliati": "Apertura cancelli ore 19:00, inizio ore 21:30",
     "info_biglietti": "Prezzi o 'Ingresso gratuito'",
-    "contatti_utili": "Telefono, email o null"
+    "contatti_utili": "Telefono, email o null",
+    "immagine_pulita_e_pubblicabile": true,
+    "motivo_immagine_non_pulita": "Descrizione se l'immagine è una foto scattata o sgranata (es. 'L'immagine è una foto inclinata scattata a un volantino stampato con ombre'), altrimenti null"
   }},
   "diario_di_bordo_ai": [
     {{

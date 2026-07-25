@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { XCircle, Globe, Trash2, Brain, Calendar, MapPin, CheckCircle2, Loader2, Eye, Clock, Sparkles } from "lucide-react";
+import { XCircle, Globe, Trash2, Brain, Calendar, MapPin, CheckCircle2, Loader2, Eye, Clock, Sparkles, AlertTriangle } from "lucide-react";
 
 const AutoResizeTextarea = ({ value, onChange, className, ...props }: any) => {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -223,11 +223,35 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
           {/* Image & Description */}
           <div className="flex flex-col sm:flex-row gap-4">
             {imageUrl(inspectingEvent) && (
-              <img
-                src={imageUrl(inspectingEvent)!}
-                alt={inspectingEvent.titolo}
-                className="w-full sm:w-48 h-36 object-cover rounded-md border"
-              />
+              <div className="relative shrink-0 w-full sm:w-48 h-36 group">
+                <img
+                  src={imageUrl(inspectingEvent)!}
+                  alt={inspectingEvent.titolo}
+                  className={`w-full h-full object-cover rounded-md border transition-all ${
+                    inspectingEvent.dettagli_extra?.immagine_pulita_e_pubblicabile === false
+                      ? "border-red-600 border-2 shadow-md shadow-red-100 dark:shadow-red-950/20"
+                      : ""
+                  }`}
+                />
+                {inspectingEvent.dettagli_extra?.immagine_pulita_e_pubblicabile === false && (
+                  <div className="absolute top-2 left-2">
+                    <div className="bg-red-600 text-white p-1.5 rounded-full shadow-md cursor-help flex items-center justify-center animate-pulse">
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                    </div>
+                    {/* Tooltip on hover */}
+                    <div className="absolute left-0 top-8 hidden group-hover:block bg-red-600 text-white text-[11px] leading-relaxed p-2.5 rounded-md shadow-xl z-50 w-60 border border-red-500 font-sans">
+                      <p className="font-bold flex items-center gap-1 mb-0.5">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        Qualità Immagine Bassa
+                      </p>
+                      <p className="text-white/90">
+                        {inspectingEvent.dettagli_extra?.motivo_immagine_non_pulita ||
+                          "L'AI ha rilevato che questa immagine potrebbe essere una foto cartacea sgranata o poco chiara."}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
             <div className="flex-1 flex flex-col gap-3">
               <div className="flex-1">
