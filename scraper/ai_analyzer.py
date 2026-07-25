@@ -245,15 +245,32 @@ TESTO SORGENTE:
         else:
             base_instructions = f"""
 Sei un analista esperto di eventi culturali in Sardegna.
-Analizza ESCLUSIVAMENTE il testo fornito. Non inventare informazioni non presenti o non deducibili.
+Analizza ESCLUSIVAMENTE il testo e le immagini forniti. Non inventare informazioni non presenti o non deducibili.
 {festival_instruction}
 
 COMPITO:
-Genera un output JSON strutturato secondo lo schema esatto qui sotto. 
+Genera un output JSON strutturato secondo lo schema esatto qui sotto.
 Usa `null` per i campi mancanti o vuoti (non ometterli).
-Se modifichi date o titoli in base a tue deduzioni logiche, DEVI obbligatoriamente dichiararlo nell'array `diario_di_bordo_ai`.
-Nella sezione `dati_curati_ai`, `categoria` deve essere una tra: ["Musica", "Teatro", "Cinema", "Arte", "Incontro", "Enogastronomia", "Folklore", "Sport", "Bambini", "Altro"].
-Nella sezione `dati_curati_ai`, `testo_estratto` deve essere un articolo giornalistico narrativo e accattivante (no elenchi puntati freddi).
+Se modifichi date, orari o titoli in base a tue deduzioni logiche, DEVI obbligatoriamente dichiararlo nell'array `diario_di_bordo_ai`.
+
+======================================================================
+REGOLE TASSATIVE DI FORMATTAZIONE E GESTIONE FESTIVAL / SOTTO-EVENTI:
+======================================================================
+
+1. REGOLA FORMATO DATE E ORARI (TASSATIVO):
+   - `data_inizio` e `data_fine`: Formato ISO 8601 strictly `YYYY-MM-DD` (es. "2026-08-15"). MAI testo libero tipo "15 Agosto" o "15/08/2026".
+   - `ora_inizio` e `ora_fine`: Formato 24 ore strictly `HH:MM` (es. "21:30", "19:00", "09:30"). Usa `null` se l'orario non è presente.
+
+2. REGOLA TASSATIVA GESTIONE FESTIVAL E GERARCHIA (`lista_sotto_eventi_estratti`):
+   - SE il testo/locandina contiene più date, un programma su più giornate, o più concerti/spettacoli/mostre/laboratori distinti:
+     a) DEVI impostare `"is_festival_padre": true` in `gestione_gerarchia`.
+     b) DEVI creare l'Evento Padre generale del Festival/Rassegna nel blocco principale `dati_curati_ai`.
+     c) DEVI estrarre OGNI singolo concerto, serata, mostra o laboratorio come elemento distinto dentro l'array `"lista_sotto_eventi_estratti"`.
+   - SE è un singolo evento unico in un'unica data/orario, imposta `"is_festival_padre": false` e lascerai `"lista_sotto_eventi_estratti": []`.
+
+3. REGOLA CATEGORIA E TESTO:
+   - `categoria` deve essere ESATTAMENTE una tra: ["Musica", "Teatro", "Cinema", "Arte", "Incontro", "Enogastronomia", "Folklore", "Sport", "Bambini", "Altro"].
+   - `testo_estratto` deve essere un articolo giornalistico narrativo e accattivante (no elenchi puntati freddi).
 
 STRUTTURA JSON OBBLIGATORIA:
 {{
@@ -267,21 +284,23 @@ STRUTTURA JSON OBBLIGATORIA:
     "nome_festival_riferimento": null
   }},
   "dati_curati_ai": {{
-    "titolo": "IL TITOLO - (ORIGINALE INVARIATO) - Titolo Eventopadre  (NON MODIFICARE IN NESSUN CASO)",
-    "categoria": "Categoria principale",
+    "titolo": "Titolo Ufficiale Pulito dell'Evento o Festival",
+    "categoria": "Musica",
     "testo_estratto": "Articolo giornalistico completo e accattivante...",
     "data_inizio": "YYYY-MM-DD",
     "data_fine": "YYYY-MM-DD",
-    "luogo": "Luogo fisico",
+    "ora_inizio": "HH:MM",
+    "ora_fine": "HH:MM",
+    "luogo": "Luogo fisico o Comune",
     "link_organizzatore": "URL ufficiale o null",
     "tags": ["Tag primario", "Tag secondario"]
   }},
   "approfondimenti_extra": {{
-    "bio_artisti": "Biografie se presenti...",
-    "crediti_regia_autori": "Regia, cast...",
-    "orari_dettagliati": "Apertura ore...",
-    "info_biglietti": "Prezzi...",
-    "contatti_utili": "Telefono, email..."
+    "bio_artisti": "Biografie se presenti o null",
+    "crediti_regia_autori": "Regia, cast o null",
+    "orari_dettagliati": "Apertura cancelli ore 19:00, inizio ore 21:30",
+    "info_biglietti": "Prezzi o 'Ingresso gratuito'",
+    "contatti_utili": "Telefono, email o null"
   }},
   "diario_di_bordo_ai": [
     {{
@@ -290,7 +309,19 @@ STRUTTURA JSON OBBLIGATORIA:
       "motivazione": "Spiegazione sintetica della deduzione"
     }}
   ],
-  "lista_sotto_eventi_estratti": []
+  "lista_sotto_eventi_estratti": [
+    {{
+      "titolo": "Titolo del singolo concerto/spettacolo/mostra",
+      "categoria": "Musica",
+      "data_inizio": "YYYY-MM-DD",
+      "data_fine": "YYYY-MM-DD",
+      "ora_inizio": "HH:MM",
+      "ora_fine": "HH:MM",
+      "luogo": "Piazza o luogo specifico di questo sotto-evento",
+      "descrizione": "Descrizione sintetica del singolo concerto o spettacolo",
+      "artisti": ["Nome Artista 1"]
+    }}
+  ]
 }}
 
 TESTO SORGENTE:
