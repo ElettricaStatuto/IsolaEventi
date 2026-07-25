@@ -27,7 +27,9 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
 
   const img = imageUrl(event);
 
-  // Filtra i dettagli extra escludendo metadati interni e chiavi vuote
+  // Filtra i dettagli extra escludendo metadati interni, dati sensibili e chiavi vuote.
+  // Esclude anche la bio artisti/artista se questo evento è un festival (isFestival = true).
+  const isFestival = Boolean(event.is_festival || subEvents.length > 0);
   const extraDetails = event.dettagli_extra
     ? Object.entries(event.dettagli_extra).filter(
         ([key, value]) =>
@@ -37,6 +39,15 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
           key !== "id_key" &&
           key !== "parent_temp_id" &&
           key !== "festival_padre" &&
+          key !== "telegram_chat_id" &&
+          key !== "metodo_estrazione" &&
+          key !== "motivo_immagine_non_pulita" &&
+          key !== "telegram_user" &&
+          key !== "ricevuto_il" &&
+          key !== "immagine_pulita_e_pubblicabile" &&
+          key !== "ora_inizio" &&
+          key !== "ora_fine" &&
+          (!isFestival || (key !== "bio_artisti" && key !== "bio_artista" && key !== "bio_artista_o_opera")) &&
           value !== null &&
           value !== ""
       )
@@ -55,7 +66,7 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
                     {event.categoria}
                   </Badge>
                 )}
-                {event.is_festival || subEvents.length > 0 ? (
+                {isFestival ? (
                   <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black border border-amber-600">
                     ⭐ FESTIVAL
                   </Badge>
@@ -112,14 +123,14 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
               )}
             </div>
 
-            {/* Descrizione */}
+            {/* Descrizione (AI summary o fallback) */}
             <div className="flex-1 flex flex-col gap-3">
               <div>
                 <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
-                  Presentazione
+                  Descrizione
                 </h4>
                 <p className="text-sm text-foreground/95 leading-relaxed whitespace-pre-wrap font-sans">
-                  {event.descrizione || "Nessuna descrizione disponibile."}
+                  {event.testo_estratto || event.descrizione || "Nessuna descrizione disponibile."}
                 </p>
               </div>
 
@@ -137,18 +148,6 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
               )}
             </div>
           </div>
-
-          {/* Mappa Articolo (Se presente) */}
-          {event.testo_estratto && (
-            <div className="bg-sky-50/40 dark:bg-sky-950/10 border border-sky-100 dark:border-sky-900/30 p-4 rounded-lg">
-              <h4 className="text-[10px] font-bold text-sky-900 dark:text-sky-300 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                ✨ Articolo di Sardegna Eventi
-              </h4>
-              <p className="text-sm text-foreground/90 leading-relaxed font-sans">
-                {event.testo_estratto}
-              </p>
-            </div>
-          )}
 
           {/* Data, Orario e Luogo */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
