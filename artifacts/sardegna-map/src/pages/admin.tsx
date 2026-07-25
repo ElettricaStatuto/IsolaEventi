@@ -1862,6 +1862,7 @@ export function Admin() {
           savingEvent={savingEvent}
           publishedEvents={publishedEvents}
           openEventDetails={openEventDetails}
+          adminKey={adminKey}
         />
 
         {/* Global error */}

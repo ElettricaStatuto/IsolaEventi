@@ -266,8 +266,9 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 </div>
               )}
               
-              <div className="flex flex-col gap-2 w-full">
-              <input
+              {isEditingEvent && (
+                <div className="flex flex-col gap-2 w-full">
+                  <input
                 type="file"
                 ref={fileInputRef}
                 className="hidden"
@@ -325,6 +326,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 </label>
               )}
             </div>
+            )}
           </div>
             
           <div className="flex-1 flex flex-col gap-3">
