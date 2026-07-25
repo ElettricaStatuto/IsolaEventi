@@ -1392,6 +1392,11 @@ export function Admin() {
           
           const updatedEvent = {
             ...inspectingEvent,
+            titolo: res.titolo || inspectingEvent.titolo,
+            categoria: res.categoria || inspectingEvent.categoria,
+            data_inizio: res.data_inizio || inspectingEvent.data_inizio,
+            data_fine: res.data_fine || inspectingEvent.data_fine,
+            luogo: res.luogo || inspectingEvent.luogo,
             testo_estratto: res.testo_estratto,
             descrizione: res.testo_grezzo_url || inspectingEvent.descrizione,
             is_festival: res.is_festival,

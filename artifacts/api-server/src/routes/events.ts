@@ -812,6 +812,38 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
   }));
 });
 
+function archiveTelegramSubmission(ev: any, workspaceRoot: string) {
+  try {
+    if (!ev.titolo?.startsWith("Segnalazione da") && !ev.fonte?.startsWith("Telegram")) {
+      return;
+    }
+    const archiveFile = path.resolve(workspaceRoot, "data/telegram_archive.json");
+    const dataDir = path.dirname(archiveFile);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    let archiveList: any[] = [];
+    if (fs.existsSync(archiveFile)) {
+      try {
+        archiveList = JSON.parse(fs.readFileSync(archiveFile, "utf8"));
+      } catch (e) {}
+    }
+    const exists = archiveList.some(item => 
+      (item.dettagli_extra?.id_key && item.dettagli_extra.id_key === ev.dettagli_extra?.id_key) ||
+      (item.titolo === ev.titolo && item.descrizione === ev.descrizione)
+    );
+    if (!exists) {
+      archiveList.push({
+        ...ev,
+        archiviato_il: new Date().toISOString()
+      });
+      fs.writeFileSync(archiveFile, JSON.stringify(archiveList, null, 2), "utf8");
+    }
+  } catch (err) {
+    console.error("Errore salvataggio archivio telegram:", err);
+  }
+}
+
 router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> => {
   req.log.info("Starting on-demand AI analysis for events");
 
@@ -824,6 +856,11 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
   const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
     ? path.resolve(process.cwd(), "../..")
     : process.cwd();
+
+  // Archivia le segnalazioni originali Telegram prima dell'analisi
+  for (const ev of events) {
+    archiveTelegramSubmission(ev, workspaceRoot);
+  }
 
   const aiScript = path.resolve(workspaceRoot, "scraper/run_ai.py");
 
