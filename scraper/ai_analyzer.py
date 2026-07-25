@@ -265,7 +265,7 @@ REGOLE TASSATIVE DI FORMATTAZIONE E GESTIONE FESTIVAL / SOTTO-EVENTI:
    - SE il testo/locandina contiene più date, un programma su più giornate, o più concerti/spettacoli/mostre/laboratori distinti:
      a) DEVI impostare `"is_festival_padre": true` in `gestione_gerarchia`.
      b) DEVI creare l'Evento Padre generale del Festival/Rassegna nel blocco principale `dati_curati_ai`.
-     c) DEVI estrarre OGNI singolo concerto, serata, mostra o laboratorio come elemento distinto dentro l'array `"lista_sotto_eventi_estratti"`.
+     c) DEVI estrarre TUTTI i singoli concerti, serate, mostre, laboratori o attività ad orari/giorni diversi come elementi distinti dentro l'array `"lista_sotto_eventi_estratti"`. Se ad esempio ci sono 4 eventi/concerti, DEVI obbligatoriamente restituire tutti e 4 gli oggetti separati.
    - SE è un singolo evento unico in un'unica data/orario, imposta `"is_festival_padre": false` e lascerai `"lista_sotto_eventi_estratti": []`.
 
 3. REGOLA CATEGORIA E TESTO:
@@ -277,6 +277,11 @@ REGOLE TASSATIVE DI FORMATTAZIONE E GESTIONE FESTIVAL / SOTTO-EVENTI:
    - DEVI indicare tassativamente PRIMA il Comune/Città della Sardegna e POI il luogo specifico/piazza/struttura separati da virgola.
    - Formato obbligatorio: "Città, Luogo Specifico" (es. "Carbonia, Campo sportivo", "Oristano, Piazza Cattedrale", "Alghero, Anfiteatro Maria Pia", "Cagliari, Parco della Musica").
    - Questa regola vale sia per l'evento principale in `dati_curati_ai` che per ogni singolo sotto-evento in `lista_sotto_eventi_estratti`.
+
+5. REGOLA TASSATIVA COMPLETEZZA ASSOLUTA (ZERO OMISSIONI):
+   - DEVI estrarre TUTTI gli eventi, concerti, spettacoli, attività, mostre e laboratori presenti nella locandina o testo, SENZA DIMENTICARNE O TRASCURARNE NESSUNO.
+   - Se ci sono diverse cose ad orari differenti o su giornate differenti (es. 4 concerti o 4 attività nel pomeriggio/sera), DEVI creare un sotto-evento dedicato per CIASCUNA di esse.
+   - È SEVERAMENTE VIETATO accorpare o tralasciare eventi minori o secondari. Se sono 4, DEVI estrarli tutti e 4!
 
 STRUTTURA JSON OBBLIGATORIA:
 {{
