@@ -513,6 +513,40 @@ router.post("/events/scrape-url", requireAdminKey, async (req, res): Promise<voi
   }
 });
 
+router.post("/events/upload-image", requireAdminKey, upload.single("file"), (req, res): void => {
+  req.log.info("Starting image upload");
+
+  const file = req.file;
+  if (!file) {
+    res.status(400).json({ error: "Nessuna immagine caricata" });
+    return;
+  }
+
+  const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
+    ? path.resolve(process.cwd(), "../..")
+    : process.cwd();
+
+  const absoluteUploadPath = path.resolve(process.cwd(), file.path);
+  
+  const ext = path.extname(file.originalname) || ".jpg";
+  const safeName = "manual_" + Date.now() + "_" + Math.random().toString(36).substring(2, 8) + ext;
+  
+  const destDir = path.resolve(workspaceRoot, "data", "event-images");
+  if (!fs.existsSync(destDir)) {
+    fs.mkdirSync(destDir, { recursive: true });
+  }
+  
+  const destPath = path.join(destDir, safeName);
+  
+  try {
+    fs.renameSync(absoluteUploadPath, destPath);
+    res.json({ success: true, fileName: safeName });
+  } catch(e) {
+    req.log.error({err: e}, "Failed to move uploaded image");
+    res.status(500).json({ error: "Impossibile salvare l'immagine" });
+  }
+});
+
 router.post("/events/upload-pdf", requireAdminKey, upload.single("file"), async (req, res): Promise<void> => {
   req.log.info("Starting scraper preview for uploaded PDF");
 

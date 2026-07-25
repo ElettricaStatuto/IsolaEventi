@@ -60,8 +60,8 @@ export interface EventDetailsModalProps {
   handleAnalyzeGroupFromModal: () => void;
   handleSaveEventDetails: () => void;
   savingEvent: boolean;
-  publishedEvents?: any[];
   openEventDetails?: (ev: any, isPending: boolean) => void;
+  adminKey?: string;
 }
 
 export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
@@ -93,7 +93,12 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   savingEvent,
   publishedEvents = [],
   openEventDetails,
+  adminKey,
 }) => {
+  const [isUploadingImage, setIsUploadingImage] = React.useState(false);
+  const [applyImageToChildren, setApplyImageToChildren] = React.useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   if (!inspectingEvent) return null;
 
   const checkIsAiModified = (fieldName: string) => {
@@ -222,7 +227,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
         <CardContent className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
           {/* Image & Description */}
           <div className="flex flex-col sm:flex-row gap-4">
-            {imageUrl(inspectingEvent) && (
+            {imageUrl(inspectingEvent) ? (
               <div className="relative shrink-0 w-full sm:w-48 h-36 group">
                 <img
                   src={imageUrl(inspectingEvent)!}
@@ -252,7 +257,72 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   </div>
                 )}
               </div>
+            ) : (
+              <div className="w-full sm:w-48 h-36 bg-muted flex items-center justify-center rounded-md border text-muted-foreground text-xs shrink-0">
+                Nessuna Immagine
+              </div>
             )}
+            
+            <div className="mt-2 flex flex-col gap-2 w-full sm:w-48 shrink-0">
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file || !adminKey) return;
+                  
+                  setIsUploadingImage(true);
+                  const formData = new FormData();
+                  formData.append("file", file);
+                  
+                  try {
+                    const res = await fetch("/api/events/upload-image", {
+                      method: "POST",
+                      headers: { "x-admin-key": adminKey },
+                      body: formData,
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                      setInspectingEvent({ ...inspectingEvent, immagine: data.fileName, _apply_image_to_children: applyImageToChildren });
+                    } else {
+                      alert("Errore caricamento immagine: " + (data.error || data.message));
+                    }
+                  } catch (err) {
+                    alert("Errore rete caricamento immagine.");
+                  } finally {
+                    setIsUploadingImage(false);
+                  }
+                }}
+              />
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full text-xs" 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingImage || !adminKey}
+              >
+                {isUploadingImage ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />}
+                Cambia Foto
+              </Button>
+              
+              {(inspectingEvent.is_festival || (inspectingEvent.sub_events_list && inspectingEvent.sub_events_list.length > 0) || inspectingEvent.sotto_eventi?.length > 0) && (
+                <label className="flex items-start gap-1.5 text-[10px] text-muted-foreground cursor-pointer mt-1">
+                  <input 
+                    type="checkbox" 
+                    checked={applyImageToChildren}
+                    onChange={(e) => {
+                      setApplyImageToChildren(e.target.checked);
+                      setInspectingEvent({ ...inspectingEvent, _apply_image_to_children: e.target.checked });
+                    }}
+                    className="mt-0.5 rounded border-gray-300"
+                  />
+                  <span>Applica anche a tutti i sotto-eventi associati</span>
+                </label>
+              )}
+            </div>
+            
             <div className="flex-1 flex flex-col gap-3">
               <div className="flex-1">
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">

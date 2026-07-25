@@ -1311,7 +1311,7 @@ export function Admin() {
     try {
       if (inspectingEvent.is_pending) {
         // Se è in attesa (preview), aggiorniamo solo la cache locale
-        const nextEvents = [...previewEvents];
+        let nextEvents = [...previewEvents];
         const idxStr = inspectingEvent.tmp_id;
         const idx = typeof inspectingEvent.idx === 'number' ? inspectingEvent.idx : parseInt(idxStr, 10);
         if (!isNaN(idx) && nextEvents[idx]) {
@@ -1320,6 +1320,17 @@ export function Admin() {
             tags: editingTags,
             dettagli_extra: editingDettagli,
           };
+          
+          // Propagazione immagine ai figli se richiesto
+          if (inspectingEvent._apply_image_to_children && inspectingEvent.dettagli_extra?.id_key && inspectingEvent.immagine) {
+            nextEvents = nextEvents.map(ev => {
+              if (ev.dettagli_extra?.parent_temp_id === inspectingEvent.dettagli_extra.id_key) {
+                return { ...ev, immagine: inspectingEvent.immagine };
+              }
+              return ev;
+            });
+          }
+
           setPreviewEvents(nextEvents);
           updatePreviewCache(nextEvents);
           setInspectingEvent({ ...inspectingEvent, tags: editingTags, dettagli_extra: editingDettagli });
@@ -1331,6 +1342,15 @@ export function Admin() {
         // Se è pubblicato, inviamo PUT
         const payload = { ...inspectingEvent, tags: editingTags, dettagli_extra: editingDettagli };
         await fetchJson(`/api/events/${inspectingEvent.id}`, "PUT", payload, adminKey);
+        
+        // Propagazione immagine ai figli se richiesto
+        if (inspectingEvent._apply_image_to_children && inspectingEvent.immagine) {
+          const children = publishedEvents.filter(ev => ev.parent_id === inspectingEvent.id);
+          for (const child of children) {
+            await fetchJson(`/api/events/${child.id}`, "PUT", { ...child, immagine: inspectingEvent.immagine }, adminKey);
+          }
+        }
+
         loadPublished(appliedFilters);
         setInspectingEvent({ ...inspectingEvent, tags: editingTags, dettagli_extra: editingDettagli });
         setIsEditingEvent(false);
