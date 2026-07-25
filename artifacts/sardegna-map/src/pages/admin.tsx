@@ -937,7 +937,8 @@ export function Admin() {
               
               // Se l'evento in analisi è quello attualmente aperto nel modal, aggiorniamo il modal
               if (inspectingEvent && inspectingEvent.is_pending &&
-                  (inspectingEvent.tmp_id === ev.tmp_id || inspectingEvent.dettagli_extra?.id_key === ev.dettagli_extra?.id_key)) {
+                  ((inspectingEvent.tmp_id && inspectingEvent.tmp_id === ev.tmp_id) ||
+                   (inspectingEvent.dettagli_extra?.id_key && inspectingEvent.dettagli_extra?.id_key === ev.dettagli_extra?.id_key))) {
                 
                 // Recuperiamo la lista aggiornata dei sotto-eventi
                 let subEvents = nextEvents.filter(e => e.dettagli_extra?.parent_temp_id === updatedEvent.dettagli_extra?.id_key);
