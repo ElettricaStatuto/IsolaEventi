@@ -63,7 +63,7 @@ export function DateFilter({ dateRange, onDateRangeChange }: DateFilterProps) {
             {label}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0 shadow-xl" align="start">
+        <PopoverContent className="w-auto p-0 shadow-xl z-[9999]" align="start">
           <div className="flex items-center justify-between border-b px-4 py-3">
             <p className="text-sm font-semibold">{summaryText}</p>
             <Button
