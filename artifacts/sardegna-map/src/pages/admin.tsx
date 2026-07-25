@@ -1333,10 +1333,75 @@ export function Admin() {
     if (!inspectingEvent || !inspectingEvent.is_pending) return;
     const parentIdx = previewEvents.findIndex(ev => ev.dettagli_extra?.id_key === inspectingEvent.dettagli_extra?.id_key);
     if (parentIdx === -1) return;
+    
     const parentEv = { ...previewEvents[parentIdx], original_idx: parentIdx, is_pending: true };
-    const childrenToAnalyze = previewEvents
+    
+    // Filtra i figli già esistenti
+    let childrenToAnalyze = previewEvents
       .map((ev, i) => ({ ...ev, original_idx: i, is_pending: true }))
       .filter(ev => ev.dettagli_extra?.parent_temp_id === inspectingEvent.dettagli_extra?.id_key);
+      
+    // Se non ci sono ancora card figlie generate per questo festival, le creiamo al volo!
+    if (childrenToAnalyze.length === 0 && inspectingEvent.sub_events_list && inspectingEvent.sub_events_list.length > 0) {
+      const parentIdKey = inspectingEvent.dettagli_extra?.id_key || `temp_parent_${Math.random().toString(36).substring(2, 10)}`;
+      
+      let updatedParent = { ...previewEvents[parentIdx] };
+      if (!updatedParent.dettagli_extra || !updatedParent.dettagli_extra.id_key) {
+        updatedParent.dettagli_extra = {
+          ...(updatedParent.dettagli_extra || {}),
+          id_key: parentIdKey
+        };
+      }
+      
+      const newCards = inspectingEvent.sub_events_list.map((se: any) => ({
+        titolo: se.titolo,
+        data_inizio: se.data_inizio || updatedParent.data_inizio,
+        data_fine: se.data_fine || updatedParent.data_fine || se.data_inizio || updatedParent.data_inizio,
+        luogo: se.luogo || updatedParent.luogo,
+        latitudine: se.latitudine || updatedParent.latitudine,
+        longitudine: se.longitudine || updatedParent.longitudine,
+        link: se.link || updatedParent.link,
+        descrizione: se.descrizione || updatedParent.descrizione || "",
+        immagine: se.immagine || updatedParent.immagine,
+        fonte: updatedParent.fonte,
+        is_new: true,
+        testo_estratto: se.descrizione || updatedParent.testo_estratto || "",
+        dettagli_extra: {
+          festival_padre: updatedParent.titolo,
+          is_extracted: true,
+          id_key: `temp_${Math.random().toString(36).substring(2, 10)}`,
+          parent_temp_id: parentIdKey,
+          metodo_estrazione: "Auto-generazione in Analisi Gruppo"
+        }
+      }));
+      
+      const nextEvents = [...previewEvents];
+      nextEvents[parentIdx] = updatedParent;
+      const startIdxOfChildren = nextEvents.length;
+      const combinedEvents = [...nextEvents, ...newCards];
+      
+      setPreviewEvents(combinedEvents);
+      updatePreviewCache(combinedEvents);
+      
+      const updatedInspecting = {
+        ...updatedParent,
+        is_pending: true,
+        sub_events_list: newCards
+      };
+      setInspectingEvent(updatedInspecting);
+      setEditingTags(updatedInspecting.tags || []);
+      setEditingDettagli(updatedInspecting.dettagli_extra || {});
+      
+      childrenToAnalyze = newCards.map((ev, i) => ({
+        ...ev,
+        original_idx: startIdxOfChildren + i,
+        is_pending: true
+      }));
+      
+      handleAnalyzeEventsMixed([{ ...updatedParent, original_idx: parentIdx, is_pending: true }, ...childrenToAnalyze]);
+      return;
+    }
+    
     handleAnalyzeEventsMixed([parentEv, ...childrenToAnalyze]);
   };
 
