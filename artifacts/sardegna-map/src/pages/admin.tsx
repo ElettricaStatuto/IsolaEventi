@@ -914,7 +914,7 @@ export function Admin() {
             successi++;
             if (ev.is_pending) {
               const idx = ev.original_idx;
-              nextEvents[idx] = {
+              const updatedEvent = {
                 ...nextEvents[idx],
                 titolo: res.titolo || nextEvents[idx].titolo,
                 categoria: res.categoria || (nextEvents[idx] as any).categoria,
@@ -924,11 +924,45 @@ export function Admin() {
                 is_festival: res.is_festival,
                 sotto_eventi: res.sotto_eventi,
                 link_organizzatore: res.link_organizzatore,
+                luogo: res.luogo || nextEvents[idx].luogo,
+                data_inizio: res.data_inizio || nextEvents[idx].data_inizio,
+                data_fine: res.data_fine || nextEvents[idx].data_fine,
               };
+              nextEvents[idx] = updatedEvent;
               setPreviewEvents([...nextEvents]);
               updatePreviewCache(nextEvents);
+              
+              // Se l'evento in analisi è quello attualmente aperto nel modal, aggiorniamo il modal
+              if (inspectingEvent && inspectingEvent.is_pending &&
+                  (inspectingEvent.tmp_id === ev.tmp_id || inspectingEvent.dettagli_extra?.id_key === ev.dettagli_extra?.id_key)) {
+                
+                // Recuperiamo la lista aggiornata dei sotto-eventi
+                const subEvents = nextEvents.filter(e => e.dettagli_extra?.parent_temp_id === updatedEvent.dettagli_extra?.id_key);
+                setInspectingEvent({
+                  ...updatedEvent,
+                  is_pending: true,
+                  sub_events_list: subEvents
+                });
+                setEditingTags(updatedEvent.tags || []);
+                setEditingDettagli(updatedEvent.dettagli_extra || {});
+              }
             } else {
               reloadPublished = true;
+              if (inspectingEvent && !inspectingEvent.is_pending && inspectingEvent.id === ev.id) {
+                setInspectingEvent({
+                  ...inspectingEvent,
+                  testo_estratto: res.testo_estratto,
+                  is_festival: res.is_festival,
+                  link_organizzatore: res.link_organizzatore,
+                  tags: res.tags,
+                  dettagli_extra: res.dettagli_extra,
+                  luogo: res.luogo || inspectingEvent.luogo,
+                  data_inizio: res.data_inizio || inspectingEvent.data_inizio,
+                  data_fine: res.data_fine || inspectingEvent.data_fine,
+                });
+                setEditingTags(res.tags || []);
+                setEditingDettagli(res.dettagli_extra || {});
+              }
             }
             setAnalysisLogs(prev => [...prev, `✅ Completato con successo!`]);
           }
@@ -1269,7 +1303,7 @@ export function Admin() {
         const idx = typeof inspectingEvent.idx === 'number' ? inspectingEvent.idx : parseInt(idxStr, 10);
         if (!isNaN(idx) && nextEvents[idx]) {
           nextEvents[idx] = {
-            ...nextEvents[idx],
+            ...inspectingEvent,
             tags: editingTags,
             dettagli_extra: editingDettagli,
           };

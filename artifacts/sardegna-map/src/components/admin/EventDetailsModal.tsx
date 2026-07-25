@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { XCircle, Globe, Trash2, Brain, Calendar, MapPin, CheckCircle2, Loader2, Eye } from "lucide-react";
+import { XCircle, Globe, Trash2, Brain, Calendar, MapPin, CheckCircle2, Loader2, Eye, Clock, Sparkles } from "lucide-react";
 
 const AutoResizeTextarea = ({ value, onChange, className, ...props }: any) => {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -95,6 +95,14 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   openEventDetails,
 }) => {
   if (!inspectingEvent) return null;
+
+  const checkIsAiModified = (fieldName: string) => {
+    if (fieldName === "testo_estratto" || fieldName === "tags") return true;
+    const diario = inspectingEvent.dettagli_extra?.diario_di_bordo_ai || [];
+    return diario.some((item: any) => item.campo_modificato === fieldName);
+  };
+
+  const aiHighlightedClass = "bg-sky-50/60 dark:bg-sky-950/20 border-sky-200 dark:border-sky-800/40 p-4 rounded-lg border shadow-sm ring-1 ring-sky-300/10";
 
   // Trova eventuale evento Padre
   let parentEvent: { ev: any; isPending: boolean } | null = null;
@@ -280,29 +288,118 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
             </div>
           </div>
 
-          {/* Extracted Text */}
-          <div>
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              Testo Estratto dalla Locandina
-            </h4>
+          {/* Date e Luogo (Evidenziati se modificati dall'AI) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Luogo */}
+            <div className={checkIsAiModified("luogo") ? aiHighlightedClass : "p-4 rounded-lg border border-border bg-card"}>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className={`text-xs font-semibold uppercase tracking-wider ${checkIsAiModified("luogo") ? "text-sky-950 dark:text-sky-200 font-bold" : "text-muted-foreground"}`}>
+                  Luogo Evento
+                </h4>
+                {checkIsAiModified("luogo") && (
+                  <Badge variant="outline" className="text-[10px] bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-200 border-sky-300 dark:border-sky-700/60 font-semibold flex items-center gap-0.5">
+                    <span>🤖</span>
+                    <span>Modificato da AI</span>
+                  </Badge>
+                )}
+              </div>
+              {isEditingEvent ? (
+                <Input
+                  value={inspectingEvent.luogo || ""}
+                  onChange={(e) => setInspectingEvent({ ...inspectingEvent, luogo: e.target.value })}
+                  className="h-10 text-sm bg-background"
+                  placeholder="Comune, Luogo Specifico"
+                />
+              ) : (
+                <div className="flex items-center gap-2 text-sm text-foreground">
+                  <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span className="font-semibold">{inspectingEvent.luogo || "Non specificato"}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Date */}
+            <div className={(checkIsAiModified("data_inizio") || checkIsAiModified("data_fine")) ? aiHighlightedClass : "p-4 rounded-lg border border-border bg-card"}>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className={`text-xs font-semibold uppercase tracking-wider ${(checkIsAiModified("data_inizio") || checkIsAiModified("data_fine")) ? "text-sky-950 dark:text-sky-200 font-bold" : "text-muted-foreground"}`}>
+                  Date di Svolgimento
+                </h4>
+                {(checkIsAiModified("data_inizio") || checkIsAiModified("data_fine")) && (
+                  <Badge variant="outline" className="text-[10px] bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-200 border-sky-300 dark:border-sky-700/60 font-semibold flex items-center gap-0.5">
+                    <span>🤖</span>
+                    <span>Modificato da AI</span>
+                  </Badge>
+                )}
+              </div>
+              {isEditingEvent ? (
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <span className="text-[10px] text-muted-foreground uppercase">Inizio</span>
+                    <Input
+                      type="date"
+                      value={inspectingEvent.data_inizio || ""}
+                      onChange={(e) => setInspectingEvent({ ...inspectingEvent, data_inizio: e.target.value })}
+                      className="h-9 text-xs bg-background mt-0.5"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <span className="text-[10px] text-muted-foreground uppercase">Fine</span>
+                    <Input
+                      type="date"
+                      value={inspectingEvent.data_fine || ""}
+                      onChange={(e) => setInspectingEvent({ ...inspectingEvent, data_fine: e.target.value })}
+                      className="h-9 text-xs bg-background mt-0.5"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-sm text-foreground">
+                  <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span className="font-semibold">
+                    {inspectingEvent.data_inizio ? new Date(inspectingEvent.data_inizio).toLocaleDateString("it-IT") : "N/D"}
+                    {inspectingEvent.data_fine && inspectingEvent.data_fine !== inspectingEvent.data_inizio
+                      ? ` - ${new Date(inspectingEvent.data_fine).toLocaleDateString("it-IT")}`
+                      : ""}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Extracted Text (Articolo Mappa) */}
+          <div className={aiHighlightedClass}>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs font-bold text-sky-950 dark:text-sky-200 uppercase tracking-wider">
+                Articolo di Mappa (Testo Estratto)
+              </h4>
+              <Badge variant="outline" className="text-[10px] bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-200 border-sky-300 dark:border-sky-700/60 font-semibold flex items-center gap-0.5">
+                <span>🤖</span>
+                <span>Scritto da AI</span>
+              </Badge>
+            </div>
             {isEditingEvent ? (
               <AutoResizeTextarea
                 value={inspectingEvent.testo_estratto || ""}
                 onChange={(e: any) => setInspectingEvent({ ...inspectingEvent, testo_estratto: e.target.value })}
-                className="w-full bg-muted p-4 rounded-md font-mono text-xs border min-h-48 focus:outline-none leading-relaxed"
+                className="w-full bg-background p-3 rounded-md text-sm border min-h-48 focus:outline-none leading-relaxed"
               />
             ) : (
-              <div className="bg-muted p-4 rounded-md font-mono text-xs max-h-64 overflow-y-auto border whitespace-pre-wrap leading-relaxed">
-                {inspectingEvent.testo_estratto || "Nessun testo estratto."}
+              <div className="bg-background/80 p-3 rounded-md text-sm max-h-64 overflow-y-auto border whitespace-pre-wrap leading-relaxed text-foreground/90">
+                {inspectingEvent.testo_estratto || "Nessun articolo generato."}
               </div>
             )}
           </div>
 
           {/* Tags & Dettagli Extra */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-border pt-4">
-            <div>
+            {/* Tags (Evidenziati AI) */}
+            <div className={aiHighlightedClass}>
               <div className="flex items-center justify-between mb-2">
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tags</h4>
+                <h4 className="text-xs font-bold text-sky-950 dark:text-sky-200 uppercase tracking-wider">Tags</h4>
+                <Badge variant="outline" className="text-[10px] bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-200 border-sky-300 dark:border-sky-700/60 font-semibold flex items-center gap-0.5">
+                  <span>🤖</span>
+                  <span>Generati da AI</span>
+                </Badge>
               </div>
               {isEditingEvent ? (
                 <div className="flex flex-col gap-2">
@@ -324,7 +421,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                       value={newTagValue}
                       onChange={(e) => setNewTagValue(e.target.value)}
                       placeholder="Nuovo tag..."
-                      className="h-10 text-sm"
+                      className="h-10 text-sm bg-background"
                     />
                     <Button
                       size="sm"
@@ -345,62 +442,72 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 <div className="flex flex-wrap gap-2">
                   {inspectingEvent.tags && inspectingEvent.tags.length > 0 ? (
                     inspectingEvent.tags.map((tag: string, i: number) => (
-                      <Badge key={i} variant="secondary" className="bg-blue-50 text-blue-700">
+                      <Badge key={i} variant="secondary" className="bg-sky-100/80 text-sky-900 border border-sky-300/40">
                         {tag}
                       </Badge>
                     ))
                   ) : (
-                    <span className="text-sm text-muted-foreground italic">Nessun tag</span>
+                    <span className="text-sm text-sky-900/60 italic">Nessun tag</span>
                   )}
                 </div>
               )}
             </div>
-            <div>
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Dettagli Extra</h4>
+
+            {/* Dettagli Extra (Evidenziati AI) */}
+            <div className={aiHighlightedClass}>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-xs font-bold text-sky-950 dark:text-sky-200 uppercase tracking-wider">Dettagli Extra</h4>
+                <Badge variant="outline" className="text-[10px] bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-200 border-sky-300 dark:border-sky-700/60 font-semibold flex items-center gap-0.5">
+                  <span>🤖</span>
+                  <span>Estratti da AI</span>
+                </Badge>
+              </div>
               {isEditingEvent ? (
                 <div className="flex flex-col gap-3">
-                  {Object.entries(editingDettagli).map(([key, value]) => (
-                    <div key={key} className="flex gap-2 items-start">
-                      <Input value={key} disabled className="h-10 text-sm w-1/3 bg-muted font-semibold mt-0.5" />
-                      {String(value).length > 60 || key.toLowerCase().includes("bio") ? (
-                        <AutoResizeTextarea
-                          value={value as string}
-                          onChange={(e: any) => setEditingDettagli((prev) => ({ ...prev, [key]: e.target.value }))}
-                          className="text-sm bg-background border border-input rounded-md p-3 flex-1 min-h-[120px] leading-relaxed"
-                        />
-                      ) : (
-                        <Input
-                          value={value as string}
-                          onChange={(e) => setEditingDettagli((prev) => ({ ...prev, [key]: e.target.value }))}
-                          className="h-10 text-sm flex-1 mt-0.5 px-3"
-                        />
-                      )}
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-10 w-10 mt-0.5 text-destructive"
-                        onClick={() => {
-                          const next = { ...editingDettagli };
-                          delete next[key];
-                          setEditingDettagli(next);
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  <div className="flex gap-2 items-center mt-3 border-t border-border pt-3">
+                  {Object.entries(editingDettagli)
+                    .filter(([key]) => key !== "diario_di_bordo_ai" && key !== "metadati_operazioni" && key !== "_usage")
+                    .map(([key, value]) => (
+                      <div key={key} className="flex gap-2 items-start">
+                        <Input value={key} disabled className="h-10 text-sm w-1/3 bg-muted font-semibold mt-0.5" />
+                        {String(value).length > 60 || key.toLowerCase().includes("bio") ? (
+                          <AutoResizeTextarea
+                            value={value as string}
+                            onChange={(e: any) => setEditingDettagli((prev) => ({ ...prev, [key]: e.target.value }))}
+                            className="text-sm bg-background border border-input rounded-md p-3 flex-1 min-h-[120px] leading-relaxed"
+                          />
+                        ) : (
+                          <Input
+                            value={value as string}
+                            onChange={(e) => setEditingDettagli((prev) => ({ ...prev, [key]: e.target.value }))}
+                            className="h-10 text-sm flex-1 mt-0.5 px-3"
+                          />
+                        )}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-10 w-10 mt-0.5 text-destructive"
+                          onClick={() => {
+                            const next = { ...editingDettagli };
+                            delete next[key];
+                            setEditingDettagli(next);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  <div className="flex gap-2 items-center mt-3 border-t border-sky-300/30 pt-3">
                     <Input
                       value={newDettaglioKey}
                       onChange={(e) => setNewDettaglioKey(e.target.value)}
                       placeholder="Es. Artisti"
-                      className="h-10 text-sm w-1/3"
+                      className="h-10 text-sm w-1/3 bg-background"
                     />
                     <Input
                       value={newDettaglioValue}
                       onChange={(e) => setNewDettaglioValue(e.target.value)}
                       placeholder="Valore"
-                      className="h-10 text-sm flex-1"
+                      className="h-10 text-sm flex-1 bg-background"
                     />
                     <Button
                       size="sm"
@@ -419,20 +526,23 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col gap-2">
-                  {inspectingEvent.dettagli_extra && Object.keys(inspectingEvent.dettagli_extra).length > 0 ? (
-                    Object.entries(inspectingEvent.dettagli_extra).map(([key, value]) => (
-                      <div key={key} className="bg-muted/50 p-2 rounded border border-border/50 text-sm">
-                        <span className="font-semibold text-foreground capitalize mr-2">{key.replace(/_/g, " ")}:</span>
-                        <span className="text-muted-foreground">
-                          {key === "_usage" && typeof value === "object" && value !== null
-                            ? `Input: ${(value as any).input_tokens || 0} | Output: ${(value as any).output_tokens || 0} | Totale: ${(value as any).total_tokens || 0}`
-                            : String(value)}
-                        </span>
-                      </div>
-                    ))
+                <div className="flex flex-col gap-2 max-h-72 overflow-y-auto pr-1">
+                  {inspectingEvent.dettagli_extra &&
+                  Object.keys(inspectingEvent.dettagli_extra).filter(
+                    (key) => key !== "diario_di_bordo_ai" && key !== "metadati_operazioni" && key !== "_usage"
+                  ).length > 0 ? (
+                    Object.entries(inspectingEvent.dettagli_extra)
+                      .filter(
+                        ([key]) => key !== "diario_di_bordo_ai" && key !== "metadati_operazioni" && key !== "_usage"
+                      )
+                      .map(([key, value]) => (
+                        <div key={key} className="bg-background/70 p-2.5 rounded border border-sky-200/50 text-xs leading-relaxed">
+                          <span className="font-semibold text-sky-950 dark:text-sky-200 capitalize mr-2">{key.replace(/_/g, " ")}:</span>
+                          <span className="text-foreground/90">{String(value)}</span>
+                        </div>
+                      ))
                   ) : (
-                    <span className="text-sm text-muted-foreground italic">Nessun dettaglio extra</span>
+                    <span className="text-sm text-sky-900/60 italic">Nessun dettaglio extra</span>
                   )}
                 </div>
               )}
@@ -451,22 +561,58 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   variant="outline"
                   className="h-7 text-xs border-amber-500 text-amber-700 hover:bg-amber-50"
                   onClick={() => {
+                    // Genera o recupera id_key del padre per associare i figli
+                    const parentIdKey = inspectingEvent.dettagli_extra?.id_key || `temp_parent_${Math.random().toString(36).substring(2, 10)}`;
+                    
+                    // Se il padre non aveva dettagli_extra o id_key, aggiorniamo il padre
+                    let updatedInspectingEvent = { ...inspectingEvent };
+                    if (!inspectingEvent.dettagli_extra || !inspectingEvent.dettagli_extra.id_key) {
+                      updatedInspectingEvent.dettagli_extra = {
+                        ...(inspectingEvent.dettagli_extra || {}),
+                        id_key: parentIdKey
+                      };
+                      
+                      // Aggiorna il padre nella lista preview locale
+                      const idxStr = inspectingEvent.tmp_id;
+                      const idx = typeof inspectingEvent.idx === 'number' ? inspectingEvent.idx : parseInt(idxStr, 10);
+                      if (!isNaN(idx) && previewEvents[idx]) {
+                        const nextEvents = [...previewEvents];
+                        nextEvents[idx] = updatedInspectingEvent;
+                        setPreviewEvents(nextEvents);
+                        updatePreviewCache(nextEvents);
+                      }
+                      setInspectingEvent(updatedInspectingEvent);
+                    }
+
                     const newCards = inspectingEvent.sub_events_list.map((se: any) => ({
                       titolo: se.titolo,
-                      data_inizio: se.data_inizio || inspectingEvent.data_inizio,
-                      data_fine: se.data_fine || inspectingEvent.data_fine,
-                      luogo: se.luogo || inspectingEvent.luogo,
-                      latitudine: se.latitudine || inspectingEvent.latitudine,
-                      longitudine: se.longitudine || inspectingEvent.longitudine,
-                      link: se.link || inspectingEvent.link,
-                      descrizione: se.descrizione || inspectingEvent.descrizione,
-                      immagine: se.immagine || inspectingEvent.immagine,
-                      fonte: inspectingEvent.fonte,
+                      data_inizio: se.data_inizio || updatedInspectingEvent.data_inizio,
+                      data_fine: se.data_fine || updatedInspectingEvent.data_fine || se.data_inizio || updatedInspectingEvent.data_inizio,
+                      luogo: se.luogo || updatedInspectingEvent.luogo,
+                      latitudine: se.latitudine || updatedInspectingEvent.latitudine,
+                      longitudine: se.longitudine || updatedInspectingEvent.longitudine,
+                      link: se.link || updatedInspectingEvent.link,
+                      descrizione: se.descrizione || updatedInspectingEvent.descrizione || "",
+                      immagine: se.immagine || updatedInspectingEvent.immagine,
+                      fonte: updatedInspectingEvent.fonte,
                       is_new: true,
-                      testo_estratto: se.descrizione || inspectingEvent.testo_estratto,
+                      testo_estratto: se.descrizione || updatedInspectingEvent.testo_estratto || "",
+                      dettagli_extra: {
+                        festival_padre: updatedInspectingEvent.titolo,
+                        is_extracted: true,
+                        id_key: `temp_${Math.random().toString(36).substring(2, 10)}`,
+                        parent_temp_id: parentIdKey,
+                        metodo_estrazione: "UI Extractor (Genera Card Figlie)"
+                      }
                     }));
-                    setPreviewEvents((prev) => [...prev, ...newCards]);
-                    updatePreviewCache([...previewEvents, ...newCards]);
+                    
+                    // Aggiungiamo i figli alle preview events
+                    setPreviewEvents((prev) => {
+                      const next = [...prev, ...newCards];
+                      updatePreviewCache(next);
+                      return next;
+                    });
+                    
                     alert(`Generati ${newCards.length} nuovi eventi singoli in In Attesa!`);
                   }}
                 >
@@ -532,6 +678,32 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               <p className="text-sm text-muted-foreground italic">Nessun sotto-evento rilevato o inserito.</p>
             )}
           </div>
+
+          {/* Diario delle Deduzioni AI */}
+          {inspectingEvent.dettagli_extra?.diario_di_bordo_ai && inspectingEvent.dettagli_extra.diario_di_bordo_ai.length > 0 && (
+            <div className="border-t border-border pt-4">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Brain className="w-4 h-4 text-sky-500" />
+                Diario delle Deduzioni AI
+              </h4>
+              <div className="flex flex-col gap-2.5">
+                {inspectingEvent.dettagli_extra.diario_di_bordo_ai.map((item: any, idx: number) => (
+                  <div key={idx} className="bg-sky-50/40 dark:bg-sky-950/10 border border-sky-100 dark:border-sky-900/30 rounded-lg p-3 text-xs leading-relaxed">
+                    <div className="flex items-center gap-1.5 font-bold mb-1">
+                      <span className="bg-sky-200/60 dark:bg-sky-900 text-sky-900 dark:text-sky-200 px-1.5 py-0.5 rounded uppercase text-[9px] tracking-wider border border-sky-300/40">
+                        {item.campo_modificato?.replace(/_/g, " ")}
+                      </span>
+                      <span className="text-muted-foreground">→</span>
+                      <Badge variant="outline" className="text-[9px] uppercase tracking-wider bg-white dark:bg-card text-sky-800 dark:text-sky-300 border-sky-200 dark:border-sky-800">
+                        {item.tipo_intervento}
+                      </Badge>
+                    </div>
+                    <p className="text-foreground/80 italic">"{item.motivazione}"</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
 
         <div className="p-4 border-t border-border flex flex-wrap items-center justify-end gap-3 bg-muted/20">
