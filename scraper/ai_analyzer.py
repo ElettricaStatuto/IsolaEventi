@@ -8,13 +8,22 @@ Re-importa e riesporta tutte le funzioni dai sottomoduli dedicati in `scraper.an
 - `standard_analyzer.py`: Analisi di locandine (JPG/PNG), pagine web e testi
 """
 
-from .analyzers import (
-    analyze_event,
-    struttura_eventi_da_pdf,
-    extract_text_from_url,
-    extract_sub_events_from_program,
-    analyze_standard_event,
-)
+try:
+    from .analyzers import (
+        analyze_event,
+        struttura_eventi_da_pdf,
+        extract_text_from_url,
+        extract_sub_events_from_program,
+        analyze_standard_event,
+    )
+except ImportError:
+    from analyzers import (
+        analyze_event,
+        struttura_eventi_da_pdf,
+        extract_text_from_url,
+        extract_sub_events_from_program,
+        analyze_standard_event,
+    )
 
 __all__ = [
     "analyze_event",
