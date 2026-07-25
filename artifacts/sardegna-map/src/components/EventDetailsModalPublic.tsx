@@ -22,14 +22,14 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
   if (!event) return null;
 
   // Trova eventuale festival padre o sotto-eventi
-  const parentEvent = event.parentId ? allEvents.find((e) => e.id === event.parentId) : null;
-  const subEvents = allEvents.filter((e) => e.parentId === event.id);
+  const parentEvent = event.parent_id ? allEvents.find((e) => e.id === event.parent_id) : null;
+  const subEvents = allEvents.filter((e) => e.parent_id === event.id);
 
   const img = imageUrl(event);
 
   // Filtra i dettagli extra escludendo metadati interni e chiavi vuote
-  const extraDetails = event.dettagliExtra
-    ? Object.entries(event.dettagliExtra).filter(
+  const extraDetails = event.dettagli_extra
+    ? Object.entries(event.dettagli_extra).filter(
         ([key, value]) =>
           key !== "diario_di_bordo_ai" &&
           key !== "metadati_operazioni" &&
@@ -123,10 +123,10 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
                 </p>
               </div>
 
-              {event.linkOrganizzatore && (
+              {event.link_organizzatore && (
                 <div className="mt-2">
                   <a
-                    href={event.linkOrganizzatore}
+                    href={event.link_organizzatore}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold rounded-lg shadow-sm transition-all hover:scale-[1.01]"
@@ -139,13 +139,13 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
           </div>
 
           {/* Mappa Articolo (Se presente) */}
-          {event.testoEstratto && (
+          {event.testo_estratto && (
             <div className="bg-sky-50/40 dark:bg-sky-950/10 border border-sky-100 dark:border-sky-900/30 p-4 rounded-lg">
               <h4 className="text-[10px] font-bold text-sky-900 dark:text-sky-300 uppercase tracking-wider mb-1.5 flex items-center gap-1">
                 ✨ Articolo di Sardegna Eventi
               </h4>
               <p className="text-sm text-foreground/90 leading-relaxed font-sans">
-                {event.testoEstratto}
+                {event.testo_estratto}
               </p>
             </div>
           )}
@@ -172,19 +172,19 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
                 <div className="flex items-center gap-2 text-sm text-foreground">
                   <Calendar className="w-4 h-4 text-primary shrink-0" />
                   <span className="font-semibold">
-                    {event.dataInizio ? new Date(event.dataInizio).toLocaleDateString("it-IT") : "N/D"}
-                    {event.dataFine && event.dataFine !== event.dataInizio
-                      ? ` - ${new Date(event.dataFine).toLocaleDateString("it-IT")}`
+                    {event.data_inizio ? new Date(event.data_inizio).toLocaleDateString("it-IT") : "N/D"}
+                    {event.data_fine && event.data_fine !== event.data_inizio
+                      ? ` - ${new Date(event.data_fine).toLocaleDateString("it-IT")}`
                       : ""}
                   </span>
                 </div>
-                {event.dettagliExtra?.ora_inizio && (
+                {event.dettagli_extra?.ora_inizio && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground ml-6">
                     <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                     <span>
-                      Inizio ore <strong className="text-foreground">{event.dettagliExtra.ora_inizio}</strong>
-                      {event.dettagliExtra.ora_fine && (
-                        <> fino alle <strong className="text-foreground">{event.dettagliExtra.ora_fine}</strong></>
+                      Inizio ore <strong className="text-foreground">{event.dettagli_extra.ora_inizio}</strong>
+                      {event.dettagli_extra.ora_fine && (
+                        <> fino alle <strong className="text-foreground">{event.dettagli_extra.ora_fine}</strong></>
                       )}
                     </span>
                   </div>
@@ -229,11 +229,11 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
                     </div>
                     <div className="text-right shrink-0 flex flex-col items-end gap-1">
                       <span className="text-xs font-mono font-medium text-primary">
-                        {se.dataInizio ? new Date(se.dataInizio).toLocaleDateString("it-IT") : ""}
+                        {se.data_inizio ? new Date(se.data_inizio).toLocaleDateString("it-IT") : ""}
                       </span>
-                      {se.dettagliExtra?.ora_inizio && (
+                      {se.dettagli_extra?.ora_inizio && (
                         <span className="text-[10px] text-muted-foreground">
-                          Ore {se.dettagliExtra.ora_inizio}
+                          Ore {se.dettagli_extra.ora_inizio}
                         </span>
                       )}
                     </div>
