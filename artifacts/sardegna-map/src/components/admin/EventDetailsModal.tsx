@@ -327,6 +327,67 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               )}
             </div>
             )}
+
+            {/* Tags (Evidenziati AI) */}
+            <div className={`${aiHighlightedClass} mt-2`}>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-xs font-bold text-sky-950 dark:text-sky-200 uppercase tracking-wider">Tags</h4>
+                <Badge variant="outline" className="text-[10px] bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-200 border-sky-300 dark:border-sky-700/60 font-semibold flex items-center gap-0.5">
+                  <span>🤖</span>
+                  <span>AI</span>
+                </Badge>
+              </div>
+              {isEditingEvent ? (
+                <div className="flex flex-col gap-2">
+                  <div className="flex flex-wrap gap-1.5">
+                    {editingTags.map((tag, i) => (
+                      <Badge key={i} variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-200 text-[10px]">
+                        {tag}
+                        <button
+                          onClick={() => setEditingTags((prev) => prev.filter((_, idx) => idx !== i))}
+                          className="ml-1 hover:text-red-500"
+                        >
+                          <XCircle className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex gap-1.5 mt-2">
+                    <Input
+                      value={newTagValue}
+                      onChange={(e) => setNewTagValue(e.target.value)}
+                      placeholder="Nuovo tag..."
+                      className="h-8 text-xs bg-background"
+                    />
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="h-8 text-xs px-2"
+                      onClick={() => {
+                        if (newTagValue.trim()) {
+                          setEditingTags((prev) => [...prev, newTagValue.trim()]);
+                          setNewTagValue("");
+                        }
+                      }}
+                    >
+                      Aggiungi
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-1">
+                  {inspectingEvent.tags && inspectingEvent.tags.length > 0 ? (
+                    inspectingEvent.tags.map((tag: string, i: number) => (
+                      <Badge key={i} variant="secondary" className="bg-sky-100/80 text-sky-900 border border-sky-300/40 text-[10px] px-1.5 py-0.5">
+                        {tag}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-xs text-sky-900/60 italic">Nessun tag</span>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
             
           <div className="flex-1 flex flex-col gap-3">
@@ -503,70 +564,8 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
             )}
           </div>
 
-          {/* Tags & Dettagli Extra */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-border pt-4">
-            {/* Tags (Evidenziati AI) */}
-            <div className={aiHighlightedClass}>
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-xs font-bold text-sky-950 dark:text-sky-200 uppercase tracking-wider">Tags</h4>
-                <Badge variant="outline" className="text-[10px] bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-200 border-sky-300 dark:border-sky-700/60 font-semibold flex items-center gap-0.5">
-                  <span>🤖</span>
-                  <span>Generati da AI</span>
-                </Badge>
-              </div>
-              {isEditingEvent ? (
-                <div className="flex flex-col gap-2">
-                  <div className="flex flex-wrap gap-2">
-                    {editingTags.map((tag, i) => (
-                      <Badge key={i} variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-200">
-                        {tag}
-                        <button
-                          onClick={() => setEditingTags((prev) => prev.filter((_, idx) => idx !== i))}
-                          className="ml-1 hover:text-red-500"
-                        >
-                          <XCircle className="w-3 h-3" />
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="flex gap-2 mt-2">
-                    <Input
-                      value={newTagValue}
-                      onChange={(e) => setNewTagValue(e.target.value)}
-                      placeholder="Nuovo tag..."
-                      className="h-10 text-sm bg-background"
-                    />
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      className="h-10 px-4"
-                      onClick={() => {
-                        if (newTagValue.trim()) {
-                          setEditingTags((prev) => [...prev, newTagValue.trim()]);
-                          setNewTagValue("");
-                        }
-                      }}
-                    >
-                      Aggiungi
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {inspectingEvent.tags && inspectingEvent.tags.length > 0 ? (
-                    inspectingEvent.tags.map((tag: string, i: number) => (
-                      <Badge key={i} variant="secondary" className="bg-sky-100/80 text-sky-900 border border-sky-300/40">
-                        {tag}
-                      </Badge>
-                    ))
-                  ) : (
-                    <span className="text-sm text-sky-900/60 italic">Nessun tag</span>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Dettagli Extra (Evidenziati AI) */}
+          {/* Dettagli Extra (Evidenziati AI - Full Width) */}
+          <div className="border-t border-border pt-4">
             <div className={aiHighlightedClass}>
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-xs font-bold text-sky-950 dark:text-sky-200 uppercase tracking-wider">Dettagli Extra</h4>
