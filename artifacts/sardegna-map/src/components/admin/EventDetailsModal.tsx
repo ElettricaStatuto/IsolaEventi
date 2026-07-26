@@ -230,10 +230,10 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
             
             {/* Left Column: Image + Upload */}
             <div className="flex flex-col gap-3 shrink-0 w-full sm:w-64">
-              {imageUrl(inspectingEvent) ? (
+              {inspectingEvent.immagine ? (
                 <div className="relative w-full h-48 sm:h-auto group">
                   <img
-                    src={imageUrl(inspectingEvent)!}
+                    src={inspectingEvent.immagine}
                     alt={inspectingEvent.titolo}
                     className={`w-full aspect-[4/3] object-cover rounded-md border transition-all ${
                       inspectingEvent.dettagli_extra?.immagine_pulita_e_pubblicabile === false

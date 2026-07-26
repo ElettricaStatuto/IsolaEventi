@@ -277,9 +277,9 @@ export const PendingEventsTable: React.FC<PendingEventsTableProps> = ({
                                 />
                               </td>
                               <td className="px-4 py-3">
-                                {getEventImageUrl(ev.immagine) ? (
+                                {ev.immagine ? (
                                   <img
-                                    src={getEventImageUrl(ev.immagine)!}
+                                    src={ev.immagine}
                                     alt={ev.titolo}
                                     className="w-16 h-16 object-cover rounded-md border border-border"
                                     loading="lazy"
