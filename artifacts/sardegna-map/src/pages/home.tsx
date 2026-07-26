@@ -11,7 +11,7 @@ import { DateFilter } from "../components/date-filter";
 import { EventList } from "../components/event-list";
 import { MapContainer } from "../components/map-container";
 import { EventDetailsModalPublic } from "../components/EventDetailsModalPublic";
-import { getAssetUrl } from "../lib/utils";
+import { getAssetUrl, getEventImageUrl } from "../lib/utils";
 
 export function Home() {
   const queryClient = useQueryClient();
@@ -235,8 +235,7 @@ export function Home() {
       {/* Public Event Details Overlay */}
       {(() => {
         const getImageUrl = (ev: any) => {
-          if (!ev?.immagine) return null;
-          return getAssetUrl(`/api/event-images/${ev.immagine}`);
+          return getEventImageUrl(ev?.immagine);
         };
 
         return selectedEventDetail ? (

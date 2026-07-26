@@ -19,7 +19,7 @@ import { AnalyzedEventsTable } from "@/components/admin/AnalyzedEventsTable";
 import { PublishedEventsTable } from "@/components/admin/PublishedEventsTable";
 import { RejectedEventsTable } from "@/components/admin/RejectedEventsTable";
 import { EventDetailsModal } from "@/components/admin/EventDetailsModal";
-import { getAssetUrl } from "../lib/utils";
+import { getAssetUrl, getEventImageUrl } from "../lib/utils";
 
 const LS_KEY = "sardegna_admin_key";
 
@@ -1587,8 +1587,7 @@ export function Admin() {
 
   // ── Render helpers ──
   const imageUrl = (ev: { immagine: string | null; titolo: string }) => {
-    if (!ev.immagine) return null;
-    return getAssetUrl(`/api/event-images/${ev.immagine}`);
+    return getEventImageUrl(ev.immagine);
   };
 
   return (

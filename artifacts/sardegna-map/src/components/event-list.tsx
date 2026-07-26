@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import type { Event } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { Helmet } from "react-helmet-async";
-import { getAssetUrl } from "../lib/utils";
+import { getAssetUrl, getEventImageUrl } from "../lib/utils";
 
 interface EventListProps {
   events: Event[];
@@ -62,7 +62,7 @@ export function EventList({
         }
       } : {})
     },
-    ...(selectedEvent.immagine ? { "image": [getAssetUrl(`/api/event-images/${selectedEvent.immagine}`)] } : {})
+    ...(selectedEvent.immagine ? { "image": [getEventImageUrl(selectedEvent.immagine)] } : {})
   } : null;
 
   return (

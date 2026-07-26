@@ -11,3 +11,10 @@ export function getAssetUrl(relativePath: string | null | undefined): string | n
   const baseUrl = import.meta.env.VITE_API_URL || "";
   return baseUrl ? `${baseUrl.replace(/\/+$/, "")}/${relativePath.replace(/^\/+/, "")}` : relativePath;
 }
+
+export function getEventImageUrl(immagine: string | null | undefined): string | null {
+  if (!immagine) return null;
+  if (immagine.startsWith("http")) return immagine;
+  return getAssetUrl(`/api/event-images/${immagine}`);
+}
+
