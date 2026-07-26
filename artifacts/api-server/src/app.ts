@@ -30,12 +30,16 @@ app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
+  ? path.resolve(process.cwd(), "../..")
+  : process.cwd();
+
 // Serve event images statically
-const imagesDir = path.resolve(process.cwd(), "..", "..", "data", "event-images");
+const imagesDir = path.resolve(workspaceRoot, "data", "event-images");
 app.use("/api/event-images", express.static(imagesDir));
 
 // Serve event pdfs statically
-const pdfsDir = path.resolve(process.cwd(), "..", "..", "data", "event-pdfs");
+const pdfsDir = path.resolve(workspaceRoot, "data", "event-pdfs");
 app.use("/api/event-pdfs", express.static(pdfsDir));
 
 app.use("/api", router);
