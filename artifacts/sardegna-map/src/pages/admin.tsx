@@ -1362,6 +1362,8 @@ export function Admin() {
     } finally {
       setSavingEvent(false);
     }
+  };
+
   const handleMergeSelectedIntoFestival = () => {
     const selectedIndices = Array.from(new Set([...selectedApproveIds, ...selectedAnalyzeIds]));
     if (selectedIndices.length < 2) {
