@@ -34,16 +34,37 @@ class GenericUrlScraper(BaseScraper):
         self.h2t.ignore_tables = False
         self.h2t.body_width = 0
 
-    def fetch_subpage(self, url: str) -> tuple[str, str]:
+    def fetch_subpage(self, url: str) -> tuple[str, str, str, str | None]:
         soup = self.get_pagina(url)
         if not soup:
-            return url, ""
+            return url, "", "", None
             
+        titolo = ""
+        h1 = soup.find("h1")
+        if h1:
+            titolo = h1.get_text(strip=True)
+        else:
+            title_tag = soup.find("title")
+            if title_tag:
+                titolo = title_tag.get_text(strip=True)
+
+        immagine = None
+        og_img = soup.find("meta", property="og:image") or soup.find("meta", attrs={"name": "twitter:image"})
+        if og_img and og_img.get("content"):
+            immagine = urljoin(url, og_img.get("content"))
+        else:
+            # Trova la prima grande immagine nel body
+            img_tag = soup.find("img", src=True)
+            if img_tag and img_tag.get("src"):
+                src = img_tag["src"]
+                if not src.startswith("data:"):
+                    immagine = urljoin(url, src)
+
         # Rimuovi roba inutile
         for tag in soup(["script", "style", "nav", "footer", "header", "noscript", "iframe"]):
             tag.decompose()
             
-        return url, self.h2t.handle(str(soup))
+        return url, titolo, self.h2t.handle(str(soup)), immagine
 
     def scrapa_eventi(self) -> list[Evento]:
         soup = self.get_pagina(self.target_url)
@@ -129,10 +150,15 @@ class GenericUrlScraper(BaseScraper):
             print(f"[{self.nome_fonte}] Trovati {len(urls_to_fetch)} link utili. Inizio deep-scraping...")
             with ThreadPoolExecutor(max_workers=5) as executor:
                 results = executor.map(self.fetch_subpage, urls_to_fetch)
-                for url, testo_sub in results:
+                for url, titolo_sub, testo_sub, img_sub in results:
                     if testo_sub.strip():
                         testo_pulito = re.sub(r'\n{3,}', '\n\n', testo_sub)
-                        full_text += f"=== Contenuto estratto da: {url} ===\n{testo_pulito}\n\n"
+                        full_text += f"=== Contenuto estratto da: {url} ===\n"
+                        if titolo_sub:
+                            full_text += f"[TITOLO_PAGINA]: {titolo_sub}\n"
+                        if img_sub:
+                            full_text += f"[IMMAGINE_SOTTO_LINK]: {img_sub}\n"
+                        full_text += f"[TESTO]:\n{testo_pulito}\n\n"
         
         # Salvataggio debug e log JSON
         try:

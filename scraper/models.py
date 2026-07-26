@@ -11,6 +11,7 @@ class SottoEvento:
     luogo: Optional[str] = None
     url: Optional[str] = None
     descrizione: Optional[str] = None
+    immagine: Optional[str] = None
 
 @dataclass
 class Evento:

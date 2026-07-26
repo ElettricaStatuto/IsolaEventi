@@ -209,7 +209,8 @@ STRUTTURA JSON OBBLIGATORIA:
       "ora_fine": "HH:MM",
       "luogo": "Città, Luogo Specifico di questo sotto-evento",
       "descrizione": "Descrizione sintetica del singolo concerto o spettacolo",
-      "artisti": ["Nome Artista 1"]
+      "artisti": ["Nome Artista 1"],
+      "immagine": "URL estratto da [IMMAGINE_SOTTO_LINK] se presente nel testo di questa serata/sotto-link, altrimenti null"
     }}
   ]
 }}
