@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm run build && node --env-file=../../.env --enable-source-maps ./dist/index.mjs",
-    "build": "pip install -r requirements.txt && node ./build.mjs",
+    "build": "pip install --break-system-packages -r requirements.txt && node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
