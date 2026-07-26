@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Brain, CheckCircle2, Trash2, Search, Eye, Loader2 } from "lucide-react";
+import { ArrowLeft, Brain, CheckCircle2, Trash2, Search, Eye, Loader2, Flag } from "lucide-react";
 import { ButtonLegendGuide } from "./ButtonLegendGuide";
 import { getEventImageUrl } from "@/lib/utils";
 
@@ -45,6 +45,7 @@ export interface PendingEventsTableProps {
   handleApprove: () => void;
   loadingPreview: boolean;
   approvalResult: any;
+  handleMergeSelectedIntoFestival?: () => void;
 }
 
 export const PendingEventsTable: React.FC<PendingEventsTableProps> = ({
@@ -82,6 +83,7 @@ export const PendingEventsTable: React.FC<PendingEventsTableProps> = ({
   handleApprove,
   loadingPreview,
   approvalResult,
+  handleMergeSelectedIntoFestival,
 }) => {
   const [soloFestival, setSoloFestival] = React.useState(false);
 
@@ -153,6 +155,16 @@ export const PendingEventsTable: React.FC<PendingEventsTableProps> = ({
                     >
                       <Trash2 className="w-3.5 h-3.5 mr-1" /> Elimina Tutti Filtrati ({displayedList.length})
                     </Button>
+                    {handleMergeSelectedIntoFestival && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="h-7 text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold"
+                        onClick={handleMergeSelectedIntoFestival}
+                      >
+                        <Flag className="w-3.5 h-3.5 mr-1" /> Unisci Selezionati in Festival
+                      </Button>
+                    )}
                   </div>
                 </div>
 

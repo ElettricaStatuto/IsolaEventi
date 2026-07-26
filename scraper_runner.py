@@ -508,7 +508,7 @@ def main():
                         "longitudine": obj["lon"],
                         "link": ev.url,
                         "descrizione": se.descrizione,
-                        "immagine": ev.immagine,
+                        "immagine": getattr(se, 'immagine', None) or ev.immagine,
                         "fonte": ev.fonte or "",
                         "is_new": obj["is_new"],
                         "testo_estratto": None,

@@ -1352,15 +1352,62 @@ export function Admin() {
           }
         }
 
-        loadPublished(appliedFilters);
-        setInspectingEvent({ ...inspectingEvent, tags: editingTags, dettagli_extra: editingDettagli });
+        const updated = publishedEvents.map(e => e.id === inspectingEvent.id ? payload : e);
+        setPublishedEvents(updated);
+        setInspectingEvent(payload);
         setIsEditingEvent(false);
       }
-    } catch (e) {
-      setError(`Errore salvataggio: ${String(e)}`);
+    } catch (err: any) {
+      setError(err.message || "Errore nel salvataggio dei dettagli");
     } finally {
       setSavingEvent(false);
     }
+  const handleMergeSelectedIntoFestival = () => {
+    const selectedIndices = Array.from(new Set([...selectedApproveIds, ...selectedAnalyzeIds]));
+    if (selectedIndices.length < 2) {
+      alert("Seleziona almeno 2 eventi (spuntando la casella) per unirli in un Festival Padre.");
+      return;
+    }
+
+    const parentIdx = selectedIndices[0];
+    const parentEv = previewEvents[parentIdx];
+    if (!parentEv) return;
+
+    const parentKey = parentEv.dettagli_extra?.id_key || `temp_parent_${Date.now()}`;
+
+    const festivalTitle = prompt("Inserisci il nome del Festival Padre:", parentEv.titolo || "Festival");
+    if (!festivalTitle) return;
+
+    const updatedPreview = previewEvents.map((ev, i) => {
+      if (i === parentIdx) {
+        return {
+          ...ev,
+          titolo: festivalTitle,
+          is_festival: true,
+          dettagli_extra: {
+            ...ev.dettagli_extra,
+            id_key: parentKey,
+            is_festival_padre: true,
+          },
+        };
+      }
+      if (selectedIndices.includes(i)) {
+        return {
+          ...ev,
+          is_festival: false,
+          dettagli_extra: {
+            ...ev.dettagli_extra,
+            parent_temp_id: parentKey,
+            festival_padre: festivalTitle,
+          },
+        };
+      }
+      return ev;
+    });
+
+    setPreviewEvents(updatedPreview);
+    updatePreviewCache(updatedPreview);
+    alert(`Uniti con successo ${selectedIndices.length} eventi sotto il Festival Padre: '${festivalTitle}'!`);
   };
 
   const handleAnalyzeGroupFromModal = () => {
@@ -1686,6 +1733,7 @@ export function Admin() {
               deletePreviewEvent={deletePreviewEvent}
               aiProvider={aiProvider}
               setAiProvider={setAiProvider}
+              handleMergeSelectedIntoFestival={handleMergeSelectedIntoFestival}
               analysisTarget={analysisTarget}
               setAnalysisTarget={setAnalysisTarget}
               handleAnalyzePreview={handleAnalyzePreview}
