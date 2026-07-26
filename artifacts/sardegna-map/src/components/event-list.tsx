@@ -108,9 +108,7 @@ export function EventList({
             events.map((evt) => {
               const isFestival = events.some(e => e.parent_id === evt.id);
               
-              // Nascondi i sotto-eventi dalla lista principale per non creare confusione
-              // (verranno visti nella pagina del festival o sulla mappa)
-              if (evt.parent_id) return null;
+
 
               return (
                 <div

@@ -67,7 +67,6 @@ router.get("/events", async (req, res): Promise<void> => {
 
   const conditions = [];
   conditions.push(gte(eventsTable.dataInizio, cutoffString));
-  conditions.push(isNull(eventsTable.parentId));
 
   if (date_from && date_from > cutoffString) {
     conditions.push(gte(eventsTable.dataInizio, date_from));
