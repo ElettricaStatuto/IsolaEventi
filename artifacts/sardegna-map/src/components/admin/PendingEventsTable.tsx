@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowLeft, Brain, CheckCircle2, Trash2, Search, Eye, Loader2 } from "lucide-react";
 import { ButtonLegendGuide } from "./ButtonLegendGuide";
+import { getEventImageUrl } from "@/lib/utils";
 
 export interface PendingEventsTableProps {
   scrapingStep: "input" | "list" | "result";
@@ -276,9 +277,9 @@ export const PendingEventsTable: React.FC<PendingEventsTableProps> = ({
                                 />
                               </td>
                               <td className="px-4 py-3">
-                                {ev.immagine ? (
+                                {getEventImageUrl(ev.immagine) ? (
                                   <img
-                                    src={ev.immagine}
+                                    src={getEventImageUrl(ev.immagine)!}
                                     alt={ev.titolo}
                                     className="w-16 h-16 object-cover rounded-md border border-border"
                                     loading="lazy"
