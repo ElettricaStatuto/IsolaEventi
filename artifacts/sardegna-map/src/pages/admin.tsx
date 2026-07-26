@@ -1529,8 +1529,13 @@ export function Admin() {
           
           if (inspectingEvent.is_pending) {
             const nextEvents = [...previewEvents];
-            const idx = parseInt(tmpId!, 10);
-            if (!isNaN(idx) && nextEvents[idx]) {
+            let idx = previewEvents.findIndex(
+              (e) => e.dettagli_extra?.id_key && e.dettagli_extra.id_key === inspectingEvent.dettagli_extra?.id_key
+            );
+            if (idx === -1) {
+              idx = parseInt(tmpId!, 10);
+            }
+            if (idx !== -1 && nextEvents[idx]) {
                nextEvents[idx] = { ...nextEvents[idx], ...updatedEvent };
                setPreviewEvents(nextEvents);
                updatePreviewCache(nextEvents);
