@@ -4,32 +4,12 @@
 ================================================================================
 Questo file contiene i testi delle istruzioni (prompt) inviati a Gemini AI.
 Separare le istruzioni testuali dal codice logico rende la manutenzione immediata.
-
-I prompt presenti sono suddivisi per la specifica azione che svolgono:
-
-1. PROMPT_ANALISI_PDF
-   - FASE: Caricamento e importazione da brochure o programmi cartacei.
-   - TRIGGER (PULSANTE): Avviato quando clicchi su "Carica PDF" nel pannello
-     Admin (Sezione "Preview eventi" -> Drag & Drop PDF).
-
-2. PROMPT_ESTRAZIONE_PROGRAMMA_FESTIVAL
-   - FASE: Suddivisione e frammentazione di programmi complessi/cartelloni in eventi singoli.
-   - TRIGGER (PULSANTE): Avviato in automatico durante lo "Scraping URL" se
-     spunti la casella "Forza Festival", oppure quando avvii l'estrazione AI
-     dei sotto-eventi su un testo lungo contenente più serate.
-
-3. PROMPT_ANALISI_LOCANDINA_STANDARD
-   - FASE: Creazione definitiva dell'articolo e della scheda geolocalizzata.
-   - TRIGGER (PULSANTE): Avviato quando premi il pulsante "Analizza" (o "Rianalizza")
-     su una card nella tabella "In Attesa" o "Analizzati". Elabora l'immagine
-     della locandina e/o il testo per compilare i campi del database.
 ================================================================================
 """
 
 # ==============================================================================
 #  1. PROMPT_ANALISI_PDF
 #  Fase: Importazione da PDF
-#  Trigger (Pulsante): "Carica PDF" (Area Admin -> Caricamento File)
 # ==============================================================================
 PROMPT_ANALISI_PDF = """Sei un analista esperto di eventi culturali in Sardegna.
 Il tuo obiettivo è esaminare il PDF allegato ed estrarre il programma completo.
@@ -46,10 +26,10 @@ REGOLE TASSATIVE DI FORMATTAZIONE E COMPLETEZZA:
    - Se un evento indica un periodo (es. "da Venerdì 17 a Domenica 19 Luglio"), DEVI assolutamente valorizzare sia "data_inizio" (2026-07-17) che "data_fine" (2026-07-19).
 
 Rispondi ESCLUSIVAMENTE in formato JSON usando questo schema esatto:
-{
+{{
   "testo_integrale_pdf": "Tutto il testo estratto qui...",
   "eventi": [
-    {
+    {{
       "titolo": "Titolo Evento o Serata",
       "categoria": "Musica | Teatro | Cinema | Arte | Enogastronomia | ...",
       "data_inizio": "YYYY-MM-DD",
@@ -57,16 +37,15 @@ Rispondi ESCLUSIVAMENTE in formato JSON usando questo schema esatto:
       "ora_inizio": "HH:MM",
       "ora_fine": "HH:MM",
       "luogo": "Città, Luogo Specifico"
-    }
+    }}
   ]
-}
+}}
 """
 
 
 # ==============================================================================
 #  2. PROMPT_ESTRAZIONE_PROGRAMMA_FESTIVAL
 #  Fase: Estrazione Sotto-Eventi / Frammentazione Cartellone
-#  Trigger (Pulsante): "Scrape URL" (con spunta su "Forza Festival") o "Estrai Sotto-eventi"
 # ==============================================================================
 PROMPT_ESTRAZIONE_PROGRAMMA_FESTIVAL = """Sei un estrattore dati specializzato in eventi culturali in Sardegna.
 Ti verrà fornito un lungo testo o locandina contenente un programma di eventi, un festival o un cartellone.
@@ -83,16 +62,16 @@ REGOLE TASSATIVE:
 
 Restituisci ESCLUSIVAMENTE questo esatto formato JSON:
 
-{
+{{
   "is_festival": true,
-  "info_festival_padre": {
+  "info_festival_padre": {{
     "titolo_festival": "Nome ufficiale del Festival o Rassegna (es. Ittiritmi 2026)",
     "data_inizio_generale": "YYYY-MM-DD",
     "data_fine_generale": "YYYY-MM-DD",
     "descrizione_introduttiva": "Testo introduttivo generale o concept del festival..."
-  },
+  }},
   "eventi_figli_estratti": [
-    {
+    {{
       "titolo": "Titolo del singolo evento/concerto (non il nome generale del festival)",
       "categoria": "Musica | Teatro | Cinema | Arte | Enogastronomia | ...",
       "data_inizio": "YYYY-MM-DD",
@@ -101,10 +80,11 @@ Restituisci ESCLUSIVAMENTE questo esatto formato JSON:
       "ora_fine": "HH:MM",
       "luogo": "Città, Luogo Specifico di questo sotto-evento",
       "url_riferimento": "https://... (se presente)",
-      "pezzo_di_testo_di_riferimento": "COPIA E INCOLLA il frammento di testo esatto che parla SOLO di questo evento."
-    }
+      "pezzo_di_testo_di_riferimento": "COPIA E INCOLLA il frammento di testo esatto che parla SOLO di questo evento.",
+      "immagine": "URL estratto da [IMMAGINE_SOTTO_LINK] se presente nel testo di questa pagina, altrimenti null"
+    }}
   ]
-}
+}}
 
 TESTO SORGENTE:
 {descrizione}
@@ -210,7 +190,7 @@ STRUTTURA JSON OBBLIGATORIA:
       "luogo": "Città, Luogo Specifico di questo sotto-evento",
       "descrizione": "Descrizione sintetica del singolo concerto o spettacolo",
       "artisti": ["Nome Artista 1"],
-      "immagine": "URL estratto da [IMMAGINE_SOTTO_LINK] se presente nel testo di questa serata/sotto-link, altrimenti null"
+      "immagine": "URL estratto da [IMMAGINE_SOTTO_LINK] se presente nel testo di questa pagina, altrimenti null"
     }}
   ]
 }}
