@@ -21,6 +21,7 @@ import { logger } from "../lib/logger";
 import { requireAdminKey } from "../middlewares/auth";
 import fs from "fs";
 import multer from "multer";
+import { isCloudinaryConfigured } from "../lib/cloudinary";
 
 const upload = multer({ dest: "data/uploads/" });
 const execFileAsync = promisify(execFile);
@@ -512,7 +513,7 @@ router.post("/events/scrape-url", requireAdminKey, async (req, res): Promise<voi
   }
 });
 
-router.post("/events/upload-image", requireAdminKey, upload.single("file"), (req, res): void => {
+router.post("/events/upload-image", requireAdminKey, upload.single("file"), async (req, res): Promise<void> => {
   req.log.info("Starting image upload");
 
   const file = req.file;
@@ -521,12 +522,26 @@ router.post("/events/upload-image", requireAdminKey, upload.single("file"), (req
     return;
   }
 
+  const absoluteUploadPath = path.resolve(process.cwd(), file.path);
+
+  // Se Cloudinary è configurato, carica lì e restituisci l'URL permanente
+  if (isCloudinaryConfigured()) {
+    try {
+      const { uploadToCloudinary } = await import("../lib/cloudinary");
+      const cloudUrl = await uploadToCloudinary(absoluteUploadPath, "isola-eventi");
+      req.log.info(`Image uploaded to Cloudinary: ${cloudUrl}`);
+      res.json({ success: true, fileName: cloudUrl });
+      return;
+    } catch (e) {
+      req.log.error({ err: e }, "Cloudinary upload failed, falling back to disk");
+    }
+  }
+
+  // Fallback: salva su disco locale
   const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
     ? path.resolve(process.cwd(), "../..")
     : process.cwd();
 
-  const absoluteUploadPath = path.resolve(process.cwd(), file.path);
-  
   const ext = path.extname(file.originalname) || ".jpg";
   const safeName = "manual_" + Date.now() + "_" + Math.random().toString(36).substring(2, 8) + ext;
   
@@ -545,6 +560,7 @@ router.post("/events/upload-image", requireAdminKey, upload.single("file"), (req
     res.status(500).json({ error: "Impossibile salvare l'immagine" });
   }
 });
+
 
 router.post("/events/upload-pdf", requireAdminKey, upload.single("file"), async (req, res): Promise<void> => {
   req.log.info("Starting scraper preview for uploaded PDF");

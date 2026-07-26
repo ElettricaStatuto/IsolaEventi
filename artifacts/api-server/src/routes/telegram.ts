@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import { uploadBufferToCloudinary, isCloudinaryConfigured } from "../lib/cloudinary";
 
 const router: IRouter = Router();
 
@@ -54,6 +55,21 @@ async function downloadTelegramFile(botToken: string, fileId: string, destPath: 
   }
   const buffer = await fileRes.arrayBuffer();
   await fs.promises.writeFile(destPath, Buffer.from(buffer));
+}
+
+/**
+ * Scarica l'immagine da Telegram come Buffer.
+ */
+async function downloadTelegramBuffer(botToken: string, fileId: string): Promise<Buffer> {
+  const getFileUrl = `https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`;
+  const res = await fetch(getFileUrl);
+  const data = await res.json() as any;
+  if (!data.ok) throw new Error(`Telegram getFile failed: ${JSON.stringify(data)}`);
+  const filePath = data.result.file_path;
+  const downloadUrl = `https://api.telegram.org/file/bot${botToken}/${filePath}`;
+  const fileRes = await fetch(downloadUrl);
+  if (!fileRes.ok) throw new Error(`Telegram file download failed: ${fileRes.statusText}`);
+  return Buffer.from(await fileRes.arrayBuffer());
 }
 
 router.post("/telegram-webhook", async (req, res): Promise<void> => {
@@ -125,21 +141,29 @@ router.post("/telegram-webhook", async (req, res): Promise<void> => {
       : process.cwd();
     const imagesDir = path.resolve(workspaceRoot, "data", "event-images");
 
-    // Assicura che la directory esista
+    // Assicura che la directory esista (usata solo come fallback se Cloudinary non è configurato)
     if (!fs.existsSync(imagesDir)) {
       fs.mkdirSync(imagesDir, { recursive: true });
     }
+
+    const useCloud = isCloudinaryConfigured();
 
     if (message.photo && Array.isArray(message.photo) && message.photo.length > 0) {
       // Photo
       const bestPhoto = message.photo[message.photo.length - 1];
       const fileId = bestPhoto.file_id;
-      const ext = "jpg";
-      imageFilename = `telegram_${Math.floor(Date.now() / 1000)}_${crypto.randomUUID().slice(0, 6)}.${ext}`;
-      const destPath = path.join(imagesDir, imageFilename);
+      const baseName = `telegram_${Math.floor(Date.now() / 1000)}_${crypto.randomUUID().slice(0, 6)}`;
 
-      req.log.info(`Downloading Telegram photo to ${imageFilename}`);
-      await downloadTelegramFile(botToken, fileId, destPath);
+      if (useCloud) {
+        req.log.info(`Uploading Telegram photo to Cloudinary: ${baseName}`);
+        const buffer = await downloadTelegramBuffer(botToken, fileId);
+        imageFilename = await uploadBufferToCloudinary(buffer, baseName);
+      } else {
+        const destPath = path.join(imagesDir, `${baseName}.jpg`);
+        req.log.info(`Downloading Telegram photo to disk: ${baseName}.jpg`);
+        await downloadTelegramFile(botToken, fileId, destPath);
+        imageFilename = `${baseName}.jpg`;
+      }
 
       if (textContent) {
         const cleanCaption = textContent.trim().split("\n")[0];
@@ -153,19 +177,23 @@ router.post("/telegram-webhook", async (req, res): Promise<void> => {
       const fileId = doc.file_id;
       const origName = doc.file_name || "locandina.pdf";
       const mime = doc.mime_type || "";
+      const isImage = origName.toLowerCase().match(/\.(png|jpg|jpeg|webp)$/) || mime.startsWith("image/");
 
+      const baseName = `telegram_${Math.floor(Date.now() / 1000)}_${crypto.randomUUID().slice(0, 6)}`;
       let ext = "pdf";
-      if (origName.toLowerCase().includes("png") || mime.includes("png")) {
-        ext = "png";
-      } else if (origName.toLowerCase().includes("jpg") || origName.toLowerCase().includes("jpeg") || mime.includes("image")) {
-        ext = "jpg";
+      if (origName.toLowerCase().includes("png") || mime.includes("png")) ext = "png";
+      else if (origName.toLowerCase().match(/\.jpe?g$/) || mime.includes("image")) ext = "jpg";
+
+      if (useCloud && isImage) {
+        req.log.info(`Uploading Telegram document (${origName}) to Cloudinary: ${baseName}`);
+        const buffer = await downloadTelegramBuffer(botToken, fileId);
+        imageFilename = await uploadBufferToCloudinary(buffer, baseName);
+      } else {
+        const destPath = path.join(imagesDir, `${baseName}.${ext}`);
+        req.log.info(`Downloading Telegram document (${origName}) to disk: ${baseName}.${ext}`);
+        await downloadTelegramFile(botToken, fileId, destPath);
+        imageFilename = `${baseName}.${ext}`;
       }
-
-      imageFilename = `telegram_${Math.floor(Date.now() / 1000)}_${crypto.randomUUID().slice(0, 6)}.${ext}`;
-      const destPath = path.join(imagesDir, imageFilename);
-
-      req.log.info(`Downloading Telegram document (${origName}) to ${imageFilename}`);
-      await downloadTelegramFile(botToken, fileId, destPath);
 
       eventTitle = `Documento (${origName}) da ${userDisplay}`;
     } else if (textContent) {
