@@ -11,6 +11,7 @@ import { DateFilter } from "../components/date-filter";
 import { EventList } from "../components/event-list";
 import { MapContainer } from "../components/map-container";
 import { EventDetailsModalPublic } from "../components/EventDetailsModalPublic";
+import { getAssetUrl } from "../lib/utils";
 
 export function Home() {
   const queryClient = useQueryClient();
@@ -235,7 +236,7 @@ export function Home() {
       {(() => {
         const getImageUrl = (ev: any) => {
           if (!ev?.immagine) return null;
-          return ev.immagine.startsWith("http") ? ev.immagine : `/api/event-images/${ev.immagine}`;
+          return getAssetUrl(`/api/event-images/${ev.immagine}`);
         };
 
         return selectedEventDetail ? (

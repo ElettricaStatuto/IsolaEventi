@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import type { Event } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { Helmet } from "react-helmet-async";
+import { getAssetUrl } from "../lib/utils";
 
 interface EventListProps {
   events: Event[];
@@ -61,7 +62,7 @@ export function EventList({
         }
       } : {})
     },
-    ...(selectedEvent.immagine ? { "image": [selectedEvent.immagine.startsWith("http") ? selectedEvent.immagine : `https://sardegnaeventi.it/api/event-images/${selectedEvent.immagine}`] } : {})
+    ...(selectedEvent.immagine ? { "image": [getAssetUrl(`/api/event-images/${selectedEvent.immagine}`)] } : {})
   } : null;
 
   return (
@@ -223,7 +224,7 @@ export function EventList({
                             
                             {evt.dettagli_extra?.pdf_path && (
                               <a
-                                href={`/api/event-pdfs/${String(evt.dettagli_extra.pdf_path).split('/').pop()}`}
+                                href={getAssetUrl(`/api/event-pdfs/${String(evt.dettagli_extra.pdf_path).split('/').pop()}`) || "#"}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="flex items-center gap-1.5 text-white font-semibold bg-red-600 hover:bg-red-700 transition-colors w-fit px-3 py-1.5 rounded-md text-xs shadow-sm hover:shadow"
@@ -275,7 +276,7 @@ export function EventList({
                             
                             {evt.dettagli_extra?.pdf_path && (
                               <a
-                                href={`/api/event-pdfs/${String(evt.dettagli_extra.pdf_path).split('/').pop()}`}
+                                href={getAssetUrl(`/api/event-pdfs/${String(evt.dettagli_extra.pdf_path).split('/').pop()}`) || "#"}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="flex items-center gap-1.5 text-red-700 font-semibold bg-red-50 hover:bg-red-100 border border-red-200 transition-colors w-fit px-3 py-1.5 rounded-md text-xs shadow-sm hover:shadow"
@@ -336,7 +337,7 @@ export function EventList({
                                 )}
                                 {evt.dettagli_extra?.pdf_path && (
                                   <a
-                                    href={`/api/event-pdfs/${String(evt.dettagli_extra.pdf_path).split('/').pop()}`}
+                                    href={getAssetUrl(`/api/event-pdfs/${String(evt.dettagli_extra.pdf_path).split('/').pop()}`) || "#"}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="flex items-center gap-1 text-red-600 hover:underline text-xs font-semibold"

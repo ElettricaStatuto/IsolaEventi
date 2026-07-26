@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { XCircle, Globe, Calendar, MapPin, Clock, FileText } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { getAssetUrl } from "../lib/utils";
 
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
@@ -182,7 +183,7 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
               {/* Locandina PDF (Flyer) Button */}
               {event.dettagli_extra?.pdf_path && (
                 <a
-                  href={`/api/event-pdfs/${String(event.dettagli_extra.pdf_path).split('/').pop()}`}
+                  href={getAssetUrl(`/api/event-pdfs/${String(event.dettagli_extra.pdf_path).split('/').pop()}`) || "#"}
                   target="_blank"
                   rel="noreferrer"
                   className="flex items-center justify-center gap-2 w-full py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-sm transition-all hover:scale-[1.01] text-xs uppercase tracking-wider"

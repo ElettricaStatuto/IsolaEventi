@@ -6,6 +6,7 @@ import { Flag, Calendar, MapPin, ArrowLeft, Clock } from "lucide-react";
 import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
+import { getAssetUrl } from "../lib/utils";
 
 export function FestivalPage() {
   const params = useParams();
@@ -64,7 +65,7 @@ export function FestivalPage() {
           <div className="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-xl ring-1 ring-border">
             {festival.immagine ? (
               <img 
-                src={festival.immagine.startsWith("http") ? festival.immagine : `/api/event-images/${festival.immagine}`} 
+                src={getAssetUrl(`/api/event-images/${festival.immagine}`) || ""} 
                 alt={festival.titolo}
                 className="absolute inset-0 w-full h-full object-cover"
               />
