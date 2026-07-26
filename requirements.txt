@@ -6,3 +6,5 @@ requests>=2.34.2
 pypdf>=4.0.0
 python-dotenv
 psycopg2-binary
+html2text
+
