@@ -81,25 +81,26 @@ def analizza_evento_con_llm_pro(client, use_live, title, text, url):
     prompt_utente = f"TITOLO: {title}\nURL: {url}\n\nTESTO GREZZO PULITO:\n{text[:3000]}"
     
     if use_live and client:
-        try:
-            from google.genai import types
-            # Configurazione esplicita modello Gemini 3.1 Pro
-            response = client.models.generate_content(
-                model='gemini-3.1-pro',
-                contents=prompt_utente,
-                config=types.GenerateContentConfig(
-                    system_instruction=PROMPT_SISTEMA_ANALISI_EVENTI,
-                    response_mime_type="application/json",
-                    temperature=0.1
+        from google.genai import types
+        models_to_try = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-pro']
+        for model_name in models_to_try:
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt_utente,
+                    config=types.GenerateContentConfig(
+                        system_instruction=PROMPT_SISTEMA_ANALISI_EVENTI,
+                        response_mime_type="application/json",
+                        temperature=0.1
+                    )
                 )
-            )
-            raw_res = response.text
-            metrics = stima_token_e_costi_pro(PROMPT_SISTEMA_ANALISI_EVENTI + prompt_utente, raw_res)
-            res_json = json.loads(raw_res)
-            res_json["_metrics"] = metrics
-            return res_json
-        except Exception as e:
-            print(f"    [-] Avviso API Live Gemini 3.1 Pro per {title}: {e}. Uso motore semantico di simulazione.")
+                raw_res = response.text
+                metrics = stima_token_e_costi_pro(PROMPT_SISTEMA_ANALISI_EVENTI + prompt_utente, raw_res)
+                res_json = json.loads(raw_res)
+                res_json["_metrics"] = metrics
+                return res_json
+            except Exception as e:
+                print(f"    [-] Avviso API Live {model_name} per {title}: {e}.")
 
     # Motore semantico di simulazione ad alta precisione con determinazione di is_evento
     text_upper = (text or "").upper()

@@ -513,6 +513,67 @@ router.post("/events/scrape-url", requireAdminKey, async (req, res): Promise<voi
   }
 });
 
+router.get("/events/crawler-logs", requireAdminKey, (req, res): void => {
+  const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
+    ? path.resolve(process.cwd(), "../..")
+    : process.cwd();
+  const logsBaseDir = path.resolve(workspaceRoot, "scraper", "crawler_ai");
+
+  try {
+    if (!fs.existsSync(logsBaseDir)) {
+      res.json({ success: true, folders: [] });
+      return;
+    }
+
+    const entries = fs.readdirSync(logsBaseDir, { withFileTypes: true });
+    const folders = entries
+      .filter(e => e.isDirectory())
+      .map(e => {
+        const folderPath = path.join(logsBaseDir, e.name);
+        const files = fs.readdirSync(folderPath).filter(f => f.endsWith(".txt") || f.endsWith(".json"));
+        const stat = fs.statSync(folderPath);
+        return {
+          name: e.name,
+          updatedAt: stat.mtime,
+          files
+        };
+      })
+      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+
+    res.json({ success: true, folders });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+router.get("/events/crawler-logs/content", requireAdminKey, (req, res): void => {
+  const { folder, file } = req.query;
+  if (!folder || !file || typeof folder !== "string" || typeof file !== "string") {
+    res.status(400).json({ error: "Mancano i parametri folder o file" });
+    return;
+  }
+
+  const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
+    ? path.resolve(process.cwd(), "../..")
+    : process.cwd();
+
+  const safeFolder = path.basename(folder);
+  const safeFile = path.basename(file);
+  const targetPath = path.resolve(workspaceRoot, "scraper", "crawler_ai", safeFolder, safeFile);
+
+  try {
+    if (!fs.existsSync(targetPath)) {
+      res.status(404).json({ error: "File di log non trovato" });
+      return;
+    }
+
+    const content = fs.readFileSync(targetPath, "utf8");
+    res.json({ success: true, folder: safeFolder, file: safeFile, content });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
 router.post("/events/upload-image", requireAdminKey, upload.single("file"), async (req, res): Promise<void> => {
   req.log.info("Starting image upload");
 

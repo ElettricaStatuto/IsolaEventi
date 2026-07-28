@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Loader2, Info, CheckCircle2, XCircle, ShieldCheck, ArrowLeft, Eye, Database,
-  Trash2, RotateCcw, AlertTriangle, Calendar, MapPin, Globe, Search, RefreshCw, Clock, Terminal, Upload, BarChart3, Brain
+  Trash2, RotateCcw, AlertTriangle, Calendar, MapPin, Globe, Search, RefreshCw, Clock, Terminal, Upload, BarChart3, Brain, FileText
 } from "lucide-react";
 import { AdminStats } from "@/components/admin-stats";
 import { ScraperPanel } from "@/components/admin/ScraperPanel";
@@ -19,6 +19,7 @@ import { AnalyzedEventsTable } from "@/components/admin/AnalyzedEventsTable";
 import { PublishedEventsTable } from "@/components/admin/PublishedEventsTable";
 import { RejectedEventsTable } from "@/components/admin/RejectedEventsTable";
 import { EventDetailsModal } from "@/components/admin/EventDetailsModal";
+import { CrawlerLogsModal } from "@/components/admin/CrawlerLogsModal";
 import { getAssetUrl, getEventImageUrl } from "../lib/utils";
 
 const LS_KEY = "sardegna_admin_key";
@@ -248,6 +249,9 @@ export function Admin() {
   const [rejectedEvents, setRejectedEvents] = useState<RejectedEvent[]>([]);
   const [loadingRejected, setLoadingRejected] = useState(false);
 
+  // ── Modal Log Crawler AI ──
+  const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
+
   // ── Preview tab filters ──
   const [prevFilterTitolo, setPrevFilterTitolo] = useState("");
   const [prevFilterDataFrom, setPrevFilterDataFrom] = useState("");
@@ -452,7 +456,10 @@ export function Admin() {
 
     setError(null);
     setScrapingGeneric(true);
-    setScrapingLogs([]);
+    setScrapingLogs([
+      `🌐 Avvio scansione ricorsiva URL: ${cleanUrl}`,
+      `⏳ Il Crawler Strutturato sta analizzando i sotto-link e scaricando le locandine...`
+    ]);
     setUrlScrapedEvents([]);
     try {
       const resp: any = await fetchJson("/api/events/scrape-url", "POST", { 
