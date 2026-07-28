@@ -464,6 +464,8 @@ router.get("/events/refresh/preview/cache", requireAdminKey, (req, res): void =>
     req.log.error({ err }, "Failed to read preview cache");
     res.json({ success: false, events: [], messaggio: String(err) });
   }
+});
+
 router.get("/events/pending", requireAdminKey, async (req, res): Promise<void> => {
   try {
     const rows = await db.select().from(pendingEventsTable).orderBy(sql`${pendingEventsTable.creatoIl} desc`);
