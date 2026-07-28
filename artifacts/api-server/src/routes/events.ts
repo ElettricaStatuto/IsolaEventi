@@ -26,6 +26,11 @@ import { isCloudinaryConfigured } from "../lib/cloudinary";
 const upload = multer({ dest: "data/uploads/" });
 const execFileAsync = promisify(execFile);
 
+function getPythonExecutable(): string {
+  if (process.env.PYTHON_PATH) return process.env.PYTHON_PATH;
+  return process.platform === "win32" ? "python" : "python3";
+}
+
 const router: IRouter = Router();
 
 function getFestivalDateRange(parentInizio: string | null, parentFine: string | null, sottoEventi: any[]) {
@@ -316,7 +321,7 @@ router.post("/events/refresh/preview", requireAdminKey, (req, res): void => {
     args.push("--sources", sources.join(","));
   }
 
-  const child = spawn("python", [scraperScript, ...args], {
+  const child = spawn(getPythonExecutable(), [scraperScript, ...args], {
     cwd: workspaceRoot,
     env: { ...process.env },
   });
@@ -481,7 +486,7 @@ router.post("/events/scrape-url", requireAdminKey, async (req, res): Promise<voi
     if (maxLinks !== undefined) pythonArgs.push("--max-links", String(maxLinks));
     if (forceFestival) pythonArgs.push("--force-festival");
 
-    const { stdout, stderr } = await execFileAsync("python", pythonArgs, {
+    const { stdout, stderr } = await execFileAsync(getPythonExecutable(), pythonArgs, {
       timeout: 120000,
       maxBuffer: 50 * 1024 * 1024,
       env: { ...process.env },
