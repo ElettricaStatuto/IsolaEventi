@@ -81,7 +81,9 @@ interface RefreshResult {
 async function fetchJson<T>(url: string, method: string, body?: unknown, key?: string): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (key) headers["x-admin-key"] = key;
-  const resp = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  const baseUrl = import.meta.env.VITE_API_URL || "";
+  const fullUrl = url.startsWith("http") ? url : `${baseUrl}${url}`;
+  const resp = await fetch(fullUrl, { method, headers, body: body ? JSON.stringify(body) : undefined });
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
   return resp.json();
 }

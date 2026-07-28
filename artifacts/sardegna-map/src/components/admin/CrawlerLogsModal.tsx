@@ -25,10 +25,12 @@ export const CrawlerLogsModal: React.FC<CrawlerLogsModalProps> = ({ isOpen, onCl
   const [loadingContent, setLoadingContent] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const baseUrl = import.meta.env.VITE_API_URL || "";
+
   const fetchFolders = async () => {
     setLoadingFolders(true);
     try {
-      const res = await fetch("/api/events/crawler-logs", {
+      const res = await fetch(`${baseUrl}/api/events/crawler-logs`, {
         headers: { "x-admin-key": adminKey }
       });
       const data = await res.json();
@@ -54,7 +56,7 @@ export const CrawlerLogsModal: React.FC<CrawlerLogsModalProps> = ({ isOpen, onCl
     setLoadingContent(true);
     setFileContent("");
     try {
-      const res = await fetch(`/api/events/crawler-logs/content?folder=${encodeURIComponent(folderName)}&file=${encodeURIComponent(fileName)}`, {
+      const res = await fetch(`${baseUrl}/api/events/crawler-logs/content?folder=${encodeURIComponent(folderName)}&file=${encodeURIComponent(fileName)}`, {
         headers: { "x-admin-key": adminKey }
       });
       const data = await res.json();
