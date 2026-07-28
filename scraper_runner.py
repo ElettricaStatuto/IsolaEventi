@@ -285,8 +285,13 @@ def main():
     scrapers = []
     
     if args.url:
-        from scraper.sites.generic import GenericUrlScraper
-        scrapers.append(GenericUrlScraper(args.url, max_links=args.max_links))
+        try:
+            from scraper.sites.structured_crawler_adapter import StructuredCrawlerScraper
+            scrapers.append(StructuredCrawlerScraper(args.url, max_links=args.max_links))
+        except Exception as e:
+            emit_log(f"Avviso: errore nell'inizializzazione del crawler strutturato ({e}), uso GenericUrlScraper...")
+            from scraper.sites.generic import GenericUrlScraper
+            scrapers.append(GenericUrlScraper(args.url, max_links=args.max_links))
     elif args.pdf:
         from scraper.sites.pdf_scraper import PdfScraper
         scrapers.append(PdfScraper(args.pdf))
