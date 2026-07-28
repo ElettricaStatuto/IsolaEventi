@@ -12,6 +12,43 @@ from ..crawler_ai.estrai_schema_locandina_ai_con_llm import genera_database_rela
 logger = logging.getLogger(__name__)
 
 
+def ensure_cloudinary_image(url: str | None) -> str | None:
+    if not url or not isinstance(url, str) or not url.startswith("http") or "cloudinary.com" in url:
+        return url
+    
+    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME")
+    api_key = os.environ.get("CLOUDINARY_API_KEY")
+    api_secret = os.environ.get("CLOUDINARY_API_SECRET")
+
+    if not (cloud_name and api_key and api_secret):
+        return url
+
+    try:
+        import cloudinary
+        import cloudinary.uploader
+        cloudinary.config(
+            cloud_name=cloud_name,
+            api_key=api_key,
+            api_secret=api_secret
+        )
+        res = cloudinary.uploader.upload(
+            url,
+            folder="isola-eventi",
+            transformation=[
+                {"width": 1200, "crop": "limit"},
+                {"quality": "auto", "fetch_format": "auto"}
+            ]
+        )
+        cloud_url = res.get("secure_url")
+        if cloud_url:
+            logger.info(f"Immagine caricata su Cloudinary: {url} -> {cloud_url}")
+            return cloud_url
+        return url
+    except Exception as e:
+        logger.warning(f"Impossibile caricare immagine {url} su Cloudinary: {e}")
+        return url
+
+
 class StructuredCrawlerScraper(BaseScraper):
     """
     Adapter per collegare crawler_strutturato.py e estrai_schema_locandina_ai_con_llm.py
@@ -62,7 +99,8 @@ class StructuredCrawlerScraper(BaseScraper):
         # 3. Converti i figli in oggetti SottoEvento
         sotto_eventi_list: List[SottoEvento] = []
         for f in figli:
-            imgs = f.get("approfondimenti_extra", {}).get("immagine") or f.get("immagine")
+            raw_img = f.get("approfondimenti_extra", {}).get("immagine") or f.get("immagine")
+            cloud_img = ensure_cloudinary_image(raw_img)
             se = SottoEvento(
                 titolo=f.get("titolo", "Sotto-evento"),
                 data_inizio=f.get("data_inizio", ""),
@@ -71,9 +109,11 @@ class StructuredCrawlerScraper(BaseScraper):
                 luogo=f.get("luogo", padre.get("luogo", "")),
                 url=f.get("url", self.target_url),
                 descrizione=f.get("descrizione") or f.get("testo_estratto", ""),
-                immagine=imgs
+                immagine=cloud_img
             )
             sotto_eventi_list.append(se)
+
+        parent_cloud_img = ensure_cloudinary_image(padre.get("immagine"))
 
         # 4. Crea l'oggetto Evento principale (Padre/Festival)
         evento_padre_obj = Evento(
@@ -85,7 +125,7 @@ class StructuredCrawlerScraper(BaseScraper):
             url=self.target_url,
             fonte=self.nome_fonte,
             categoria=padre.get("categoria", "Festival"),
-            immagine=padre.get("immagine"),
+            immagine=parent_cloud_img,
             is_festival=True,
             sotto_eventi=sotto_eventi_list,
             dettagli_extra={
