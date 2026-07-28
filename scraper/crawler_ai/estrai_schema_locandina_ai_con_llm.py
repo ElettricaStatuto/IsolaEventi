@@ -107,8 +107,8 @@ def analizza_evento_con_llm_pro(client, use_live, title, text, url):
     title_upper = (title or "").upper()
 
     # Valutazione euristica avanzata se si tratta di un vero evento
-    parole_evento = ["CONCERTO", "FESTIVAL", "SPETTACOLO", "SAGRA", "RASSEGNA", "PROIEZIONE", "MOSTRA", "FIERA", "TEATRO", "INCONTRO", "ORE 2", "ORE 1"]
-    is_evento_val = any(pw in text_upper or pw in title_upper for pw in parole_evento) and len(text) > 100
+    parole_evento = ["CONCERTO", "FESTIVAL", "SPETTACOLO", "SAGRA", "RASSEGNA", "PROIEZIONE", "MOSTRA", "FIERA", "TEATRO", "INCONTRO", "EVENTI", "EVENTO", "PROGRAMMA", "CALENDARIO", "ESTATE", "TURISMO", "ORE 2", "ORE 1"]
+    is_evento_val = any(pw in text_upper or pw in title_upper for pw in parole_evento) or len(text) > 50
 
     if "POET" in text_upper or "LETTERAR" in text_upper:
         genere = "Festival"

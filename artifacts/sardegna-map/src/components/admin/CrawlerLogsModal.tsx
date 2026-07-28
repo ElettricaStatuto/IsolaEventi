@@ -25,7 +25,13 @@ export const CrawlerLogsModal: React.FC<CrawlerLogsModalProps> = ({ isOpen, onCl
   const [loadingContent, setLoadingContent] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const baseUrl = import.meta.env.VITE_API_URL || "";
+  let baseUrl = (import.meta.env.VITE_API_URL || "").trim().replace(/\/+$/, "");
+  if (!baseUrl || !baseUrl.startsWith("http")) {
+    baseUrl = "https://isolaeventi.onrender.com";
+  }
+  if (baseUrl.endsWith("/api")) {
+    baseUrl = baseUrl.slice(0, -4);
+  }
 
   const fetchFolders = async () => {
     setLoadingFolders(true);

@@ -81,8 +81,15 @@ interface RefreshResult {
 async function fetchJson<T>(url: string, method: string, body?: unknown, key?: string): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (key) headers["x-admin-key"] = key;
-  const baseUrl = import.meta.env.VITE_API_URL || "";
-  const fullUrl = url.startsWith("http") ? url : `${baseUrl}${url}`;
+  let baseUrl = (import.meta.env.VITE_API_URL || "").trim().replace(/\/+$/, "");
+  if (!baseUrl || !baseUrl.startsWith("http")) {
+    baseUrl = "https://isolaeventi.onrender.com";
+  }
+  if (baseUrl.endsWith("/api")) {
+    baseUrl = baseUrl.slice(0, -4);
+  }
+  const cleanPath = url.startsWith("/") ? url : `/${url}`;
+  const fullUrl = url.startsWith("http") ? url : `${baseUrl}${cleanPath}`;
   const resp = await fetch(fullUrl, { method, headers, body: body ? JSON.stringify(body) : undefined });
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
   return resp.json();
