@@ -1,6 +1,7 @@
 import urllib.request
 from urllib.parse import urljoin, urlparse
 from html.parser import HTMLParser
+from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 import re
@@ -47,7 +48,11 @@ KEYWORDS_EVENTS_MED = [
     'luglio', 'agosto', 'settembre', 'july', 'august'
 ]
 
-NOISE_KEYWORDS = ['privacy', 'cookie', 'trasparenza', 'termini', 'terms', 'login', 'cart', 'carrello']
+NOISE_KEYWORDS = [
+    'privacy', 'cookie', 'trasparenza', 'termini', 'terms', 'login', 'cart', 'carrello',
+    'accessibilita', 'disservizio', 'assistenza', 'appuntamento', 'uffici', 'governo',
+    'salta-al-contenuto', 'dichiarazione', 'albo', 'amministrazione'
+]
 
 # ------------------------------------------------------------------------------
 # PARSER HTML PER LINK, TITOLI E MEDIA
@@ -277,18 +282,16 @@ def run_structured_crawler(target_url, custom_folder_name=None):
     print(f" [4/4] Estrazione del testo e immagini dalle {len(events_and_dates)} pagine degli Eventi attivi...")
     print("-" * 80)
 
-    for idx, item in enumerate(events_and_dates, start=1):
-        evt_url = item["url"]
-        label = item["anchor_text"] or "Senza Etichetta"
-        print(f"  [{idx:02d}/{len(events_and_dates):02d}] Scaricamento... ", end="", flush=True)
-        
-        pdata = fetch_page_content(evt_url)
-        item["page_data"] = pdata
-        
-        if pdata["status"] == "success":
-            print(f"OK ({pdata['word_count']:4d} parole, {len(pdata['images']):2d} img) | Etichetta: '{label[:30]}'")
-        else:
-            print(f"ERRORE ({pdata['error_message']})")
+    def _fetch_single_item(item):
+        item["page_data"] = fetch_page_content(item["url"])
+        pdata = item["page_data"]
+        label = item.get("anchor_text") or "Senza Etichetta"
+        if pdata.get("status") == "success":
+            print(f"  [OK] ({pdata.get('word_count', 0):4d} parole, {len(pdata.get('images', [])):2d} img) | '{label[:30]}'")
+        return item
+
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        list(executor.map(_fetch_single_item, events_and_dates))
 
     master_database = {
         "crawl_info": {
