@@ -82,7 +82,7 @@ def analizza_evento_con_llm_pro(client, use_live, title, text, url):
     
     if use_live and client:
         from google.genai import types
-        models_to_try = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-pro']
+        models_to_try = ['gemini-3.1-pro', 'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro']
         for model_name in models_to_try:
             try:
                 response = client.models.generate_content(
