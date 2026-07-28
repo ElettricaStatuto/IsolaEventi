@@ -324,7 +324,96 @@ def genera_database_relazionale_con_llm(target_folder):
     print(f" -> Token Usati: {tot_input_tokens + tot_output_tokens} | Costo Pro: ${round(tot_pro_cost, 6)}")
     print("=" * 80)
 
+    try:
+        salva_in_pending_db_online(database_relazionale_llm, target_url=parent_url)
+    except Exception as err:
+        print(f" [-] Avviso salva_in_pending_db_online: {err}")
+
     return database_relazionale_llm["metadati_database"]["metriche_token"]
+
+
+def salva_in_pending_db_online(database_relazionale_llm, target_url=""):
+    db_url = os.environ.get("DATABASE_URL")
+    if not db_url:
+        return
+    import psycopg2
+    import psycopg2.extras
+    import uuid
+
+    eventi = database_relazionale_llm.get("eventi", [])
+    if not eventi:
+        return
+
+    padre = eventi[0]
+    figli = eventi[1:] if len(eventi) > 1 else []
+
+    try:
+        conn = psycopg2.connect(db_url)
+        cur = conn.cursor()
+
+        parent_temp_id = f"temp_{uuid.uuid4().hex[:8]}"
+
+        # Salva Padre in pending_events
+        cur.execute("""
+            INSERT INTO pending_events (
+                titolo, categoria, data_inizio, data_fine, date_originali, luogo, link, descrizione, immagine, fonte, parent_temp_id, sotto_eventi, tags, dettagli_extra
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+        """, (
+            padre.get("titolo", "Festival / Rassegna"),
+            padre.get("categoria", "Festival"),
+            padre.get("data_inizio"),
+            padre.get("data_fine"),
+            padre.get("date_testuali"),
+            padre.get("luogo"),
+            target_url or padre.get("link_evento_specifico"),
+            padre.get("testo_estratto"),
+            padre.get("approfondimenti_extra", {}).get("immagine"),
+            "Crawler AI",
+            parent_temp_id,
+            json.dumps([f.get("titolo") for f in figli]),
+            padre.get("tags", []),
+            json.dumps({
+                "is_festival": True,
+                "totale_sotto_eventi": len(figli),
+                "is_ingresso_gratuito": padre.get("is_ingresso_gratuito", False),
+                "artisti": padre.get("artisti", []),
+                "id_key": parent_temp_id,
+                "bio_artisti": padre.get("approfondimenti_extra", {}).get("bio_artisti", [])
+            })
+        ))
+
+        # Salva ciascun sotto-evento in pending_events
+        for f in figli:
+            cur.execute("""
+                INSERT INTO pending_events (
+                    titolo, categoria, data_inizio, data_fine, date_originali, luogo, link, descrizione, immagine, fonte, parent_temp_id, tags, dettagli_extra
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+            """, (
+                f.get("titolo", "Sotto-evento"),
+                f.get("categoria", "Concerto"),
+                f.get("data_inizio"),
+                f.get("data_fine"),
+                f.get("date_testuali"),
+                f.get("luogo"),
+                f.get("link_evento_specifico"),
+                f.get("testo_estratto"),
+                f.get("approfondimenti_extra", {}).get("immagine"),
+                "Crawler AI",
+                parent_temp_id,
+                f.get("tags", []),
+                json.dumps({
+                    "festival_padre": padre.get("titolo"),
+                    "parent_temp_id": parent_temp_id,
+                    "artisti": f.get("artisti", [])
+                })
+            ))
+
+        conn.commit()
+        cur.close()
+        conn.close()
+        print(f" [+] Salvati {1 + len(figli)} eventi nella tabella online 'pending_events' su Neon PostgreSQL!")
+    except Exception as e:
+        print(f" [-] Avviso salvataggio pending_events DB: {e}")
 
 if __name__ == "__main__":
     import sys

@@ -15,3 +15,4 @@ export const db = drizzle(pool, { schema });
 
 export * from "./schema";
 export { rejectedEventsTable } from "./schema/rejected-events";
+export { pendingEventsTable } from "./schema/events";

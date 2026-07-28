@@ -209,6 +209,19 @@ export function Admin() {
   const loadPreviewCache = useCallback(async () => {
     if (!adminKey) return;
     try {
+      // 1. Prima carica dal DB online (pending_events)
+      const dbData: any = await fetchJson("/api/events/pending", "GET", undefined, adminKey);
+      if (dbData.success && dbData.events && dbData.events.length > 0) {
+        const dbEvents = dbData.events.map((ev: any) => ({ ...ev, from_db: true }));
+        setPreviewEvents(dbEvents);
+        setSelectedApproveIds(new Set());
+        setSelectedAnalyzeIds(new Set());
+        setScrapingStep("list");
+        return; // Se il DB ha dati, usa quelli e basta
+      }
+    } catch (e) { /* fallback alla cache */ }
+    try {
+      // 2. Fallback: carica dalla cache locale (file)
       const data: any = await fetchJson("/api/events/refresh/preview/cache", "GET", undefined, adminKey);
       if (data.success && data.events && data.events.length > 0) {
         setPreviewEvents(data.events);
@@ -755,6 +768,12 @@ export function Admin() {
       const data: RefreshResult = await fetchJson("/api/events/approve", "POST", { events: toApprove }, adminKey);
       setApprovalResult(data);
       setScrapingStep("result");
+      // Cancella dal DB pending_events gli eventi approvati
+      toApprove.forEach(ev => {
+        if (ev?.from_db && ev?.id) {
+          fetchJson(`/api/events/pending/${ev.id}`, "DELETE", undefined, adminKey).catch(() => {});
+        }
+      });
       updatePreviewCache([]);
       loadPublished(appliedFilters);
     } catch (e) {
@@ -1019,6 +1038,11 @@ export function Admin() {
   };
 
   const deletePreviewEvent = (idx: number) => {
+    const ev = previewEvents[idx];
+    // Se l'evento viene dal DB online, cancellalo anche da pending_events
+    if (ev?.from_db && ev?.id) {
+      fetchJson(`/api/events/pending/${ev.id}`, "DELETE", undefined, adminKey).catch(() => {});
+    }
     const next = previewEvents.filter((_, i) => i !== idx);
     setPreviewEvents(next);
     setSelectedApproveIds(new Set());
@@ -1040,6 +1064,12 @@ export function Admin() {
   const handleDeleteAllFiltered = () => {
     if (!window.confirm(`Sei sicuro di voler eliminare i ${filteredPreviewEvents.length} eventi visibili?`)) return;
     const indicesToDelete = new Set(filteredPreviewEvents.map(({ i }) => i));
+    // Cancella dal DB online tutti gli eventi from_db con id
+    filteredPreviewEvents.forEach(({ ev }) => {
+      if (ev?.from_db && ev?.id) {
+        fetchJson(`/api/events/pending/${ev.id}`, "DELETE", undefined, adminKey).catch(() => {});
+      }
+    });
     const next = previewEvents.filter((_, i) => !indicesToDelete.has(i));
     setPreviewEvents(next);
     updatePreviewCache(next);

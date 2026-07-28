@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { and, gte, lte, ilike, sql, eq, isNull, inArray } from "drizzle-orm";
-import { db, eventsTable, rejectedEventsTable } from "@workspace/db";
+import { db, eventsTable, rejectedEventsTable, pendingEventsTable } from "@workspace/db";
 import {
   ListEventsQueryParams,
   ListEventsResponse,
@@ -463,6 +463,52 @@ router.get("/events/refresh/preview/cache", requireAdminKey, (req, res): void =>
   } catch (err) {
     req.log.error({ err }, "Failed to read preview cache");
     res.json({ success: false, events: [], messaggio: String(err) });
+  }
+router.get("/events/pending", requireAdminKey, async (req, res): Promise<void> => {
+  try {
+    const rows = await db.select().from(pendingEventsTable).orderBy(sql`${pendingEventsTable.creatoIl} desc`);
+    const formattedEvents = rows.map(r => ({
+      id: r.id,
+      titolo: r.titolo,
+      titolo_originale: r.titoloOriginale,
+      categoria: r.categoria,
+      data_inizio: r.dataInizio,
+      data_fine: r.dataFine,
+      date_originali: r.dateOriginali,
+      luogo: r.luogo,
+      luogo_originale: r.luogoOriginale,
+      latitudine: r.latitudine,
+      longitudine: r.longitudine,
+      link: r.link,
+      link_organizzatore: r.linkOrganizzatore,
+      descrizione: r.descrizione,
+      immagine: r.immagine,
+      fonte: r.fonte,
+      testo_estratto: r.testoEstratto,
+      is_new: true,
+      tags: r.tags || [],
+      dettagli_extra: r.dettagliExtra || {},
+      sotto_eventi: r.sottoEventi || []
+    }));
+    res.json({ success: true, events: formattedEvents });
+  } catch (err) {
+    req.log.error({ err }, "Failed to fetch pending events from DB");
+    res.json({ success: false, events: [], error: String(err) });
+  }
+});
+
+router.delete("/events/pending/:id", requireAdminKey, async (req, res): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    if (!id || isNaN(id)) {
+      res.status(400).json({ success: false, error: "Invalid ID" });
+      return;
+    }
+    await db.delete(pendingEventsTable).where(eq(pendingEventsTable.id, id));
+    res.json({ success: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete pending event");
+    res.status(500).json({ success: false, error: String(err) });
   }
 });
 
