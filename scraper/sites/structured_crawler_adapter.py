@@ -97,6 +97,11 @@ class StructuredCrawlerScraper(BaseScraper):
             return GenericUrlScraper(self.target_url, max_links=self.max_links).scrapa_eventi()
 
         padre = eventi_list[0]
+        if not padre.get("testo_estratto") and not padre.get("descrizione"):
+            logger.warning(f"[{self.nome_fonte}] Dati evento padre insufficienti, fallback a GenericUrlScraper")
+            from .generic import GenericUrlScraper
+            return GenericUrlScraper(self.target_url, max_links=self.max_links).scrapa_eventi()
+
         figli = eventi_list[1:] if len(eventi_list) > 1 else []
 
         # 3. Converti i figli in oggetti SottoEvento
