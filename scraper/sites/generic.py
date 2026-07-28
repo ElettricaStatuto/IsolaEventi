@@ -12,6 +12,16 @@ from ..models import Evento
 
 logger = logging.getLogger(__name__)
 
+def safe_html2text(h2t, html_obj_or_str):
+    try:
+        return h2t.handle(str(html_obj_or_str))
+    except Exception:
+        if hasattr(html_obj_or_str, 'get_text'):
+            return html_obj_or_str.get_text(separator="\n", strip=True)
+        from bs4 import BeautifulSoup
+        s = BeautifulSoup(str(html_obj_or_str), "html.parser")
+        return s.get_text(separator="\n", strip=True)
+
 class GenericUrlScraper(BaseScraper):
     def __init__(self, target_url: str, max_links: int = 70):
         super().__init__()
@@ -64,7 +74,7 @@ class GenericUrlScraper(BaseScraper):
         for tag in soup(["script", "style", "nav", "footer", "header", "noscript", "iframe"]):
             tag.decompose()
             
-        return url, titolo, self.h2t.handle(str(soup)), immagine
+        return url, titolo, safe_html2text(self.h2t, soup), immagine
 
     def scrapa_eventi(self) -> list[Evento]:
         soup = self.get_pagina(self.target_url)
@@ -95,7 +105,7 @@ class GenericUrlScraper(BaseScraper):
             tag.decompose()
 
         # Genera il testo della pagina principale
-        main_text = self.h2t.handle(str(soup))
+        main_text = safe_html2text(self.h2t, soup)
         main_text = re.sub(r'\n{3,}', '\n\n', main_text)
         
         full_text = f"=== Contenuto pagina principale ({self.target_url}) ===\n" + main_text + "\n\n"

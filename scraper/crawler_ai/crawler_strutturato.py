@@ -177,14 +177,14 @@ def run_structured_crawler(target_url, custom_folder_name=None):
     raw_event_name = main_page_data.get("title") or urlparse(target_url).path.strip('/') or "Evento"
     
     if custom_folder_name:
-        folder_name = sanitize_folder_name(custom_folder_name)
+        output_dir = custom_folder_name
+        folder_name = os.path.basename(custom_folder_name)
     else:
         folder_name = sanitize_folder_name(raw_event_name)
+        base_dir = os.path.dirname(__file__)
+        output_dir = os.path.join(base_dir, folder_name)
     
     print(f" [2/4] Titolo Evento rilevato   : {raw_event_name}")
-    
-    base_dir = os.path.dirname(__file__)
-    output_dir = os.path.join(base_dir, folder_name)
     os.makedirs(output_dir, exist_ok=True)
     
     print(f" [3/4] Creazione cartella output : {folder_name}")

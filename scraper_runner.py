@@ -64,10 +64,8 @@ def emit_log(msg: str):
     print(json.dumps({"log": msg}), flush=True)
     logger.info(msg)
 
-if not DATABASE_URL:
-    logger.error("DATABASE_URL not set")
-    print(json.dumps({"nuovi": 0, "aggiornati": 0, "errori": 1}), flush=True)
-    sys.exit(1)
+# Nota: DATABASE_URL viene controllato in main() solo per le operazioni di scrittura nel DB.
+# In modalità --preview non è necessario il DB.
 
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 NOMINATIM_HEADERS = {"User-Agent": "SardegnaEventsMap/1.0 (info@sardegnamap.local)"}
@@ -347,8 +345,19 @@ def main():
             logger.error(f"Scraper {s.nome_fonte} failed: {e}")
             errori += 1
 
-    conn = psycopg2.connect(DATABASE_URL)
-    rejected_set = _load_rejected(conn)
+    conn = None
+    rejected_set = set()
+    existing_events = []
+
+    if DATABASE_URL:
+        try:
+            conn = psycopg2.connect(DATABASE_URL)
+            rejected_set = _load_rejected(conn)
+            cur = conn.cursor()
+            cur.execute("SELECT id, titolo FROM events")
+            existing_events = list(cur.fetchall())
+        except Exception as db_err:
+            emit_log(f"Avviso: Connessione DB non disponibile ({db_err}), proseguo in modalità preview...")
 
     if args.url:
         filtrati = tutti_eventi
@@ -368,11 +377,6 @@ def main():
     # Subtract 90 days as approx 3 months
     cutoff_date = cutoff_date - timedelta(days=90)
     cutoff_str = cutoff_date.strftime("%Y-%m-%d")
-
-    # We need to know which ones are completely new to avoid re-analyzing
-    cur = conn.cursor()
-    cur.execute("SELECT id, titolo FROM events")
-    existing_events = list(cur.fetchall())
     
     for ev in filtrati:
         data_inizio = _parse_mixed_date(ev.data_inizio)
@@ -411,7 +415,11 @@ def main():
             "row_id": found_id
         })
 
-    cur.close()
+    if 'cur' in locals() and cur:
+        try:
+            cur.close()
+        except:
+            pass
 
 
     # Truncate giant descriptions for ALL modes to avoid memory/db crashes
@@ -529,7 +537,8 @@ def main():
                         }
                     }
                     events_preview.append(child_dict)
-        conn.close()
+        if conn:
+            conn.close()
         result = {
             "success": True,
             "nuovi": len(events_preview),
@@ -543,7 +552,8 @@ def main():
         return
 
     if dry_run:
-        conn.close()
+        if conn:
+            conn.close()
         result = {
             "success": True,
             "nuovi": len([e for e in events_to_save if e["is_new"]]),
