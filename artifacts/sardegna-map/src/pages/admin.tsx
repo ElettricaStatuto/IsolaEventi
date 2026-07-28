@@ -451,8 +451,10 @@ export function Admin() {
     const urlMatches = cleanUrl.match(/https?:\/\/[^\s"<>]+/g);
     if (urlMatches && urlMatches.length > 0) {
       cleanUrl = urlMatches[0];
-      setGenericUrl(cleanUrl);
+    } else if (!cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://")) {
+      cleanUrl = "https://" + cleanUrl;
     }
+    setGenericUrl(cleanUrl);
 
     setError(null);
     setScrapingGeneric(true);

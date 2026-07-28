@@ -57,7 +57,10 @@ class StructuredCrawlerScraper(BaseScraper):
 
     def __init__(self, target_url: str, max_links: int = 70):
         super().__init__()
-        self.target_url = target_url.strip()
+        url_str = target_url.strip()
+        if not url_str.startswith("http://") and not url_str.startswith("https://"):
+            url_str = f"https://{url_str}"
+        self.target_url = url_str
         self.max_links = max_links
         parsed = urlparse(self.target_url)
         self.nome_fonte = parsed.netloc.replace("www.", "")
