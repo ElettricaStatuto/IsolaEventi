@@ -26,39 +26,68 @@ const LS_KEY = "sardegna_admin_key";
 
 interface EventPreview {
   titolo: string;
+  titolo_originale?: string | null;
+  categoria?: string | null;
   data_inizio: string | null;
   data_fine: string | null;
+  date_originali?: string | null;
+  ora_inizio?: string | null;
+  ora_fine?: string | null;
   luogo: string | null;
+  luogo_originale?: string | null;
   latitudine: number | null;
   longitudine: number | null;
   link: string | null;
+  link_organizzatore?: string | null;
+  link_biglietti?: string | null;
   descrizione: string | null;
   immagine: string | null;
   fonte: string;
   is_new?: boolean;
+  is_festival?: boolean | null;
+  is_ingresso_gratuito?: boolean;
   parent_id?: number | null;
   testo_estratto?: string | null;
-  is_festival?: boolean | null;
   sotto_eventi?: any[];
-  link_organizzatore?: string | null;
+  tags?: string[];
+  artisti?: string[];
+  bio_artisti?: any[];
+  social_contatti?: string[];
+  dettagli_extra?: any;
+  from_db?: boolean;
+  id?: number;
 }
 
 interface DbEvent {
   id: number;
   titolo: string;
+  titolo_originale?: string | null;
+  categoria?: string | null;
   data_inizio: string | null;
   data_fine: string | null;
+  date_originali?: string | null;
+  ora_inizio?: string | null;
+  ora_fine?: string | null;
   luogo: string | null;
+  luogo_originale?: string | null;
   latitudine: number | null;
   longitudine: number | null;
   link: string | null;
+  link_organizzatore?: string | null;
+  link_biglietti?: string | null;
   descrizione: string | null;
   immagine: string | null;
   fonte: string;
   aggiornato_il: string;
   testo_estratto?: string | null;
+  is_festival?: boolean;
+  is_ingresso_gratuito?: boolean;
   parent_id?: number | null;
-  linkOrganizzatore?: string | null;
+  tags?: string[];
+  artisti?: string[];
+  bio_artisti?: any[];
+  social_contatti?: string[];
+  dettagli_extra?: any;
 }
 
 interface RejectedEvent {

@@ -353,58 +353,94 @@ def salva_in_pending_db_online(database_relazionale_llm, target_url=""):
 
         parent_temp_id = f"temp_{uuid.uuid4().hex[:8]}"
 
-        # Salva Padre in pending_events
+        # Salva Padre in pending_events (tutti i campi nuovi inclusi)
         cur.execute("""
             INSERT INTO pending_events (
-                titolo, categoria, data_inizio, data_fine, date_originali, luogo, link, descrizione, immagine, fonte, parent_temp_id, sotto_eventi, tags, dettagli_extra
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                titolo, titolo_originale, categoria,
+                data_inizio, data_fine, date_originali,
+                ora_inizio, ora_fine,
+                luogo, luogo_originale,
+                link, link_biglietti,
+                descrizione, immagine, fonte,
+                is_festival, is_ingresso_gratuito,
+                parent_temp_id, sotto_eventi,
+                tags, artisti, bio_artisti, social_contatti,
+                dettagli_extra
+            ) VALUES (%s,%s,%s, %s,%s,%s, %s,%s, %s,%s, %s,%s, %s,%s,%s, %s,%s, %s,%s, %s,%s,%s,%s, %s);
         """, (
             padre.get("titolo", "Festival / Rassegna"),
+            padre.get("titolo_originale") or padre.get("titolo", ""),
             padre.get("categoria", "Festival"),
             padre.get("data_inizio"),
             padre.get("data_fine"),
-            padre.get("date_testuali"),
+            padre.get("date_originali"),          # fix: era date_testuali
+            padre.get("ora_inizio"),
+            padre.get("ora_fine"),
             padre.get("luogo"),
+            padre.get("luogo") or padre.get("luogo_originale"),
             target_url or padre.get("link_evento_specifico"),
+            padre.get("link_pagina_ticket"),
             padre.get("testo_estratto"),
             padre.get("approfondimenti_extra", {}).get("immagine"),
             "Crawler AI",
+            True,
+            padre.get("is_ingresso_gratuito", False),
             parent_temp_id,
             json.dumps([f.get("titolo") for f in figli]),
             padre.get("tags", []),
+            padre.get("artisti", []),
+            json.dumps(padre.get("approfondimenti_extra", {}).get("bio_artisti", [])),
+            padre.get("social_e_contatti", []),
             json.dumps({
-                "is_festival": True,
-                "totale_sotto_eventi": len(figli),
-                "is_ingresso_gratuito": padre.get("is_ingresso_gratuito", False),
-                "artisti": padre.get("artisti", []),
                 "id_key": parent_temp_id,
-                "bio_artisti": padre.get("approfondimenti_extra", {}).get("bio_artisti", [])
+                "totale_sotto_eventi": len(figli),
+                "dettagli_dominio": padre.get("dettagli_dominio", {}),
             })
         ))
 
         # Salva ciascun sotto-evento in pending_events
         for f in figli:
+            approfondimenti = f.get("approfondimenti_extra", {})
             cur.execute("""
                 INSERT INTO pending_events (
-                    titolo, categoria, data_inizio, data_fine, date_originali, luogo, link, descrizione, immagine, fonte, parent_temp_id, tags, dettagli_extra
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                    titolo, titolo_originale, categoria,
+                    data_inizio, data_fine, date_originali,
+                    ora_inizio, ora_fine,
+                    luogo, luogo_originale,
+                    link, link_biglietti,
+                    descrizione, immagine, fonte,
+                    is_festival, is_ingresso_gratuito,
+                    parent_temp_id,
+                    tags, artisti, bio_artisti, social_contatti,
+                    dettagli_extra
+                ) VALUES (%s,%s,%s, %s,%s,%s, %s,%s, %s,%s, %s,%s, %s,%s,%s, %s,%s, %s, %s,%s,%s,%s, %s);
             """, (
                 f.get("titolo", "Sotto-evento"),
+                f.get("titolo_originale") or f.get("titolo", ""),
                 f.get("categoria", "Concerto"),
                 f.get("data_inizio"),
                 f.get("data_fine"),
-                f.get("date_testuali"),
+                f.get("date_originali"),           # fix: era date_testuali
+                f.get("ora_inizio"),
+                f.get("ora_fine"),
                 f.get("luogo"),
+                f.get("luogo") or f.get("luogo_originale"),
                 f.get("link_evento_specifico"),
+                f.get("link_pagina_ticket"),
                 f.get("testo_estratto"),
-                f.get("approfondimenti_extra", {}).get("immagine"),
+                approfondimenti.get("immagine"),
                 "Crawler AI",
+                False,
+                f.get("is_ingresso_gratuito", False),
                 parent_temp_id,
                 f.get("tags", []),
+                f.get("artisti", []),
+                json.dumps(approfondimenti.get("bio_artisti", [])),
+                f.get("social_e_contatti", []),
                 json.dumps({
                     "festival_padre": padre.get("titolo"),
                     "parent_temp_id": parent_temp_id,
-                    "artisti": f.get("artisti", [])
+                    "dettagli_dominio": f.get("dettagli_dominio", {}),
                 })
             ))
 
@@ -414,6 +450,7 @@ def salva_in_pending_db_online(database_relazionale_llm, target_url=""):
         print(f" [+] Salvati {1 + len(figli)} eventi nella tabella online 'pending_events' su Neon PostgreSQL!")
     except Exception as e:
         print(f" [-] Avviso salvataggio pending_events DB: {e}")
+
 
 if __name__ == "__main__":
     import sys
