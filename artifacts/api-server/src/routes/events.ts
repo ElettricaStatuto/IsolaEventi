@@ -1184,14 +1184,23 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
             await db.insert(eventsTable).values({
               titolo: r.titolo || "Evento Senza Titolo",
               titoloOriginale: r.titolo || "Evento Senza Titolo",
+              categoria: r.categoria || parent.categoria || null,
               dataInizio: r.data_inizio ? new Date(r.data_inizio) : parent.dataInizio,
               dataFine: r.data_fine ? new Date(r.data_fine) : parent.dataFine,
+              oraInizio: r.ora_inizio || null,
+              oraFine: r.ora_fine || null,
               luogo: r.luogo || parent.luogo,
               luogoOriginale: r.luogo || parent.luogoOriginale || parent.luogo,
               descrizione: r.pezzo_di_testo_di_riferimento || "",
               parentId: parent.id,
               fonte: parent.fonte,
               link: r.url_riferimento || parent.link,
+              linkOrganizzatore: parent.linkOrganizzatore || null,
+              linkBiglietti: parent.linkBiglietti || null,
+              isFestival: false,
+              isIngressoGratuito: r.is_ingresso_gratuito ?? parent.isIngressoGratuito ?? false,
+              artisti: r.artisti || null,
+              immagine: r.immagine || parent.immagine,
             });
           }
         } catch (e) {
@@ -1216,11 +1225,19 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
               .set({
                 titolo: r.titolo || parent.titolo,
                 titoloOriginale: parent.titoloOriginale || parent.titolo,
-                categoria: r.categoria || null,
+                categoria: r.categoria || parent.categoria || null,
                 testoEstratto: r.testo_estratto,
-                linkOrganizzatore: r.link_organizzatore || null,
-                tags: r.tags || null,
-                dettagliExtra: r.dettagli_extra || null,
+                linkOrganizzatore: r.link_organizzatore || parent.linkOrganizzatore || null,
+                linkBiglietti: r.link_biglietti || parent.linkBiglietti || null,
+                oraInizio: r.ora_inizio || parent.oraInizio || null,
+                oraFine: r.ora_fine || parent.oraFine || null,
+                isFestival: r.is_festival ?? parent.isFestival ?? false,
+                isIngressoGratuito: r.is_ingresso_gratuito ?? parent.isIngressoGratuito ?? false,
+                tags: r.tags || parent.tags || null,
+                artisti: r.artisti || parent.artisti || null,
+                bioArtisti: r.bio_artisti || parent.bioArtisti || null,
+                socialContatti: r.social_contatti || parent.socialContatti || null,
+                dettagliExtra: r.dettagli_extra || parent.dettagliExtra || null,
                 descrizione: r.testo_grezzo_url || parent.descrizione,
                 dataInizio: dataInizio,
                 dataFine: dataFine,
@@ -1238,19 +1255,22 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
                 await db.insert(eventsTable).values({
                   titolo: se.titolo ? `${r.titolo || parent.titolo} - ${se.titolo}` : `${r.titolo || parent.titolo}`,
                   titoloOriginale: se.titolo || null,
-                  categoria: r.categoria || null,
+                  categoria: se.categoria || r.categoria || parent.categoria || null,
                   dataInizio: se.data_inizio,
                   dataFine: se.data_fine || se.data_inizio,
                   dateOriginali: se.date_testuali || null,
+                  oraInizio: se.ora_inizio || null,
+                  oraFine: se.ora_fine || null,
                   luogo: se.luogo || parent.luogo,
                   luogoOriginale: se.luogo || parent.luogoOriginale || parent.luogo,
                   parentId: parent.id,
                   fonte: parent.fonte,
-                  linkOrganizzatore: r.link_organizzatore || null,
-                  dettagliExtra: {
-                    ora_inizio: se.ora_inizio || null,
-                    ora_fine: se.ora_fine || null
-                  }
+                  linkOrganizzatore: r.link_organizzatore || parent.linkOrganizzatore || null,
+                  linkBiglietti: r.link_biglietti || parent.linkBiglietti || null,
+                  isFestival: false,
+                  isIngressoGratuito: se.is_ingresso_gratuito ?? r.is_ingresso_gratuito ?? false,
+                  artisti: se.artisti || null,
+                  immagine: se.immagine || parent.immagine,
                 });
               }
             }

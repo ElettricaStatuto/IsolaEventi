@@ -161,10 +161,16 @@ STRUTTURA JSON OBBLIGATORIA:
     "ora_fine": "HH:MM",
     "luogo": "Città, Luogo Specifico (es. Carbonia, Campo sportivo)",
     "link_organizzatore": "URL ufficiale o null",
+    "link_biglietti": "URL vendita biglietti o null",
+    "is_ingresso_gratuito": true,
+    "artisti": ["Nome Artista 1", "Nome Artista 2"],
     "tags": ["Tag primario", "Tag secondario"]
   }},
   "approfondimenti_extra": {{
-    "bio_artisti": "Biografie se presenti o null",
+    "bio_artisti": [
+      {{ "nome": "Nome Artista", "bio": "Breve biografia" }}
+    ],
+    "social_contatti": ["URL o contatto social/email"],
     "crediti_regia_autori": "Regia, cast o null",
     "orari_dettagliati": "Apertura cancelli ore 19:00, inizio ore 21:30",
     "info_biglietti": "Prezzi o 'Ingresso gratuito'",
