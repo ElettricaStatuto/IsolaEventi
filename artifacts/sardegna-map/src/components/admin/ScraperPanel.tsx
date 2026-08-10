@@ -477,17 +477,70 @@ export const ScraperPanel: React.FC<ScraperPanelProps> = ({
           </div>
         </div>
         {scrapingLogs.length > 0 && (
-          <div className="mt-4 bg-[#1e1e1e] text-green-400 p-4 rounded-md font-mono text-xs max-h-64 overflow-y-auto shadow-inner border border-border/50">
-            {scrapingLogs.map((log, i) => (
-              <div key={i} className="mb-1">
-                <span className="text-muted-foreground mr-2">{">"}</span> {log}
+          <div className="mt-4 border border-zinc-800 rounded-lg overflow-hidden bg-[#0d1117] shadow-2xl font-mono text-xs">
+            <div className="bg-[#161b22] px-4 py-2 border-b border-zinc-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Terminal className="w-4 h-4 text-emerald-400" />
+                <span className="font-bold text-zinc-200">Terminal Log Operazioni Scraper & AI</span>
+                <Badge variant="outline" className="text-[10px] bg-emerald-950/40 border-emerald-800 text-emerald-400">
+                  {loadingPreview || scrapingGeneric || uploadingPdf ? "IN ESECUZIONE..." : "PRONTO"}
+                </Badge>
               </div>
-            ))}
-            {loadingPreview && (
-              <div className="animate-pulse">
-                <span className="text-muted-foreground mr-2">{">"}</span> _
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 text-[10px] text-zinc-400 hover:text-zinc-100"
+                  onClick={() => {
+                    navigator.clipboard.writeText(scrapingLogs.join("\n"));
+                  }}
+                  title="Copia tutti i log negli appunti"
+                >
+                  📋 Copia
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 text-[10px] text-zinc-400 hover:text-rose-400"
+                  onClick={() => {
+                    // non resetta le props ma possiamo pulire il rendering locale
+                    const ev = new CustomEvent("clear-scraping-logs");
+                    window.dispatchEvent(ev);
+                  }}
+                  title="Pulisci schermata log"
+                >
+                  🧹 Pulisci
+                </Button>
               </div>
-            )}
+            </div>
+
+            <div className="p-4 max-h-72 overflow-y-auto space-y-1.5 scrollbar-thin scrollbar-thumb-zinc-700">
+              {scrapingLogs.map((log, i) => {
+                let colorClass = "text-zinc-300";
+                if (log.includes("✅") || log.includes("Completato") || log.includes("Salvati")) colorClass = "text-emerald-400 font-semibold";
+                else if (log.includes("🤖") || log.includes("Gemini") || log.includes("Token")) colorClass = "text-indigo-400 font-semibold";
+                else if (log.includes("🌐") || log.includes("Avvio") || log.includes("Fetching")) colorClass = "text-sky-400";
+                else if (log.includes("⚠️") || log.includes("Avviso")) colorClass = "text-amber-400 font-semibold";
+                else if (log.includes("❌") || log.includes("Errore") || log.includes("Fallito")) colorClass = "text-rose-400 font-bold";
+
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString();
+
+                return (
+                  <div key={i} className="flex items-start gap-2 leading-relaxed hover:bg-white/5 px-1 rounded transition-colors">
+                    <span className="text-zinc-600 select-none font-mono text-[10px] shrink-0 pt-0.5">[{timeStr}]</span>
+                    <span className={`${colorClass} whitespace-pre-wrap break-all flex-1`}>{log}</span>
+                  </div>
+                );
+              })}
+              {(loadingPreview || scrapingGeneric || uploadingPdf) && (
+                <div className="flex items-center gap-2 text-emerald-400 font-bold animate-pulse pt-1">
+                  <span className="text-zinc-600 font-mono text-[10px]">{">"}</span>
+                  <Loader2 className="w-3 h-3 animate-spin text-emerald-400" />
+                  <span>Elaborazione in corso...</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </CardContent>
