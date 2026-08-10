@@ -316,9 +316,13 @@ router.post("/events/refresh/preview", requireAdminKey, (req, res): void => {
   res.setHeader("Connection", "keep-alive");
 
   const sources: string[] = req.body.sources || [];
+  const useAiCrawler: boolean = !!req.body.useAiCrawler;
   const args = ["--preview"];
   if (sources.length > 0) {
     args.push("--sources", sources.join(","));
+  }
+  if (useAiCrawler) {
+    args.push("--force-festival");
   }
 
   const child = spawn(getPythonExecutable(), [scraperScript, ...args], {
@@ -337,20 +341,58 @@ router.post("/events/refresh/preview", requireAdminKey, (req, res): void => {
     req.log.warn({ stderr: data.toString() }, "Preview stderr");
   });
 
-  child.on("close", (code) => {
+  child.on("close", async (code) => {
     if (code !== 0) {
       req.log.error({ code }, "Preview failed");
       res.write(JSON.stringify({ success: false, nuovi: 0, aggiornati: 0, errori: 1, messaggio: `Process exited with code ${code}`, events: [] }) + "\n");
     } else {
-      // Parse output buffer to find the final events payload and cache it
+      // Parse output buffer, cache it, AND persist directly into pending_events table on Neon PostgreSQL
       try {
         const lines = outputBuffer.split("\n");
         for (let i = lines.length - 1; i >= 0; i--) {
           const line = lines[i].trim();
           if (line.startsWith("{") && line.includes('"events"')) {
             const parsed = JSON.parse(line);
-            if (parsed.events) {
+            if (parsed.events && Array.isArray(parsed.events)) {
               fs.writeFileSync(cacheFile, JSON.stringify(parsed.events, null, 2), "utf8");
+              
+              // Persistenza diretta ed unificata su Neon PostgreSQL
+              for (const ev of parsed.events) {
+                try {
+                  await db.insert(pendingEventsTable).values({
+                    titolo: ev.titolo || "Evento da Scraper",
+                    titoloOriginale: ev.titolo_originale || ev.titolo || null,
+                    categoria: ev.categoria || null,
+                    dataInizio: ev.data_inizio || null,
+                    dataFine: ev.data_fine || null,
+                    dateOriginali: ev.date_originali || null,
+                    oraInizio: ev.ora_inizio || null,
+                    oraFine: ev.ora_fine || null,
+                    luogo: ev.luogo || null,
+                    luogoOriginale: ev.luogo_originale || ev.luogo || null,
+                    latitudine: ev.latitudine || null,
+                    longitudine: ev.longitudine || null,
+                    link: ev.link || null,
+                    linkOrganizzatore: ev.link_organizzatore || null,
+                    linkBiglietti: ev.link_biglietti || null,
+                    descrizione: ev.descrizione || null,
+                    immagine: ev.immagine || null,
+                    fonte: ev.fonte || "Scraper Multi-fonte",
+                    testoEstratto: ev.testo_estratto || null,
+                    isFestival: ev.is_festival ?? false,
+                    isIngressoGratuito: ev.is_ingresso_gratuito ?? false,
+                    parentTempId: ev.dettagli_extra?.parent_temp_id || null,
+                    sottoEventi: ev.sotto_eventi || null,
+                    tags: ev.tags || null,
+                    artisti: ev.artisti || null,
+                    bioArtisti: ev.bio_artisti || null,
+                    socialContatti: ev.social_contatti || null,
+                    dettagliExtra: ev.dettagli_extra || null,
+                  });
+                } catch (dbErr) {
+                  req.log.warn({ dbErr, title: ev.titolo }, "Failed to persist preview event into pending_events table");
+                }
+              }
               break;
             }
           }

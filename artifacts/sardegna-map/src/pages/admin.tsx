@@ -214,6 +214,7 @@ export function Admin() {
   const [activeTab, setActiveTab] = useState("scraping");
   const [analysisTarget, setAnalysisTarget] = useState<"both" | "both_source" | "image" | "text" | "source_page">("both");
   const [aiProvider, setAiProvider] = useState<"direct" | "replit">("direct");
+  const [useAiCrawler, setUseAiCrawler] = useState<boolean>(false);
   const [selectedSources, setSelectedSources] = useState<string[]>([
     "paradisola",
     "sardegnaturismo",
@@ -450,7 +451,7 @@ export function Admin() {
           "Content-Type": "application/json",
           "x-admin-key": adminKey.trim()
         },
-        body: JSON.stringify({ sources: selectedSources })
+        body: JSON.stringify({ sources: selectedSources, useAiCrawler })
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       if (!resp.body) throw new Error("No response body");
@@ -1798,6 +1799,8 @@ export function Admin() {
             <ScraperPanel
               selectedSources={selectedSources}
               setSelectedSources={setSelectedSources}
+              useAiCrawler={useAiCrawler}
+              setUseAiCrawler={setUseAiCrawler}
               loadingPreview={loadingPreview}
               keyVerified={keyVerified}
               handlePreview={handlePreview}

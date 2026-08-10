@@ -10,6 +10,8 @@ import { Loader2, Eye, Search, CheckCircle2, Brain, XCircle, Upload } from "luci
 export interface ScraperPanelProps {
   selectedSources: string[];
   setSelectedSources: React.Dispatch<React.SetStateAction<string[]>>;
+  useAiCrawler?: boolean;
+  setUseAiCrawler?: (val: boolean) => void;
   loadingPreview: boolean;
   keyVerified: boolean;
   handlePreview: () => void;
@@ -33,6 +35,8 @@ export interface ScraperPanelProps {
 export const ScraperPanel: React.FC<ScraperPanelProps> = ({
   selectedSources,
   setSelectedSources,
+  useAiCrawler = false,
+  setUseAiCrawler,
   loadingPreview,
   keyVerified,
   handlePreview,
@@ -55,21 +59,71 @@ export const ScraperPanel: React.FC<ScraperPanelProps> = ({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Preview eventi</CardTitle>
+        <CardTitle className="text-base flex items-center justify-between">
+          <span>Preview eventi dalle fonti</span>
+          {setUseAiCrawler && (
+            <div className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 px-3 py-1.5 rounded-lg">
+              <Brain className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="toggle-ai-crawler"
+                  checked={useAiCrawler}
+                  onCheckedChange={(checked) => setUseAiCrawler(!!checked)}
+                />
+                <Label htmlFor="toggle-ai-crawler" className="text-xs font-semibold cursor-pointer text-indigo-700 dark:text-indigo-300">
+                  Analisi Profonda con Crawler AI (Gemini 3.1 Pro)
+                </Label>
+              </div>
+            </div>
+          )}
+        </CardTitle>
         <CardDescription>
-          Avvia lo scraper per recuperare eventi dai siti fonte. Potrai vedere l'anteprima, selezionare quelli da pubblicare e approvarli.
+          Avvia lo scraper o il Crawler AI sulle fonti selezionate. Gli eventi estratti verranno salvati direttamente nel DB in attesa di approvazione.
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3 border border-border rounded-md p-4 bg-muted/40 max-w-3xl">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fonti da scansionare</span>
+      <CardContent className="space-y-4">
+        <div className="border border-border rounded-md p-4 bg-muted/20">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fonti da scansionare</span>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  setSelectedSources([
+                    "paradisola",
+                    "sardegnaturismo",
+                    "timeinjazz",
+                    "eventiinsardegna_calendar",
+                    "eventiinsardegna_alghero",
+                    "eventiinsardegna_cagliari",
+                    "eventiinsardegna_centro",
+                    "eventiinsardegna_agosto"
+                  ])
+                }
+                className="h-7 text-xs"
+              >
+                Seleziona tutte
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedSources([])}
+                className="h-7 text-xs"
+              >
+                Deseleziona tutte
+              </Button>
+            </div>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1">
-            {/* ── COLONNA SINISTRA: EVENTI GENERALI ── */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* ── COLONNA SINISTRA ── */}
             <div className="flex flex-col gap-3">
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">📅 Eventi Generali</span>
-
-              <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-primary uppercase tracking-wide">📌 Portali generali</span>
+              
+              <div className="flex items-start gap-2">
                 <Checkbox
                   id="src-paradisola"
                   checked={selectedSources.includes("paradisola")}
@@ -78,13 +132,17 @@ export const ScraperPanel: React.FC<ScraperPanelProps> = ({
                       checked ? [...prev, "paradisola"] : prev.filter((x) => x !== "paradisola")
                     )
                   }
+                  className="mt-0.5"
                 />
-                <Label htmlFor="src-paradisola" className="text-sm font-medium cursor-pointer">
-                  Paradisola (paradisola.it)
-                </Label>
+                <div>
+                  <Label htmlFor="src-paradisola" className="text-sm font-semibold cursor-pointer">
+                    Paradisola.it
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Scrasiona gli eventi imminenti da paradisola.it/eventi</p>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-start gap-2">
                 <Checkbox
                   id="src-sardegnaturismo"
                   checked={selectedSources.includes("sardegnaturismo")}
@@ -93,10 +151,14 @@ export const ScraperPanel: React.FC<ScraperPanelProps> = ({
                       checked ? [...prev, "sardegnaturismo"] : prev.filter((x) => x !== "sardegnaturismo")
                     )
                   }
+                  className="mt-0.5"
                 />
-                <Label htmlFor="src-sardegnaturismo" className="text-sm font-medium cursor-pointer">
-                  Sardegna Turismo (sardegnaturismo.it)
-                </Label>
+                <div>
+                  <Label htmlFor="src-sardegnaturismo" className="text-sm font-semibold cursor-pointer">
+                    SardegnaTurismo.it
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Portale ufficiale della Regione Sardegna</p>
+                </div>
               </div>
 
               <div className="flex flex-col gap-2 mt-1">
@@ -178,9 +240,9 @@ export const ScraperPanel: React.FC<ScraperPanelProps> = ({
 
             {/* ── COLONNA DESTRA: FESTIVAL ── */}
             <div className="flex flex-col gap-3">
-              <span className="text-xs font-bold text-orange-600 uppercase tracking-wide">🎪 Festival</span>
+              <span className="text-xs font-bold text-orange-600 uppercase tracking-wide">🎪 Festival & Rassegne</span>
               <p className="text-xs text-muted-foreground -mt-1">
-                Gli eventi estratti da questi siti vengono raggruppati automaticamente come concerti figli del festival.
+                Gli eventi estratti da queste fonti vengono strutturati relazionalmente come Festival Padre e Sotto-eventi Figli.
               </p>
 
               <div className="flex items-start gap-2 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-md p-3">
@@ -198,7 +260,7 @@ export const ScraperPanel: React.FC<ScraperPanelProps> = ({
                   <Label htmlFor="src-timeinjazz" className="text-sm font-semibold cursor-pointer text-orange-700 dark:text-orange-400">
                     Time in Jazz 2026
                   </Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">timeinjazz.it — 86 concerti a Berchidda e dintorni</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">timeinjazz.it — concerti a Berchidda e dintorni</p>
                 </div>
               </div>
             </div>
@@ -208,15 +270,16 @@ export const ScraperPanel: React.FC<ScraperPanelProps> = ({
         <Button
           onClick={handlePreview}
           disabled={loadingPreview || selectedSources.length === 0}
-          className="w-full max-w-sm mt-2"
+          className={`w-full max-w-md mt-2 ${useAiCrawler ? "bg-indigo-600 hover:bg-indigo-700 text-white" : ""}`}
         >
           {loadingPreview ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Scraping in corso…
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> {useAiCrawler ? "Crawler AI in corso su fonti…" : "Scraping in corso…"}
             </>
           ) : (
             <>
-              <Eye className="w-4 h-4 mr-2" /> Avvia Scraper ({selectedSources.length})
+              {useAiCrawler ? <Brain className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
+              {useAiCrawler ? `Avvia Crawler AI Gemini (${selectedSources.length} fonti)` : `Avvia Scraper (${selectedSources.length} fonti)`}
             </>
           )}
         </Button>
