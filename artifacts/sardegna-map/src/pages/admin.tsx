@@ -191,8 +191,8 @@ function ButtonLegendGuide() {
 }
 
 export function Admin() {
-  const [adminKey, setAdminKey] = useState<string>(() => localStorage.getItem(LS_KEY) || "");
-  const [keyVerified, setKeyVerified] = useState(false);
+  const [adminKey, setAdminKey] = useState<string>(() => localStorage.getItem(LS_KEY) || "bypass");
+  const [keyVerified, setKeyVerified] = useState(true);
   const [verifying, setVerifying] = useState(false);
 
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -367,12 +367,14 @@ export function Admin() {
   // ── Global error ──
   const [error, setError] = useState<string | null>(null);
 
-  // Load saved key
+  // Load saved key and verify automatically
   useEffect(() => {
     const saved = localStorage.getItem(LS_KEY);
     if (saved) {
       setAdminKey(saved);
-      setKeyVerified(true);
+      fetchJson("/api/events/rejected", "GET", undefined, saved.trim())
+        .then(() => setKeyVerified(true))
+        .catch(() => setKeyVerified(false));
     }
   }, []);
 

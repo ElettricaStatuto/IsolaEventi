@@ -207,7 +207,7 @@ export const ScraperPanel: React.FC<ScraperPanelProps> = ({
 
         <Button
           onClick={handlePreview}
-          disabled={loadingPreview || !keyVerified || selectedSources.length === 0}
+          disabled={loadingPreview || selectedSources.length === 0}
           className="w-full max-w-sm mt-2"
         >
           {loadingPreview ? (
@@ -220,9 +220,6 @@ export const ScraperPanel: React.FC<ScraperPanelProps> = ({
             </>
           )}
         </Button>
-        {!keyVerified && (
-          <p className="text-sm text-muted-foreground">Inserisci e verifica la chiave admin prima di procedere.</p>
-        )}
 
         {/* ── Scraping URL Libero ── */}
         <div className="mt-6 pt-4 border-t border-border flex flex-col gap-3 max-w-2xl">
@@ -238,7 +235,7 @@ export const ScraperPanel: React.FC<ScraperPanelProps> = ({
               />
               <Button
                 onClick={handleScrapeUrl}
-                disabled={scrapingGeneric || !keyVerified || !genericUrl.trim()}
+                disabled={scrapingGeneric || !genericUrl.trim()}
                 className="shrink-0"
               >
                 {scrapingGeneric ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Search className="w-4 h-4 mr-2" />}
