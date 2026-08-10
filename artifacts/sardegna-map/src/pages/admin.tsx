@@ -505,7 +505,7 @@ export function Admin() {
       setSelectedAnalyzeIds(new Set());
       updatePreviewCache(evs);
       setScrapingStep("list");
-      setActiveTab("pending");
+      setScrapingLogs(prev => [...prev, "✅ Estrazione completata! Puoi ora consultare gli eventi nella scheda 'In Attesa'."]);
     } catch (e) {
       setError(`Errore di rete: ${String(e)}`);
     } finally {
