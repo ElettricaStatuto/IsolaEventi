@@ -433,9 +433,9 @@ def main():
         for obj in events_to_save:
             ev = obj["ev"]
             
-            # Se è uno scraping URL libero, esegui subito l'estrazione AI dei sotto-eventi (Extractor mode)
-            if args.url:
-                emit_log(f"Esecuzione AI Extractor sull'evento in corso (Estrazione Sotto-Eventi)...")
+            # Se è uno scraping URL libero o se l'utente ha attivato lo switch Crawler AI, esegui l'estrazione AI dei sotto-eventi
+            if args.url or args.force_festival:
+                emit_log(f"🤖 Esecuzione Crawler AI Gemini sull'evento '{ev.titolo}'...")
                 extra_kwargs = {"force_festival": True} if args.force_festival else {}
                 ai_result = analyze_event(ev.to_dict(), mode="extract", **extra_kwargs)
                 
