@@ -31,6 +31,26 @@ function getPythonExecutable(): string {
   return process.platform === "win32" ? "python" : "python3";
 }
 
+function calculateTitleSimilarity(s1: string, s2: string): number {
+  if (!s1 || !s2) return 0;
+  const str1 = s1.toLowerCase().trim().replace(/[^a-z0-9]/g, "");
+  const str2 = s2.toLowerCase().trim().replace(/[^a-z0-9]/g, "");
+  if (str1 === str2) return 1.0;
+  if (str1.includes(str2) || str2.includes(str1)) return 0.85;
+
+  let longer = str1.length > str2.length ? str1 : str2;
+  let shorter = str1.length > str2.length ? str2 : str1;
+  if (longer.length === 0) return 1.0;
+
+  // Simple character overlap ratio
+  let matchCount = 0;
+  const shorterChars = new Set(shorter.split(""));
+  for (const char of longer.split("")) {
+    if (shorterChars.has(char)) matchCount++;
+  }
+  return matchCount / longer.length;
+}
+
 const router: IRouter = Router();
 
 function getFestivalDateRange(parentInizio: string | null, parentFine: string | null, sottoEventi: any[]) {
@@ -356,14 +376,35 @@ router.post("/events/refresh/preview", requireAdminKey, (req, res): void => {
             if (parsed.events && Array.isArray(parsed.events)) {
               fs.writeFileSync(cacheFile, JSON.stringify(parsed.events, null, 2), "utf8");
               
-              // Persistenza diretta ed unificata su Neon PostgreSQL
+              // Persistenza diretta ed unificata su Neon PostgreSQL con controllo anti-duplicati
+              const existingPending = await db.select({
+                titolo: pendingEventsTable.titolo,
+                dataInizio: pendingEventsTable.dataInizio,
+                luogo: pendingEventsTable.luogo
+              }).from(pendingEventsTable);
+
               for (const ev of parsed.events) {
                 try {
+                  const evTitle = ev.titolo || "Evento da Scraper";
+                  const evDate = ev.data_inizio || null;
+                  
+                  // Controlla se esiste già un evento simile nello stesso giorno
+                  const isDuplicate = existingPending.some(ex => {
+                    const sameDate = (ex.dataInizio === evDate) || (!ex.dataInizio && !evDate);
+                    const titleSim = calculateTitleSimilarity(ex.titolo, evTitle);
+                    return sameDate && titleSim >= 0.80;
+                  });
+
+                  if (isDuplicate) {
+                    req.log.info({ title: evTitle }, "Skipping duplicate event in pending_events");
+                    continue;
+                  }
+
                   await db.insert(pendingEventsTable).values({
-                    titolo: ev.titolo || "Evento da Scraper",
+                    titolo: evTitle,
                     titoloOriginale: ev.titolo_originale || ev.titolo || null,
                     categoria: ev.categoria || null,
-                    dataInizio: ev.data_inizio || null,
+                    dataInizio: evDate,
                     dataFine: ev.data_fine || null,
                     dateOriginali: ev.date_originali || null,
                     oraInizio: ev.ora_inizio || null,
@@ -389,6 +430,8 @@ router.post("/events/refresh/preview", requireAdminKey, (req, res): void => {
                     socialContatti: ev.social_contatti || null,
                     dettagliExtra: ev.dettagli_extra || null,
                   });
+
+                  existingPending.push({ titolo: evTitle, dataInizio: evDate, luogo: ev.luogo || null });
                 } catch (dbErr) {
                   req.log.warn({ dbErr, title: ev.titolo }, "Failed to persist preview event into pending_events table");
                 }
@@ -608,14 +651,34 @@ router.post("/events/scrape-url", requireAdminKey, async (req, res): Promise<voi
     }
 
     if (resultJson && resultJson.success && Array.isArray(resultJson.events)) {
-      // Garantisce il salvataggio immediato ed esplicito in pending_events su Neon PostgreSQL
+      // Persistenza diretta su Neon PostgreSQL con controllo anti-duplicati
+      const existingPending = await db.select({
+        titolo: pendingEventsTable.titolo,
+        dataInizio: pendingEventsTable.dataInizio,
+        luogo: pendingEventsTable.luogo
+      }).from(pendingEventsTable);
+
       for (const ev of resultJson.events) {
         try {
+          const evTitle = ev.titolo || "Evento Scrapato";
+          const evDate = ev.data_inizio || null;
+          
+          const isDuplicate = existingPending.some(ex => {
+            const sameDate = (ex.dataInizio === evDate) || (!ex.dataInizio && !evDate);
+            const titleSim = calculateTitleSimilarity(ex.titolo, evTitle);
+            return sameDate && titleSim >= 0.80;
+          });
+
+          if (isDuplicate) {
+            req.log.info({ title: evTitle }, "Skipping duplicate event in pending_events");
+            continue;
+          }
+
           await db.insert(pendingEventsTable).values({
-            titolo: ev.titolo || "Evento Scrapato",
+            titolo: evTitle,
             titoloOriginale: ev.titolo_originale || ev.titolo || null,
             categoria: ev.categoria || null,
-            dataInizio: ev.data_inizio || null,
+            dataInizio: evDate,
             dataFine: ev.data_fine || null,
             dateOriginali: ev.date_originali || null,
             oraInizio: ev.ora_inizio || null,
@@ -641,6 +704,8 @@ router.post("/events/scrape-url", requireAdminKey, async (req, res): Promise<voi
             socialContatti: ev.social_contatti || null,
             dettagliExtra: ev.dettagli_extra || null,
           });
+
+          existingPending.push({ titolo: evTitle, dataInizio: evDate, luogo: ev.luogo || null });
         } catch (dbErr) {
           req.log.warn({ dbErr, title: ev.titolo }, "Failed to save scraped event into pending_events table");
         }
