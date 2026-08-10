@@ -523,12 +523,9 @@ export const ScraperPanel: React.FC<ScraperPanelProps> = ({
                 else if (log.includes("⚠️") || log.includes("Avviso")) colorClass = "text-amber-400 font-semibold";
                 else if (log.includes("❌") || log.includes("Errore") || log.includes("Fallito")) colorClass = "text-rose-400 font-bold";
 
-                const now = new Date();
-                const timeStr = now.toLocaleTimeString();
-
                 return (
                   <div key={i} className="flex items-start gap-2 leading-relaxed hover:bg-white/5 px-1 rounded transition-colors">
-                    <span className="text-zinc-600 select-none font-mono text-[10px] shrink-0 pt-0.5">[{timeStr}]</span>
+                    <span className="text-zinc-500 font-mono text-[10px] shrink-0 pt-0.5">{">"}</span>
                     <span className={`${colorClass} whitespace-pre-wrap break-all flex-1`}>{log}</span>
                   </div>
                 );
