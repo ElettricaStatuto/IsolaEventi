@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Loader2, Info, CheckCircle2, XCircle, ShieldCheck, ArrowLeft, Eye, Database,
-  Trash2, RotateCcw, AlertTriangle, Calendar, MapPin, Globe, Search, RefreshCw, Clock, Terminal, Upload, BarChart3, Brain, FileText
+  Trash2, RotateCcw, AlertTriangle, Calendar, MapPin, Globe, Search, RefreshCw, Clock, Terminal, Upload, BarChart3, Brain, FileText, Sun, Moon
 } from "lucide-react";
 import { AdminStats } from "@/components/admin-stats";
 import { ScraperPanel } from "@/components/admin/ScraperPanel";
@@ -191,8 +191,25 @@ function ButtonLegendGuide() {
 }
 
 export function Admin() {
-  const [adminKey, setAdminKey] = useState("bypass");
-  const [keyVerified, setKeyVerified] = useState(true);
+  const [adminKey, setAdminKey] = useState<string>(() => localStorage.getItem(LS_KEY) || "");
+  const [keyVerified, setKeyVerified] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    return localStorage.getItem("sardegna_theme") === "dark" ||
+      (!localStorage.getItem("sardegna_theme") && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  });
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("sardegna_theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("sardegna_theme", "light");
+    }
+  }, [isDark]);
+
   const [keyError, setKeyError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("scraping");
   const [analysisTarget, setAnalysisTarget] = useState<"both" | "both_source" | "image" | "text" | "source_page">("both");
@@ -1721,14 +1738,32 @@ export function Admin() {
       <div className="max-w-7xl mx-auto flex flex-col gap-4">
 
         {/* Header */}
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
-            <ShieldCheck className="w-5 h-5" />
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="font-serif text-xl font-bold text-foreground">Area Admin</h1>
+              <p className="text-xs text-muted-foreground">Sardegna Eventi — gestione eventi e approvazione</p>
+            </div>
           </div>
-          <div>
-            <h1 className="font-serif text-xl font-bold text-foreground">Area Admin</h1>
-            <p className="text-xs text-muted-foreground">Sardegna Eventi — gestione eventi e approvazione</p>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsDark(!isDark)}
+            className="flex items-center gap-2 border-border text-foreground hover:bg-muted"
+          >
+            {isDark ? (
+              <>
+                <Sun className="w-4 h-4 text-amber-400" /> <span>Tema Chiaro</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-4 h-4 text-indigo-500" /> <span>Tema Scuro</span>
+              </>
+            )}
+          </Button>
         </div>
 
 
