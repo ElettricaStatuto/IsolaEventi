@@ -215,16 +215,7 @@ export function Admin() {
   const [analysisTarget, setAnalysisTarget] = useState<"both" | "both_source" | "image" | "text" | "source_page">("both");
   const [aiProvider, setAiProvider] = useState<"direct" | "replit">("direct");
   const [useAiCrawler, setUseAiCrawler] = useState<boolean>(false);
-  const [selectedSources, setSelectedSources] = useState<string[]>([
-    "paradisola",
-    "sardegnaturismo",
-    "timeinjazz",
-    "eventiinsardegna_calendar",
-    "eventiinsardegna_alghero",
-    "eventiinsardegna_cagliari",
-    "eventiinsardegna_centro",
-    "eventiinsardegna_agosto"
-  ]);
+  const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [analysisLogs, setAnalysisLogs] = useState<string[]>([]);
   const [analyzingStep, setAnalyzingStep] = useState<"idle" | "preview" | "published">("idle");
   const abortControllerRef = useRef<AbortController | null>(null);
