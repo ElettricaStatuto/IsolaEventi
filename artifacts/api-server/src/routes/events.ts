@@ -477,18 +477,28 @@ router.get("/events/pending", requireAdminKey, async (req, res): Promise<void> =
       data_inizio: r.dataInizio,
       data_fine: r.dataFine,
       date_originali: r.dateOriginali,
+      ora_inizio: r.oraInizio,
+      ora_fine: r.oraFine,
       luogo: r.luogo,
       luogo_originale: r.luogoOriginale,
       latitudine: r.latitudine,
       longitudine: r.longitudine,
       link: r.link,
       link_organizzatore: r.linkOrganizzatore,
+      link_biglietti: r.linkBiglietti,
       descrizione: r.descrizione,
       immagine: r.immagine,
       fonte: r.fonte,
       testo_estratto: r.testoEstratto,
+      is_festival: r.isFestival,
+      is_ingresso_gratuito: r.isIngressoGratuito,
       is_new: true,
+      parent_id: null,
+      parent_temp_id: r.parentTempId,
       tags: r.tags || [],
+      artisti: r.artisti || [],
+      bio_artisti: r.bioArtisti || [],
+      social_contatti: r.socialContatti || [],
       dettagli_extra: r.dettagliExtra || {},
       sotto_eventi: r.sottoEventi || []
     }));
@@ -555,7 +565,44 @@ router.post("/events/scrape-url", requireAdminKey, async (req, res): Promise<voi
       }
     }
 
-    if (resultJson && resultJson.success) {
+    if (resultJson && resultJson.success && Array.isArray(resultJson.events)) {
+      // Garantisce il salvataggio immediato ed esplicito in pending_events su Neon PostgreSQL
+      for (const ev of resultJson.events) {
+        try {
+          await db.insert(pendingEventsTable).values({
+            titolo: ev.titolo || "Evento Scrapato",
+            titoloOriginale: ev.titolo_originale || ev.titolo || null,
+            categoria: ev.categoria || null,
+            dataInizio: ev.data_inizio || null,
+            dataFine: ev.data_fine || null,
+            dateOriginali: ev.date_originali || null,
+            oraInizio: ev.ora_inizio || null,
+            oraFine: ev.ora_fine || null,
+            luogo: ev.luogo || null,
+            luogoOriginale: ev.luogo_originale || ev.luogo || null,
+            latitudine: ev.latitudine || null,
+            longitudine: ev.longitudine || null,
+            link: ev.link || url,
+            linkOrganizzatore: ev.link_organizzatore || null,
+            linkBiglietti: ev.link_biglietti || null,
+            descrizione: ev.descrizione || null,
+            immagine: ev.immagine || null,
+            fonte: ev.fonte || "Scraper URL",
+            testoEstratto: ev.testo_estratto || null,
+            isFestival: ev.is_festival ?? false,
+            isIngressoGratuito: ev.is_ingresso_gratuito ?? false,
+            parentTempId: ev.dettagli_extra?.parent_temp_id || null,
+            sottoEventi: ev.sotto_eventi || null,
+            tags: ev.tags || null,
+            artisti: ev.artisti || null,
+            bioArtisti: ev.bio_artisti || null,
+            socialContatti: ev.social_contatti || null,
+            dettagliExtra: ev.dettagli_extra || null,
+          });
+        } catch (dbErr) {
+          req.log.warn({ dbErr, title: ev.titolo }, "Failed to save scraped event into pending_events table");
+        }
+      }
       res.json({ success: true, events: resultJson.events });
     } else {
       res.json({ success: false, message: "No events found or parsing failed." });
@@ -731,7 +778,43 @@ router.post("/events/upload-pdf", requireAdminKey, upload.single("file"), async 
       req.log.warn({ err: e }, "Failed to remove uploaded PDF");
     }
 
-    if (resultJson && resultJson.success) {
+    if (resultJson && resultJson.success && Array.isArray(resultJson.events)) {
+      for (const ev of resultJson.events) {
+        try {
+          await db.insert(pendingEventsTable).values({
+            titolo: ev.titolo || "Evento da PDF",
+            titoloOriginale: ev.titolo_originale || ev.titolo || null,
+            categoria: ev.categoria || null,
+            dataInizio: ev.data_inizio || null,
+            dataFine: ev.data_fine || null,
+            dateOriginali: ev.date_originali || null,
+            oraInizio: ev.ora_inizio || null,
+            oraFine: ev.ora_fine || null,
+            luogo: ev.luogo || null,
+            luogoOriginale: ev.luogo_originale || ev.luogo || null,
+            latitudine: ev.latitudine || null,
+            longitudine: ev.longitudine || null,
+            link: ev.link || null,
+            linkOrganizzatore: ev.link_organizzatore || null,
+            linkBiglietti: ev.link_biglietti || null,
+            descrizione: ev.descrizione || null,
+            immagine: ev.immagine || null,
+            fonte: ev.fonte || "Estrattore PDF",
+            testoEstratto: ev.testo_estratto || null,
+            isFestival: ev.is_festival ?? false,
+            isIngressoGratuito: ev.is_ingresso_gratuito ?? false,
+            parentTempId: ev.dettagli_extra?.parent_temp_id || null,
+            sottoEventi: ev.sotto_eventi || null,
+            tags: ev.tags || null,
+            artisti: ev.artisti || null,
+            bioArtisti: ev.bio_artisti || null,
+            socialContatti: ev.social_contatti || null,
+            dettagliExtra: ev.dettagli_extra || null,
+          });
+        } catch (dbErr) {
+          req.log.warn({ dbErr, title: ev.titolo }, "Failed to save PDF event into pending_events table");
+        }
+      }
       res.json({ success: true, events: resultJson.events });
     } else {
       res.json({ success: false, message: "Nessun evento trovato o estrazione fallita." });
