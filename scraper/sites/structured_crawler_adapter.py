@@ -35,8 +35,8 @@ def ensure_cloudinary_image(url: str | None) -> str | None:
             url,
             folder="isola-eventi",
             transformation=[
-                {"width": 1200, "crop": "limit"},
-                {"quality": "auto", "fetch_format": "auto"}
+                {"width": 800, "height": 1000, "crop": "limit"},
+                {"quality": "auto:eco", "fetch_format": "auto"}
             ]
         )
         cloud_url = res.get("secure_url")

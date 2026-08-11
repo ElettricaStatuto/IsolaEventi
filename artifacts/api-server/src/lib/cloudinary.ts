@@ -29,10 +29,10 @@ export async function uploadToCloudinary(
 
   const result = await cloudinary.uploader.upload(localFilePath, {
     folder,
-    // Ottimizzazioni automatiche: formato WebP, qualità auto, max 1200px larghezza
+    // Ottimizzazione banda: ridimensionamento a max 800px e conversione automatica in WebP compresso
     transformation: [
-      { width: 1200, crop: "limit" },
-      { quality: "auto", fetch_format: "auto" },
+      { width: 800, height: 1000, crop: "limit" },
+      { quality: "auto:eco", fetch_format: "auto" },
     ],
     resource_type: "image",
   });
