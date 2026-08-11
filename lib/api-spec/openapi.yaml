@@ -368,11 +368,19 @@ components:
       properties:
         titolo:
           type: string
+        titolo_originale:
+          type: ["string", "null"]
+        categoria:
+          type: ["string", "null"]
         data_inizio:
           type: ["string", "null"]
         data_fine:
           type: ["string", "null"]
         date_originali:
+          type: ["string", "null"]
+        ora_inizio:
+          type: ["string", "null"]
+        ora_fine:
           type: ["string", "null"]
         luogo:
           type: ["string", "null"]
@@ -398,12 +406,34 @@ components:
           type: ["string", "null"]
         is_festival:
           type: ["boolean", "null"]
+        is_evento:
+          type: ["boolean", "null"]
+        is_ingresso_gratuito:
+          type: ["boolean", "null"]
         link_organizzatore:
+          type: ["string", "null"]
+        link_biglietti:
           type: ["string", "null"]
         tags:
           type: ["array", "null"]
           items:
             type: string
+        artisti:
+          type: ["array", "null"]
+          items:
+            type: string
+        bio_artisti:
+          type: ["array", "null"]
+          items:
+            type: object
+            additionalProperties: true
+        social_contatti:
+          type: ["array", "null"]
+          items:
+            type: string
+        dettagli_dominio:
+          type: ["object", "null"]
+          additionalProperties: true
         dettagli_extra:
           type: ["object", "null"]
           additionalProperties: true

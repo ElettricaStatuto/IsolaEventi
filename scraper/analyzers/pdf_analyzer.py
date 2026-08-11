@@ -6,7 +6,7 @@ import logging
 import os
 from pathlib import Path
 
-from .prompts import PROMPT_ANALISI_PDF
+from .prompts import PROMPT_ANALISI_PDF, PDF_RESPONSE_SCHEMA
 
 logger = logging.getLogger(__name__)
 
@@ -48,11 +48,12 @@ def struttura_eventi_da_pdf(pdf_path: str) -> list[dict]:
             contents=contents,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
+                response_json_schema=PDF_RESPONSE_SCHEMA,
                 temperature=0.2,
             ),
         )
         data = json.loads(response.text)
-        
+
         # Salva il testo estratto per uso futuro
         testo_pdf = data.get("testo_integrale_pdf", "")
         if testo_pdf:
@@ -67,8 +68,14 @@ def struttura_eventi_da_pdf(pdf_path: str) -> list[dict]:
             except Exception as e:
                 logger.warning(f"Errore salvataggio raw_texts: {e}")
 
+        eventi_grezzi = data.get("lista_sotto_eventi_estratti", [])
+        if not eventi_grezzi and data.get("dati_curati_ai", {}).get("titolo"):
+            eventi_grezzi = [data["dati_curati_ai"]]
+
         eventi_out = []
-        for ev in data.get("eventi", []):
+        for ev in eventi_grezzi:
+            if ev.get("is_evento") is False:
+                continue
             eventi_out.append({
                 "titolo": ev.get("titolo", "Evento Senza Titolo"),
                 "categoria": ev.get("categoria", "Altro"),
@@ -77,7 +84,15 @@ def struttura_eventi_da_pdf(pdf_path: str) -> list[dict]:
                 "ora_inizio": ev.get("ora_inizio"),
                 "ora_fine": ev.get("ora_fine"),
                 "luogo": ev.get("luogo"),
-                "descrizione": "",
+                "descrizione": ev.get("testo_estratto", ""),
+                "link_organizzatore": ev.get("link_organizzatore"),
+                "link_biglietti": ev.get("link_biglietti"),
+                "is_ingresso_gratuito": ev.get("is_ingresso_gratuito", False),
+                "artisti": ev.get("artisti", []),
+                "tags": ev.get("tags", []),
+                "dettagli_dominio": ev.get("dettagli_dominio"),
+                "approfondimenti_extra": ev.get("approfondimenti_extra"),
+                "is_evento": ev.get("is_evento", True),
             })
         return eventi_out
     except Exception as e:

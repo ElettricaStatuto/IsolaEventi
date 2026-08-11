@@ -7,6 +7,11 @@ import { requireAdminKey } from "../middlewares/auth.js";
 
 const router = Router();
 
+function getPythonExecutable(): string {
+  if (process.env.PYTHON_PATH) return process.env.PYTHON_PATH;
+  return process.platform === "win32" ? "python" : "python3";
+}
+
 // Simple token similarity helper (Dice's Coefficient)
 function stringSimilarity(str1: string, str2: string): number {
   const getTokens = (s: string) => s.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean);
@@ -95,7 +100,7 @@ router.post("/duplicates/find", requireAdminKey, async (req, res): Promise<void>
 
     // E. Send suspicious groups to Python AI script for confirmation
     const pyScript = path.resolve(workspaceRoot, "scraper/find_duplicates.py");
-    const child = spawn("python", [pyScript], {
+    const child = spawn(getPythonExecutable(), [pyScript], {
       cwd: workspaceRoot,
       env: { ...process.env },
     });

@@ -279,7 +279,7 @@ router.post("/events/refresh", requireAdminKey, async (req, res): Promise<void> 
   const scraperScript = path.resolve(workspaceRoot, "scraper_runner.py");
 
   try {
-    const { stdout, stderr } = await execFileAsync("python", [scraperScript], {
+    const { stdout, stderr } = await execFileAsync(getPythonExecutable(), [scraperScript], {
       timeout: 300000,
       env: { ...process.env },
       cwd: workspaceRoot,
@@ -433,6 +433,7 @@ router.post("/events/refresh/preview", requireAdminKey, (req, res): void => {
                     testoEstratto: ev.testo_estratto || null,
                     isFestival: ev.is_festival ?? false,
                     isIngressoGratuito: ev.is_ingresso_gratuito ?? false,
+                    isEvento: ev.is_evento ?? true,
                     parentTempId: ev.dettagli_extra?.parent_temp_id || null,
                     rawScrapeId: rawScrapeId,
                     sottoEventi: ev.sotto_eventi || null,
@@ -440,6 +441,7 @@ router.post("/events/refresh/preview", requireAdminKey, (req, res): void => {
                     artisti: ev.artisti || null,
                     bioArtisti: ev.bio_artisti || null,
                     socialContatti: ev.social_contatti || null,
+                    dettagliDominio: ev.dettagli_dominio || null,
                     dettagliExtra: ev.dettagli_extra || null,
                   });
 
@@ -569,6 +571,7 @@ router.get("/events/pending", requireAdminKey, async (req, res): Promise<void> =
       testo_estratto: r.testoEstratto,
       is_festival: r.isFestival,
       is_ingresso_gratuito: r.isIngressoGratuito,
+      is_evento: r.isEvento,
       is_new: true,
       parent_id: null,
       parent_temp_id: r.parentTempId,
@@ -576,6 +579,7 @@ router.get("/events/pending", requireAdminKey, async (req, res): Promise<void> =
       artisti: r.artisti || [],
       bio_artisti: r.bioArtisti || [],
       social_contatti: r.socialContatti || [],
+      dettagli_dominio: r.dettagliDominio || null,
       dettagli_extra: r.dettagliExtra || {},
       sotto_eventi: r.sottoEventi || []
     }));
@@ -702,6 +706,7 @@ router.post("/events/scrape-url", requireAdminKey, async (req, res): Promise<voi
             testoEstratto: ev.testo_estratto || null,
             isFestival: ev.is_festival ?? false,
             isIngressoGratuito: ev.is_ingresso_gratuito ?? false,
+            isEvento: ev.is_evento ?? true,
             parentTempId: ev.dettagli_extra?.parent_temp_id || null,
             rawScrapeId: rawScrapeId,
             sottoEventi: ev.sotto_eventi || null,
@@ -709,6 +714,7 @@ router.post("/events/scrape-url", requireAdminKey, async (req, res): Promise<voi
             artisti: ev.artisti || null,
             bioArtisti: ev.bio_artisti || null,
             socialContatti: ev.social_contatti || null,
+            dettagliDominio: ev.dettagli_dominio || null,
             dettagliExtra: ev.dettagli_extra || null,
           });
 
@@ -864,7 +870,7 @@ router.post("/events/upload-pdf", requireAdminKey, upload.single("file"), async 
   }
 
   try {
-    const { stdout, stderr } = await execFileAsync("python", [scraperScript, "--preview", "--pdf", renamedPdfPath], {
+    const { stdout, stderr } = await execFileAsync(getPythonExecutable(), [scraperScript, "--preview", "--pdf", renamedPdfPath], {
       timeout: 120000,
       env: { ...process.env },
       cwd: workspaceRoot,
@@ -917,12 +923,14 @@ router.post("/events/upload-pdf", requireAdminKey, upload.single("file"), async 
             testoEstratto: ev.testo_estratto || null,
             isFestival: ev.is_festival ?? false,
             isIngressoGratuito: ev.is_ingresso_gratuito ?? false,
+            isEvento: ev.is_evento ?? true,
             parentTempId: ev.dettagli_extra?.parent_temp_id || null,
             sottoEventi: ev.sotto_eventi || null,
             tags: ev.tags || null,
             artisti: ev.artisti || null,
             bioArtisti: ev.bio_artisti || null,
             socialContatti: ev.social_contatti || null,
+            dettagliDominio: ev.dettagli_dominio || null,
             dettagliExtra: ev.dettagli_extra || null,
           });
         } catch (dbErr) {
@@ -973,12 +981,14 @@ router.put("/events/refresh/preview/cache", requireAdminKey, async (req, res): P
         testoEstratto: ev.testo_estratto || null,
         isFestival: ev.is_festival ?? false,
         isIngressoGratuito: ev.is_ingresso_gratuito ?? false,
+        isEvento: ev.is_evento ?? true,
         parentTempId: ev.dettagli_extra?.parent_temp_id || null,
         sottoEventi: ev.sotto_eventi || null,
         tags: ev.tags || null,
         artisti: ev.artisti || null,
         bioArtisti: ev.bio_artisti || null,
         socialContatti: ev.social_contatti || null,
+        dettagliDominio: ev.dettagli_dominio || null,
         dettagliExtra: ev.dettagli_extra || null,
       };
 
@@ -1043,7 +1053,7 @@ try:
 except Exception as e:
     print("null")
 `;
-    const { stdout } = await execFileAsync("python", ["-c", geocodeScript, luogo], {
+    const { stdout } = await execFileAsync(getPythonExecutable(), ["-c", geocodeScript, luogo], {
       timeout: 15000,
       cwd: workspaceRoot,
     });
@@ -1177,6 +1187,8 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
               artisti: ev.artisti || null,
               bioArtisti: ev.bio_artisti || null,
               socialContatti: ev.social_contatti || null,
+              isEvento: ev.is_evento ?? true,
+              dettagliDominio: ev.dettagli_dominio || null,
               dettagliExtra: ev.dettagli_extra || null,
               aggiornatoIl: new Date(),
             })
@@ -1211,6 +1223,8 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
             artisti: ev.artisti || null,
             bioArtisti: ev.bio_artisti || null,
             socialContatti: ev.social_contatti || null,
+            isEvento: ev.is_evento ?? true,
+            dettagliDominio: ev.dettagli_dominio || null,
             dettagliExtra: ev.dettagli_extra || null,
           }).returning({ id: eventsTable.id });
 
@@ -1273,6 +1287,8 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
               artisti: ev.artisti || null,
               bioArtisti: ev.bio_artisti || null,
               socialContatti: ev.social_contatti || null,
+              isEvento: ev.is_evento ?? true,
+              dettagliDominio: ev.dettagli_dominio || null,
               dettagliExtra: ev.dettagli_extra || null,
               aggiornatoIl: new Date(),
             })
@@ -1307,6 +1323,8 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
             artisti: ev.artisti || null,
             bioArtisti: ev.bio_artisti || null,
             socialContatti: ev.social_contatti || null,
+            isEvento: ev.is_evento ?? true,
+            dettagliDominio: ev.dettagli_dominio || null,
             dettagliExtra: ev.dettagli_extra || null,
           });
           nuovi++;
@@ -1376,7 +1394,7 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
   const aiScript = path.resolve(workspaceRoot, "scraper/run_ai.py");
 
   try {
-    const child = spawn("python", [aiScript], {
+    const child = spawn(getPythonExecutable(), [aiScript], {
       cwd: workspaceRoot,
       env: { ...process.env },
     });
@@ -1443,7 +1461,9 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
               linkBiglietti: parent.linkBiglietti || null,
               isFestival: false,
               isIngressoGratuito: r.is_ingresso_gratuito ?? parent.isIngressoGratuito ?? false,
+              isEvento: r.is_evento ?? true,
               artisti: r.artisti || null,
+              dettagliDominio: r.dettagli_dominio || null,
               immagine: r.immagine || parent.immagine,
             });
           }
@@ -1477,10 +1497,12 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
                 oraFine: r.ora_fine || parent.oraFine || null,
                 isFestival: r.is_festival ?? parent.isFestival ?? false,
                 isIngressoGratuito: r.is_ingresso_gratuito ?? parent.isIngressoGratuito ?? false,
+                isEvento: r.is_evento ?? parent.isEvento ?? true,
                 tags: r.tags || parent.tags || null,
                 artisti: r.artisti || parent.artisti || null,
                 bioArtisti: r.bio_artisti || parent.bioArtisti || null,
                 socialContatti: r.social_contatti || parent.socialContatti || null,
+                dettagliDominio: r.dettagli_dominio || parent.dettagliDominio || null,
                 dettagliExtra: r.dettagli_extra || parent.dettagliExtra || null,
                 descrizione: r.testo_grezzo_url || parent.descrizione,
                 dataInizio: dataInizio,
@@ -1507,13 +1529,20 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
                   oraFine: se.ora_fine || null,
                   luogo: se.luogo || parent.luogo,
                   luogoOriginale: se.luogo || parent.luogoOriginale || parent.luogo,
+                  descrizione: se.testo_estratto || null,
+                  testoEstratto: se.testo_estratto || null,
                   parentId: parent.id,
                   fonte: parent.fonte,
-                  linkOrganizzatore: r.link_organizzatore || parent.linkOrganizzatore || null,
-                  linkBiglietti: r.link_biglietti || parent.linkBiglietti || null,
+                  linkOrganizzatore: se.link_organizzatore || r.link_organizzatore || parent.linkOrganizzatore || null,
+                  linkBiglietti: se.link_biglietti || r.link_biglietti || parent.linkBiglietti || null,
                   isFestival: false,
                   isIngressoGratuito: se.is_ingresso_gratuito ?? r.is_ingresso_gratuito ?? false,
+                  isEvento: se.is_evento ?? true,
+                  tags: se.tags || r.tags || null,
                   artisti: se.artisti || null,
+                  bioArtisti: se.approfondimenti_extra?.bio_artisti || null,
+                  socialContatti: se.approfondimenti_extra?.social_contatti || null,
+                  dettagliDominio: se.dettagli_dominio || null,
                   immagine: se.immagine || parent.immagine,
                 });
               }

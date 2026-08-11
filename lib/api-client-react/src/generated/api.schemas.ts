@@ -70,6 +70,13 @@ export interface RefreshResult {
   messaggio?: string | null;
 }
 
+export type EventPreviewBioArtistiItem = { [key: string]: unknown };
+
+/**
+ * @nullable
+ */
+export type EventPreviewDettagliDominio = { [key: string]: unknown } | null;
+
 /**
  * @nullable
  */
@@ -78,11 +85,19 @@ export type EventPreviewDettagliExtra = { [key: string]: unknown } | null;
 export interface EventPreview {
   titolo: string;
   /** @nullable */
+  titolo_originale?: string | null;
+  /** @nullable */
+  categoria?: string | null;
+  /** @nullable */
   data_inizio?: string | null;
   /** @nullable */
   data_fine?: string | null;
   /** @nullable */
   date_originali?: string | null;
+  /** @nullable */
+  ora_inizio?: string | null;
+  /** @nullable */
+  ora_fine?: string | null;
   /** @nullable */
   luogo?: string | null;
   /** @nullable */
@@ -106,9 +121,23 @@ export interface EventPreview {
   /** @nullable */
   is_festival?: boolean | null;
   /** @nullable */
+  is_evento?: boolean | null;
+  /** @nullable */
+  is_ingresso_gratuito?: boolean | null;
+  /** @nullable */
   link_organizzatore?: string | null;
   /** @nullable */
+  link_biglietti?: string | null;
+  /** @nullable */
   tags?: string[] | null;
+  /** @nullable */
+  artisti?: string[] | null;
+  /** @nullable */
+  bio_artisti?: EventPreviewBioArtistiItem[] | null;
+  /** @nullable */
+  social_contatti?: string[] | null;
+  /** @nullable */
+  dettagli_dominio?: EventPreviewDettagliDominio;
   /** @nullable */
   dettagli_extra?: EventPreviewDettagliExtra;
 }

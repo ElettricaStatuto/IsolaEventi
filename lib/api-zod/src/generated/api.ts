@@ -87,9 +87,13 @@ export const PreviewEventsResponse = zod.object({
   "messaggio": zod.string().nullable(),
   "events": zod.array(zod.object({
   "titolo": zod.string(),
+  "titolo_originale": zod.string().nullish(),
+  "categoria": zod.string().nullish(),
   "data_inizio": zod.string().nullish(),
   "data_fine": zod.string().nullish(),
   "date_originali": zod.string().nullish(),
+  "ora_inizio": zod.string().nullish(),
+  "ora_fine": zod.string().nullish(),
   "luogo": zod.string().nullish(),
   "luogo_originale": zod.string().nullish(),
   "latitudine": zod.number().nullish(),
@@ -102,8 +106,15 @@ export const PreviewEventsResponse = zod.object({
   "parent_id": zod.number().nullish(),
   "testo_estratto": zod.string().nullish(),
   "is_festival": zod.boolean().nullish(),
+  "is_evento": zod.boolean().nullish(),
+  "is_ingresso_gratuito": zod.boolean().nullish(),
   "link_organizzatore": zod.string().nullish(),
+  "link_biglietti": zod.string().nullish(),
   "tags": zod.array(zod.string()).nullish(),
+  "artisti": zod.array(zod.string()).nullish(),
+  "bio_artisti": zod.array(zod.record(zod.string(), zod.unknown())).nullish(),
+  "social_contatti": zod.array(zod.string()).nullish(),
+  "dettagli_dominio": zod.record(zod.string(), zod.unknown()).nullish(),
   "dettagli_extra": zod.record(zod.string(), zod.unknown()).nullish()
 }))
 })
@@ -141,9 +152,13 @@ export const RestoreRejectedEventResponse = zod.object({
 export const ApproveEventsBody = zod.object({
   "events": zod.array(zod.object({
   "titolo": zod.string(),
+  "titolo_originale": zod.string().nullish(),
+  "categoria": zod.string().nullish(),
   "data_inizio": zod.string().nullish(),
   "data_fine": zod.string().nullish(),
   "date_originali": zod.string().nullish(),
+  "ora_inizio": zod.string().nullish(),
+  "ora_fine": zod.string().nullish(),
   "luogo": zod.string().nullish(),
   "luogo_originale": zod.string().nullish(),
   "latitudine": zod.number().nullish(),
@@ -156,8 +171,15 @@ export const ApproveEventsBody = zod.object({
   "parent_id": zod.number().nullish(),
   "testo_estratto": zod.string().nullish(),
   "is_festival": zod.boolean().nullish(),
+  "is_evento": zod.boolean().nullish(),
+  "is_ingresso_gratuito": zod.boolean().nullish(),
   "link_organizzatore": zod.string().nullish(),
+  "link_biglietti": zod.string().nullish(),
   "tags": zod.array(zod.string()).nullish(),
+  "artisti": zod.array(zod.string()).nullish(),
+  "bio_artisti": zod.array(zod.record(zod.string(), zod.unknown())).nullish(),
+  "social_contatti": zod.array(zod.string()).nullish(),
+  "dettagli_dominio": zod.record(zod.string(), zod.unknown()).nullish(),
   "dettagli_extra": zod.record(zod.string(), zod.unknown()).nullish()
 }))
 })

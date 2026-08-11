@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 import requests
 
-from .prompts import PROMPT_ANALISI_LOCANDINA_STANDARD
+from .prompts import PROMPT_ANALISI_LOCANDINA_STANDARD, STANDARD_RESPONSE_SCHEMA
 
 logger = logging.getLogger(__name__)
 
@@ -119,10 +119,11 @@ def analyze_standard_event(
             f"- Concentrati solo ed esclusivamente sulle informazioni relative a questa specifica serata/attività: '{titolo}'."
         )
 
-    prompt = PROMPT_ANALISI_LOCANDINA_STANDARD.format(
-        festival_instruction=festival_instruction,
-        model_name=model_name,
-        descrizione=descrizione
+    prompt = (
+        PROMPT_ANALISI_LOCANDINA_STANDARD
+        .replace("{festival_instruction}", festival_instruction)
+        .replace("{model_name}", model_name)
+        .replace("{descrizione}", descrizione)
     )
     contents = [prompt]
 
@@ -172,7 +173,15 @@ def analyze_standard_event(
         }
 
     try:
-        response = client.models.generate_content(model=model_name, contents=contents)
+        from google.genai import types
+        response = client.models.generate_content(
+            model=model_name,
+            contents=contents,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_json_schema=STANDARD_RESPONSE_SCHEMA,
+            ),
+        )
         text = response.text.strip()
         if text.startswith("```json"):
             text = text[7:]

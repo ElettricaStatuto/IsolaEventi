@@ -6,7 +6,7 @@ import logging
 import os
 from pathlib import Path
 
-from .prompts import PROMPT_ESTRAZIONE_PROGRAMMA_FESTIVAL
+from .prompts import PROMPT_ESTRAZIONE_PROGRAMMA_FESTIVAL, FESTIVAL_RESPONSE_SCHEMA
 
 logger = logging.getLogger(__name__)
 
@@ -31,11 +31,19 @@ def extract_sub_events_from_program(
         return {"is_festival": False, "eventi_figli_estratti": [], "info_festival_padre": {}}
     client = genai.Client(api_key=api_key)
 
-    prompt = PROMPT_ESTRAZIONE_PROGRAMMA_FESTIVAL.format(descrizione=descrizione)
+    prompt = PROMPT_ESTRAZIONE_PROGRAMMA_FESTIVAL.replace("{descrizione}", descrizione)
     contents = [prompt]
 
     try:
-        response = client.models.generate_content(model=model_name, contents=contents)
+        from google.genai import types
+        response = client.models.generate_content(
+            model=model_name,
+            contents=contents,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_json_schema=FESTIVAL_RESPONSE_SCHEMA,
+            ),
+        )
         text = response.text.strip()
         if text.startswith("```json"):
             text = text[7:]

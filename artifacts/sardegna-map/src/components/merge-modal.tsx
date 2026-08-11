@@ -150,7 +150,7 @@ export function MergeModal({ pair, onClose, onConfirm }: MergeModalProps) {
               required
             >
               <option value="">Seleziona Categoria...</option>
-              {["Musica", "Teatro", "Cinema", "Arte", "Incontro", "Enogastronomia", "Folklore", "Sport", "Bambini", "Altro"].map(cat => (
+              {["Musica", "Teatro", "Cinema", "Arte", "Incontro", "Enogastronomia", "Folklore", "Sport", "Eventi per Bambini", "Altro"].map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>

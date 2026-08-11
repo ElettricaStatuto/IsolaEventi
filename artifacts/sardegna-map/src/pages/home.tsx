@@ -153,7 +153,7 @@ export function Home() {
                     Enogastronomia: { color: "#ea580c", icon: "🍷" },
                     Folklore: { color: "#dc2626", icon: "🥁" },
                     Sport: { color: "#06b6d4", icon: "🏆" },
-                    Bambini: { color: "#84cc16", icon: "🎈" },
+                    "Eventi per Bambini": { color: "#84cc16", icon: "🎈" },
                   };
 
                   return Object.entries(categoryStyles).map(([catName, style]) => {
