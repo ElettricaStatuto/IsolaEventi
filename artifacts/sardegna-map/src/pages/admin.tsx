@@ -247,27 +247,19 @@ export function Admin() {
   const loadPreviewCache = useCallback(async () => {
     if (!adminKey) return;
     try {
-      // 1. Prima carica dal DB online (pending_events)
+      // Carica ESCLUSIVAMENTE ed in tempo reale dal DB online (pending_events)
       const dbData: any = await fetchJson("/api/events/pending", "GET", undefined, adminKey);
-      if (dbData.success && dbData.events && dbData.events.length > 0) {
+      if (dbData.success && dbData.events) {
         const dbEvents = dbData.events.map((ev: any) => ({ ...ev, from_db: true }));
         setPreviewEvents(dbEvents);
         setSelectedApproveIds(new Set());
         setSelectedAnalyzeIds(new Set());
         setScrapingStep("list");
-        return; // Se il DB ha dati, usa quelli e basta
       }
-    } catch (e) { /* fallback alla cache */ }
-    try {
-      // 2. Fallback: carica dalla cache locale (file)
-      const data: any = await fetchJson("/api/events/refresh/preview/cache", "GET", undefined, adminKey);
-      if (data.success && data.events && data.events.length > 0) {
-        setPreviewEvents(data.events);
-        setSelectedApproveIds(new Set());
-        setSelectedAnalyzeIds(new Set());
-        setScrapingStep("list");
-      }
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      // In caso di errore di rete, lista vuota
+      setPreviewEvents([]);
+    }
   }, [adminKey]);
 
   const updatePreviewCache = async (events: EventPreview[]) => {
