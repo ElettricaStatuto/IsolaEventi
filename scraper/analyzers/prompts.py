@@ -286,6 +286,7 @@ REGOLE TASSATIVE DI FORMATTAZIONE E COMPLETEZZA:
 6. {REGOLA_DETTAGLI_DOMINIO_TXT}
 7. {REGOLA_IS_EVENTO_TXT}
 8. `dati_curati_ai` rappresenta il programma/opuscolo nel suo complesso (titolo generale, date coperte); se il PDF descrive un unico evento con più giornate, imposta `gestione_gerarchia.is_festival_padre` a true.
+9. REGOLA TESTO: il campo `testo_estratto` NON deve MAI essere lasciato vuoto — sia in `dati_curati_ai` sia in OGNI singolo elemento di `lista_sotto_eventi_estratti` — DEVI scrivere un breve articolo giornalistico narrativo e accattivante (no elenchi puntati freddi, no semplice copia-incolla del testo sorgente).
 
 Rispondi ESCLUSIVAMENTE in formato JSON usando questo schema esatto:
 {json.dumps(_DOCUMENTO_EXAMPLE, indent=2, ensure_ascii=False)}
@@ -313,6 +314,7 @@ REGOLE TASSATIVE:
 5. {REGOLA_DETTAGLI_DOMINIO_TXT}
 6. {REGOLA_IS_EVENTO_TXT}
 7. Imposta `gestione_gerarchia.is_festival_padre` a true.
+8. REGOLA TESTO: il campo `testo_estratto` NON deve MAI essere lasciato vuoto — sia in `dati_curati_ai` (il festival nel suo complesso) sia in OGNI singolo elemento di `lista_sotto_eventi_estratti` (ogni sotto-evento) — DEVI scrivere un breve articolo giornalistico narrativo e accattivante (no elenchi puntati freddi, no semplice copia-incolla del testo sorgente).
 
 Restituisci ESCLUSIVAMENTE questo esatto formato JSON:
 {json.dumps(_DOCUMENTO_EXAMPLE, indent=2, ensure_ascii=False)}

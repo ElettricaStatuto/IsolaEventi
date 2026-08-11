@@ -548,7 +548,7 @@ def main():
                         "immagine": getattr(se, 'immagine', None) or ev.immagine,
                         "fonte": ev.fonte or "",
                         "is_new": obj["is_new"],
-                        "testo_estratto": None,
+                        "testo_estratto": se.descrizione,
                         "is_festival": False,
                         "is_ingresso_gratuito": getattr(se, 'is_ingresso_gratuito', getattr(ev, 'is_ingresso_gratuito', False)),
                         "parent_id": None,
