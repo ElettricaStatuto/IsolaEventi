@@ -58,12 +58,21 @@ export const pendingEventsTable = pgTable("pending_events", {
   isFestival: boolean("is_festival").default(false),
   isIngressoGratuito: boolean("is_ingresso_gratuito").default(false),
   parentTempId: text("parent_temp_id"),
+  rawScrapeId: integer("raw_scrape_id"),
   sottoEventi: jsonb("sotto_eventi"),
   tags: text("tags").array(),
   artisti: text("artisti").array(),
   bioArtisti: jsonb("bio_artisti"),
   socialContatti: text("social_contatti").array(),
   dettagliExtra: jsonb("dettagli_extra"),
+  creatoIl: timestamp("creato_il", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const rawScrapesTable = pgTable("raw_scrapes", {
+  id: serial("id").primaryKey(),
+  urlFonte: text("url_fonte").notNull(),
+  testoGrezzo: text("testo_grezzo").notNull(),
+  jsonAiRisposta: jsonb("json_ai_risposta"),
   creatoIl: timestamp("creato_il", { withTimezone: true }).notNull().defaultNow(),
 });
 

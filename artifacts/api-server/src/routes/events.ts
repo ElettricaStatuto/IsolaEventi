@@ -651,7 +651,21 @@ router.post("/events/scrape-url", requireAdminKey, async (req, res): Promise<voi
     }
 
     if (resultJson && resultJson.success && Array.isArray(resultJson.events)) {
-      // Persistenza diretta su Neon PostgreSQL con controllo anti-duplicati
+      // 1. Registra prima il testo grezzo e la scansione completa nella tabella di audit raw_scrapes
+      let rawScrapeId: number | null = null;
+      try {
+        const fullRawText = resultJson.raw_text || resultJson.events.map((e: any) => `${e.titolo}\n${e.descrizione || ''}`).join('\n\n');
+        const [insertedRaw] = await db.insert(rawScrapesTable).values({
+          urlFonte: url,
+          testoGrezzo: fullRawText,
+          jsonAiRisposta: resultJson,
+        }).returning({ id: rawScrapesTable.id });
+        if (insertedRaw) rawScrapeId = insertedRaw.id;
+      } catch (rawErr) {
+        req.log.warn({ rawErr }, "Failed to insert into raw_scrapes");
+      }
+
+      // 2. Persistenza su Neon PostgreSQL con controllo anti-duplicati
       const existingPending = await db.select({
         titolo: pendingEventsTable.titolo,
         dataInizio: pendingEventsTable.dataInizio,
@@ -697,6 +711,7 @@ router.post("/events/scrape-url", requireAdminKey, async (req, res): Promise<voi
             isFestival: ev.is_festival ?? false,
             isIngressoGratuito: ev.is_ingresso_gratuito ?? false,
             parentTempId: ev.dettagli_extra?.parent_temp_id || null,
+            rawScrapeId: rawScrapeId,
             sottoEventi: ev.sotto_eventi || null,
             tags: ev.tags || null,
             artisti: ev.artisti || null,
