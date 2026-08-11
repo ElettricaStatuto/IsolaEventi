@@ -59,6 +59,7 @@ class Evento:
     tags: List[str] = field(default_factory=list)
     is_evento: bool = True
     dettagli_dominio: Optional[dict] = None
+    documento_ai: Optional[dict] = None
 
     def to_dict(self) -> dict:
         return {k: v for k, v in self.__dict__.items()}

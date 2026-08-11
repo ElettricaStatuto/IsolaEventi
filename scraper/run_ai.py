@@ -123,7 +123,10 @@ def main():
                     "is_evento": dati_curati.get("is_evento", True),
                     "dettagli_dominio": dati_curati.get("dettagli_dominio"),
                     "sotto_eventi": ai_data.get("lista_sotto_eventi_estratti", []),
-                    "dettagli_extra": dettagli
+                    "dettagli_extra": dettagli,
+                    # Documento AI completo e non modificato (schema unificato v2.0),
+                    # da registrare cosi' com'e' nella tabella ai_analysis.
+                    "documento_ai": {k: v for k, v in ai_data.items() if k != "_usage"}
                 })
             except Exception as e:
                 # Append error info but continue to next event

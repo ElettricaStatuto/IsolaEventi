@@ -478,6 +478,10 @@ def main():
                 ev.bio_artisti = approfondimenti_padre.get("bio_artisti") or ev.bio_artisti
                 ev.social_contatti = approfondimenti_padre.get("social_contatti") or ev.social_contatti
 
+                # Documento AI completo e non modificato (schema unificato v2.0),
+                # da registrare cosi' com'e' nella tabella ai_analysis.
+                ev.documento_ai = {k: v for k, v in ai_data.items() if k != "_usage"} if isinstance(ai_data, dict) else None
+
                 sotto_eventi_objs = []
                 for se in extracted_list:
                     if se.get("is_evento") is False:
@@ -544,6 +548,7 @@ def main():
                 "social_contatti": getattr(ev, 'social_contatti', []),
                 "is_evento": getattr(ev, 'is_evento', True),
                 "dettagli_dominio": getattr(ev, 'dettagli_dominio', None),
+                "documento_ai": getattr(ev, 'documento_ai', None),
                 "dettagli_extra": {
                     **getattr(ev, 'dettagli_extra', {}),
                     "id_key": temp_id,

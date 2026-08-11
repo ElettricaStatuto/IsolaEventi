@@ -895,7 +895,15 @@ export function Admin() {
               is_festival: res.is_festival,
               sotto_eventi: res.sotto_eventi,
               link_organizzatore: res.link_organizzatore,
-            };
+              link_biglietti: res.link_biglietti,
+              is_ingresso_gratuito: res.is_ingresso_gratuito,
+              is_evento: res.is_evento,
+              artisti: res.artisti,
+              bio_artisti: res.bio_artisti,
+              social_contatti: res.social_contatti,
+              dettagli_dominio: res.dettagli_dominio,
+              documento_ai: res.documento_ai,
+            } as any;
             setPreviewEvents([...nextEvents]);
             updatePreviewCache(nextEvents);
             setAnalysisLogs(prev => [...prev, `✅ Completato con successo!`]);
@@ -999,10 +1007,18 @@ export function Admin() {
                 is_festival: res.is_festival,
                 sotto_eventi: res.sotto_eventi,
                 link_organizzatore: res.link_organizzatore,
+                link_biglietti: res.link_biglietti,
+                is_ingresso_gratuito: res.is_ingresso_gratuito,
+                is_evento: res.is_evento,
+                artisti: res.artisti,
+                bio_artisti: res.bio_artisti,
+                social_contatti: res.social_contatti,
+                dettagli_dominio: res.dettagli_dominio,
+                documento_ai: res.documento_ai,
                 luogo: res.luogo || nextEvents[idx].luogo,
                 data_inizio: res.data_inizio || nextEvents[idx].data_inizio,
                 data_fine: res.data_fine || nextEvents[idx].data_fine,
-              };
+              } as any;
               nextEvents[idx] = updatedEvent;
               setPreviewEvents([...nextEvents]);
               updatePreviewCache(nextEvents);
@@ -1033,12 +1049,20 @@ export function Admin() {
                   testo_estratto: res.testo_estratto,
                   is_festival: res.is_festival,
                   link_organizzatore: res.link_organizzatore,
+                  link_biglietti: res.link_biglietti,
+                  is_ingresso_gratuito: res.is_ingresso_gratuito,
+                  is_evento: res.is_evento,
+                  artisti: res.artisti,
+                  bio_artisti: res.bio_artisti,
+                  social_contatti: res.social_contatti,
+                  dettagli_dominio: res.dettagli_dominio,
+                  documento_ai: res.documento_ai,
                   tags: res.tags,
                   dettagli_extra: res.dettagli_extra,
                   luogo: res.luogo || inspectingEvent.luogo,
                   data_inizio: res.data_inizio || inspectingEvent.data_inizio,
                   data_fine: res.data_fine || inspectingEvent.data_fine,
-                });
+                } as any);
                 setEditingTags(res.tags || []);
                 setEditingDettagli(res.dettagli_extra || {});
               }
@@ -1644,13 +1668,21 @@ export function Admin() {
             is_festival: res.is_festival,
             sub_events_list: res.sotto_eventi || inspectingEvent.sub_events_list,
             link_organizzatore: res.link_organizzatore,
+            link_biglietti: res.link_biglietti,
+            is_ingresso_gratuito: res.is_ingresso_gratuito,
+            is_evento: res.is_evento,
+            artisti: res.artisti,
+            bio_artisti: res.bio_artisti,
+            social_contatti: res.social_contatti,
+            dettagli_dominio: res.dettagli_dominio,
+            documento_ai: res.documento_ai,
             tags: res.tags,
             dettagli_extra: {
               ...(inspectingEvent.dettagli_extra || {}),
               ...(res.dettagli_extra || {}),
               parent_temp_id: inspectingEvent.dettagli_extra?.parent_temp_id || res.dettagli_extra?.parent_temp_id,
             },
-          };
+          } as any;
           setInspectingEvent(updatedEvent);
           setEditingTags(res.tags || []);
           setEditingDettagli(updatedEvent.dettagli_extra || {});

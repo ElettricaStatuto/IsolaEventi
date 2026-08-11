@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { and, gte, lte, ilike, sql, eq, isNull, inArray } from "drizzle-orm";
-import { db, eventsTable, rejectedEventsTable, pendingEventsTable, rawScrapesTable } from "@workspace/db";
+import { db, eventsTable, rejectedEventsTable, pendingEventsTable, rawScrapesTable, aiAnalysisTable } from "@workspace/db";
 import {
   ListEventsQueryParams,
   ListEventsResponse,
@@ -29,6 +29,29 @@ const execFileAsync = promisify(execFile);
 function getPythonExecutable(): string {
   if (process.env.PYTHON_PATH) return process.env.PYTHON_PATH;
   return process.platform === "win32" ? "python" : "python3";
+}
+
+// Registra il documento AI completo e non modificato (schema unificato v2.0)
+// cosi' come restituito da Gemini, indipendentemente dalle colonne "operative".
+async function recordAiAnalysis(
+  documentoAi: any,
+  ids: { pendingEventId?: number | null; eventId?: number | null }
+): Promise<void> {
+  if (!documentoAi || typeof documentoAi !== "object") return;
+  try {
+    await db.insert(aiAnalysisTable).values({
+      pendingEventId: ids.pendingEventId ?? null,
+      eventId: ids.eventId ?? null,
+      schemaVersion: documentoAi.schema_version ?? null,
+      metadatiOperazioni: documentoAi.metadati_operazioni ?? null,
+      gestioneGerarchia: documentoAi.gestione_gerarchia ?? null,
+      datiCuratiAi: documentoAi.dati_curati_ai ?? null,
+      diarioDiBordoAi: documentoAi.diario_di_bordo_ai ?? null,
+      listaSottoEventiEstratti: documentoAi.lista_sotto_eventi_estratti ?? null,
+    });
+  } catch (err) {
+    logger.error({ err }, "Failed to record ai_analysis row");
+  }
 }
 
 function calculateTitleSimilarity(s1: string, s2: string): number {
@@ -411,7 +434,7 @@ router.post("/events/refresh/preview", requireAdminKey, (req, res): void => {
                     continue;
                   }
 
-                  await db.insert(pendingEventsTable).values({
+                  const [insertedPending] = await db.insert(pendingEventsTable).values({
                     titolo: evTitle,
                     titoloOriginale: ev.titolo_originale || ev.titolo || null,
                     categoria: ev.categoria || null,
@@ -443,7 +466,11 @@ router.post("/events/refresh/preview", requireAdminKey, (req, res): void => {
                     socialContatti: ev.social_contatti || null,
                     dettagliDominio: ev.dettagli_dominio || null,
                     dettagliExtra: ev.dettagli_extra || null,
-                  });
+                  }).returning({ id: pendingEventsTable.id });
+
+                  if (insertedPending) {
+                    await recordAiAnalysis(ev.documento_ai, { pendingEventId: insertedPending.id });
+                  }
 
                   existingPending.push({ titolo: evTitle, dataInizio: evDate, luogo: ev.luogo || null });
                 } catch (dbErr) {
@@ -684,7 +711,7 @@ router.post("/events/scrape-url", requireAdminKey, async (req, res): Promise<voi
             continue;
           }
 
-          await db.insert(pendingEventsTable).values({
+          const [insertedPending] = await db.insert(pendingEventsTable).values({
             titolo: evTitle,
             titoloOriginale: ev.titolo_originale || ev.titolo || null,
             categoria: ev.categoria || null,
@@ -716,7 +743,11 @@ router.post("/events/scrape-url", requireAdminKey, async (req, res): Promise<voi
             socialContatti: ev.social_contatti || null,
             dettagliDominio: ev.dettagli_dominio || null,
             dettagliExtra: ev.dettagli_extra || null,
-          });
+          }).returning({ id: pendingEventsTable.id });
+
+          if (insertedPending) {
+            await recordAiAnalysis(ev.documento_ai, { pendingEventId: insertedPending.id });
+          }
 
           existingPending.push({ titolo: evTitle, dataInizio: evDate, luogo: ev.luogo || null });
         } catch (dbErr) {
@@ -901,7 +932,7 @@ router.post("/events/upload-pdf", requireAdminKey, upload.single("file"), async 
     if (resultJson && resultJson.success && Array.isArray(resultJson.events)) {
       for (const ev of resultJson.events) {
         try {
-          await db.insert(pendingEventsTable).values({
+          const [insertedPending] = await db.insert(pendingEventsTable).values({
             titolo: ev.titolo || "Evento da PDF",
             titoloOriginale: ev.titolo_originale || ev.titolo || null,
             categoria: ev.categoria || null,
@@ -932,7 +963,11 @@ router.post("/events/upload-pdf", requireAdminKey, upload.single("file"), async 
             socialContatti: ev.social_contatti || null,
             dettagliDominio: ev.dettagli_dominio || null,
             dettagliExtra: ev.dettagli_extra || null,
-          });
+          }).returning({ id: pendingEventsTable.id });
+
+          if (insertedPending) {
+            await recordAiAnalysis(ev.documento_ai, { pendingEventId: insertedPending.id });
+          }
         } catch (dbErr) {
           req.log.warn({ dbErr, title: ev.titolo }, "Failed to save PDF event into pending_events table");
         }
@@ -995,6 +1030,7 @@ router.put("/events/refresh/preview/cache", requireAdminKey, async (req, res): P
       try {
         if (typeof ev.id === "number") {
           await db.update(pendingEventsTable).set(values).where(eq(pendingEventsTable.id, ev.id));
+          await recordAiAnalysis(ev.documento_ai, { pendingEventId: ev.id });
           continue;
         }
 
@@ -1006,11 +1042,15 @@ router.put("/events/refresh/preview/cache", requireAdminKey, async (req, res): P
             .where(sql`${pendingEventsTable.dettagliExtra}->>'id_key' = ${idKey}`);
           if (existing) {
             await db.update(pendingEventsTable).set(values).where(eq(pendingEventsTable.id, existing.id));
+            await recordAiAnalysis(ev.documento_ai, { pendingEventId: existing.id });
             continue;
           }
         }
 
-        await db.insert(pendingEventsTable).values(values);
+        const [insertedPending] = await db.insert(pendingEventsTable).values(values).returning({ id: pendingEventsTable.id });
+        if (insertedPending) {
+          await recordAiAnalysis(ev.documento_ai, { pendingEventId: insertedPending.id });
+        }
       } catch (evErr) {
         req.log.warn({ evErr, title: ev.titolo }, "Failed to sync one pending event");
       }
@@ -1511,7 +1551,9 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
                 aggiornatoIl: new Date(),
               })
               .where(eq(eventsTable.id, r.id));
-              
+
+            await recordAiAnalysis(r.documento_ai, { eventId: r.id });
+
             // We can also insert sotto_eventi if it's a festival, but since this
             // event is already published, we should create the sub-events in the DB
             if (r.is_festival && r.sotto_eventi && r.sotto_eventi.length > 0) {
