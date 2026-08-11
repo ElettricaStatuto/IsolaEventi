@@ -1,3 +1,21 @@
+"""
+================================================================================
+ 🧠 ISOLA EVENTI - MOTORE DI ESTRAZIONE SEMANTICA CON AI GEMINI 3.1 PRO (FASE 2)
+================================================================================
+ Architettura: Pipeline di Intelligenza Artificiale Generativa & Generazione JSON Schema
+ File: scraper/crawler_ai/estrai_schema_locandina_ai_con_llm.py
+
+ FUNZIONAMENTO E RESPONSABILITÀ:
+ 1. Integrazione Gemini 3.1 Pro: Riceve il testo grezzo estrapolato dalla Fase 1.
+ 2. Valutazione Semantica & Validazione: Determina se la pagina descrive un vero evento ('is_evento': true/false).
+ 3. Redazione Articolo Promo: Genera una sintesi fluida ed elegante di 40-60 parole in stile giornalistico ('testo_estratto').
+ 4. Estrazione Entità: Isola gli artisti reali, compone le loro biografie ('bio_artisti'), date ISO, orari e tag.
+ 5. Costruzione Gerarchia Relazionale: Genera l'albero con l'Evento Padre (Festival/Rassegna)
+    e la lista ordinata dei Sotto-eventi Figli collegati tramite Foreign Keys temporanee.
+ 6. Calcolo Metriche & Token: Traccia i token di prompt e risposta e calcola i costi in USD.
+================================================================================
+"""
+
 import json
 import os
 import re
@@ -5,7 +23,7 @@ import random
 from datetime import datetime, timezone
 
 # ------------------------------------------------------------------------------
-# PROMPT SISTEMA PER L'AI GEMINI 3.1 PRO (Valutazione Intelligenza del Pagina/Evento)
+# PROMPT SISTEMA PER L'AI GEMINI 3.1 PRO (Valutazione Intelligenza della Pagina/Evento)
 # ------------------------------------------------------------------------------
 
 PROMPT_SISTEMA_ANALISI_EVENTI = """
@@ -314,9 +332,25 @@ def genera_database_relazionale_con_llm(target_folder):
         "eventi": tutti_gli_eventi
     }
 
+    # Garantisci la presenza delle cartelle fisiche di output per la verifica
+    os.makedirs(target_folder, exist_ok=True)
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    raw_texts_dir = os.path.join(project_root, "data", "raw_texts")
+    os.makedirs(raw_texts_dir, exist_ok=True)
+
+    safe_domain = "".join(c for c in (event_name or "evento") if c.isalnum() or c in ('-', '_')).strip() or "evento"
+    raw_txt_out = os.path.join(raw_texts_dir, f"{safe_domain}_scraped.txt")
+    try:
+        with open(raw_txt_out, 'w', encoding='utf-8') as f:
+            f.write(all_combined_text)
+    except Exception as e:
+        print(f"    [-] Impossibile salvare file testo raw in {raw_txt_out}: {e}")
+
     json_out = os.path.join(target_folder, "08_database_relazionale_eventi_LLM.json")
     with open(json_out, 'w', encoding='utf-8') as f:
         json.dump(database_relazionale_llm, f, ensure_ascii=False, indent=2)
+
+    print(f"    [+] File JSON salvato fisicamente in: {json_out}")
 
     print("=" * 80)
     print(f" GENERATO DATABASE GEMINI 3.1 PRO PER: {event_name}")

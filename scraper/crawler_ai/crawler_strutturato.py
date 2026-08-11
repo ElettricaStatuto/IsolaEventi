@@ -1,3 +1,21 @@
+"""
+================================================================================
+ 🌐 ISOLA EVENTI - CRAWLER RICORSIVO & STRUTTURATO WEB (FASE 1)
+================================================================================
+ Architettura: Pipeline di Fetching & Scansione HTML
+ File: scraper/crawler_ai/crawler_strutturato.py
+
+ FUNZIONAMENTO E RESPONSABILITÀ:
+ 1. Navigazione Ricorsiva: Accetta un URL target e scarica l'HTML della pagina principale.
+ 2. Classificazione Link: Analizza i sotto-link isolando quelli rilevanti (programmi,
+    date, lineup, concerti, ticket) e scartando link di servizio (privacy, cookie, carrello).
+ 3. Sanitizzazione Testi: Pulisce il codice HTML da tag inutili (<script>, <style>, <nav>, <footer>),
+    estrando solo il testo promozionale leggibile ed i link delle immagini.
+ 4. Audit Cloud PostgreSQL: Registra il report testuale completo direttamente nella tabella
+    'raw_scrapes' del Database Neon PostgreSQL, restituendo l'ID univoco di scansione (raw_scrape_id).
+================================================================================
+"""
+
 import urllib.request
 from urllib.parse import urljoin, urlparse
 from html.parser import HTMLParser
@@ -360,22 +378,36 @@ def run_structured_crawler(target_url, custom_folder_name=None):
                     f.write(f"  - {img}\n")
                 f.write("\n")
 
-    # 5. Export TXT 04: Altri Link Generici
-    with open(os.path.join(output_dir, "04_link_generici.txt"), 'w', encoding='utf-8') as f:
-        f.write(f"# ALTRI LINK DEL SITO (GENERICI, LEGALI O EVENTI PASSATI)\n\n")
-        for item in generic_or_legal:
-            f.write(f"TIPO: {item['link_type']} | URL: {item['url']} | ETICHETTA: '{item['anchor_text']}'\n")
+    # 5. Salva direttamente nel Database Neon PostgreSQL nella tabella raw_scrapes
+    raw_scrape_id = None
+    try:
+        DATABASE_URL = os.environ.get("DATABASE_URL") or 'postgresql://neondb_owner:npg_4mPtbKgeMXV8@ep-winter-block-atggvg1s.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require'
+        import psycopg2
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        
+        full_text_report = f"# REPORT TESTUALE EVENTO: {raw_event_name}\n# TARGET: {target_url}\n\n"
+        for item in events_and_dates:
+            pdata = item.get("page_data", {})
+            full_text_report += f"URL: {item['url']}\nTITOLO: {pdata.get('title', '')}\nTEXT:\n{pdata.get('text', '')}\n\n"
+            
+        cur.execute(
+            "INSERT INTO raw_scrapes (url_fonte, testo_grezzo, json_ai_risposta) VALUES (%s, %s, %s) RETURNING id;",
+            (target_url, full_text_report, json.dumps(master_database))
+        )
+        raw_scrape_id = cur.fetchone()[0]
+        conn.commit()
+        cur.close()
+        conn.close()
+        print(f"    [+] Registrazione Cloud completata! Registrato raw_scrape_id #{raw_scrape_id} su Neon DB.")
+    except Exception as db_err:
+        print(f"    [-] Avviso salvataggio Cloud raw_scrapes: {db_err}")
 
     print("=" * 80)
     print(f" SCANSIONE COMPLETATA CON SUCCESSO!")
-    print(f" Tutti i file sono stati salvati nella cartella: {folder_name}")
-    print("=" * 80)
-    print("  1. Database JSON Master    -> database_strutturato.json")
-    print("  2. Social & Contatti       -> 01_social_e_contatti.txt")
-    print("  3. Lista Link Eventi       -> 02_link_eventi.txt")
-    print("  4. Testo Eventi Estratto   -> 03_testo_eventi_estratto.txt")
-    print("  5. Link Scartati / Passati -> 04_link_generici.txt")
+    print(f" Raw Scrape ID registrato su DB: #{raw_scrape_id}")
     print("=" * 80 + "\n")
+    return master_database, raw_scrape_id
 
 if __name__ == "__main__":
     import sys
