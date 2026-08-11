@@ -14,12 +14,10 @@ logger = logging.getLogger(__name__)
 def extract_sub_events_from_program(
     descrizione: str,
     force_festival: bool = False,
-    use_proxy: bool = False,
     model_name: str = "gemini-3.1-flash-lite"
 ) -> dict:
     """Estrae l'evento Padre e tutti i sotto-eventi da un testo lungo di programma."""
     from google import genai
-    from google.genai import types
 
     try:
         from dotenv import load_dotenv
@@ -28,19 +26,10 @@ def extract_sub_events_from_program(
     except ImportError:
         pass
 
-    if use_proxy:
-        api_key = os.environ.get("REPLIT_API_KEY")
-        client = genai.Client(
-            api_key=api_key,
-            http_options=types.HttpOptions(
-                base_url="https://production-modelfarm.replit.com"
-            )
-        )
-    else:
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            return {"is_festival": False, "eventi_figli_estratti": [], "info_festival_padre": {}}
-        client = genai.Client(api_key=api_key)
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        return {"is_festival": False, "eventi_figli_estratti": [], "info_festival_padre": {}}
+    client = genai.Client(api_key=api_key)
 
     prompt = PROMPT_ESTRAZIONE_PROGRAMMA_FESTIVAL.format(descrizione=descrizione)
     contents = [prompt]

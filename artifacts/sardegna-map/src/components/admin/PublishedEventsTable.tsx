@@ -15,8 +15,6 @@ export interface PublishedEventsTableProps {
   setSelectedPubAnalyzeIds: React.Dispatch<React.SetStateAction<Set<number>>>;
   handleAnalyzeAllPublishedFiltered: () => void;
   handleDeleteAllPublishedFiltered: (scarta?: boolean) => void;
-  aiProvider: "direct" | "replit";
-  setAiProvider: (val: "direct" | "replit") => void;
   analysisTarget: "both" | "both_source" | "image" | "text" | "source_page";
   setAnalysisTarget: (val: any) => void;
   handleAnalyzePublished: () => void;
@@ -48,8 +46,6 @@ export const PublishedEventsTable: React.FC<PublishedEventsTableProps> = ({
   setSelectedPubAnalyzeIds,
   handleAnalyzeAllPublishedFiltered,
   handleDeleteAllPublishedFiltered,
-  aiProvider,
-  setAiProvider,
   analysisTarget,
   setAnalysisTarget,
   handleAnalyzePublished,
@@ -320,17 +316,6 @@ export const PublishedEventsTable: React.FC<PublishedEventsTableProps> = ({
             <div className="flex-1"></div>
             {selectedPubAnalyzeIds.size > 0 && (
               <>
-                <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1 bg-background text-xs">
-                  <span className="text-muted-foreground text-xs">Provider:</span>
-                  <select
-                    value={aiProvider}
-                    onChange={(e) => setAiProvider(e.target.value as any)}
-                    className="bg-transparent border-none outline-none font-semibold text-foreground cursor-pointer text-xs"
-                  >
-                    <option value="direct">Chiave Diretta</option>
-                    <option value="replit">Proxy Replit</option>
-                  </select>
-                </div>
                 <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1 bg-background text-xs">
                   <span className="text-muted-foreground text-xs">Analizza:</span>
                   <select

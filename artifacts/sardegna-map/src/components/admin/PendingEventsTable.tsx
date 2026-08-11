@@ -36,8 +36,6 @@ export interface PendingEventsTableProps {
   toggleAnalyzeOne: (i: number, checked: boolean) => void;
   openEventDetails: (ev: any, isPending: boolean) => void;
   deletePreviewEvent: (i: number) => void;
-  aiProvider: "direct" | "replit";
-  setAiProvider: (provider: "direct" | "replit") => void;
   analysisTarget: "both" | "both_source" | "image" | "text" | "source_page";
   setAnalysisTarget: (target: any) => void;
   handleAnalyzePreview: () => void;
@@ -74,8 +72,6 @@ export const PendingEventsTable: React.FC<PendingEventsTableProps> = ({
   toggleAnalyzeOne,
   openEventDetails,
   deletePreviewEvent,
-  aiProvider,
-  setAiProvider,
   analysisTarget,
   setAnalysisTarget,
   handleAnalyzePreview,
@@ -386,17 +382,6 @@ export const PendingEventsTable: React.FC<PendingEventsTableProps> = ({
                   <Button variant="outline" onClick={() => setScrapingStep("input")}>
                     Annulla
                   </Button>
-                  <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1 bg-background text-xs">
-                    <span className="text-muted-foreground text-xs">Provider:</span>
-                    <select
-                      value={aiProvider}
-                      onChange={(e) => setAiProvider(e.target.value as any)}
-                      className="bg-transparent border-none outline-none font-semibold text-foreground cursor-pointer text-xs"
-                    >
-                      <option value="direct">Chiave Diretta</option>
-                      <option value="replit">Proxy Replit</option>
-                    </select>
-                  </div>
                   <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1 bg-background text-xs">
                     <span className="text-muted-foreground text-xs">Analizza:</span>
                     <select

@@ -27,6 +27,12 @@ import time
 import ssl
 from datetime import datetime, timezone
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
+except ImportError:
+    pass
+
 # ------------------------------------------------------------------------------
 # REGISTRO CONFIGURAZIONI E REGOLE DI CLASSIFICAZIONE
 # ------------------------------------------------------------------------------
@@ -381,7 +387,9 @@ def run_structured_crawler(target_url, custom_folder_name=None):
     # 5. Salva direttamente nel Database Neon PostgreSQL nella tabella raw_scrapes
     raw_scrape_id = None
     try:
-        DATABASE_URL = os.environ.get("DATABASE_URL") or 'postgresql://neondb_owner:npg_4mPtbKgeMXV8@ep-winter-block-atggvg1s.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require'
+        DATABASE_URL = os.environ.get("DATABASE_URL")
+        if not DATABASE_URL:
+            raise RuntimeError("DATABASE_URL non impostata (controlla il file .env)")
         import psycopg2
         conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()

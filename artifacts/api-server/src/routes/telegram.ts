@@ -2,28 +2,10 @@ import { Router, type IRouter } from "express";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import { db, pendingEventsTable } from "@workspace/db";
 import { uploadBufferToCloudinary, isCloudinaryConfigured } from "../lib/cloudinary";
 
 const router: IRouter = Router();
-
-async function getPreviewCache(cacheFile: string): Promise<any[]> {
-  if (!fs.existsSync(cacheFile)) {
-    return [];
-  }
-  try {
-    const raw = await fs.promises.readFile(cacheFile, "utf-8");
-    const data = JSON.parse(raw);
-    return Array.isArray(data) ? data : [];
-  } catch (err) {
-    return [];
-  }
-}
-
-async function savePreviewCache(cacheFile: string, data: any[]) {
-  const tempPath = cacheFile + ".tmp";
-  await fs.promises.writeFile(tempPath, JSON.stringify(data, null, 2), "utf-8");
-  await fs.promises.rename(tempPath, cacheFile);
-}
 
 async function sendTelegramMessage(botToken: string, chatId: number, text: string) {
   const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
@@ -112,15 +94,11 @@ router.post("/telegram-webhook", async (req, res): Promise<void> => {
 
     // 2. /status
     if (textContent && textContent.startsWith("/status")) {
-      const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
-        ? path.resolve(process.cwd(), "../..")
-        : process.cwd();
-      const cacheFile = path.resolve(workspaceRoot, "preview_cache.json");
-      const cache = await getPreviewCache(cacheFile);
-      const telegramCount = cache.filter((e: any) => e.fonte?.startsWith("Telegram")).length;
+      const pending = await db.select({ fonte: pendingEventsTable.fonte }).from(pendingEventsTable);
+      const telegramCount = pending.filter((e) => e.fonte?.startsWith("Telegram")).length;
 
       const msg = `📊 *Stato Sistema IsolaEventi*\n\n` +
-        `• Eventi totali in attesa: \`${cache.length}\`\n` +
+        `• Eventi totali in attesa: \`${pending.length}\`\n` +
         `• Segnalazioni da Telegram: \`${telegramCount}\`\n`;
       await sendTelegramMessage(botToken, chatId, msg);
       res.sendStatus(200);
@@ -208,26 +186,16 @@ router.post("/telegram-webhook", async (req, res): Promise<void> => {
       return;
     }
 
-    // Build raw event object
-    const rawEvent = {
+    // Salva direttamente in pending_events su Neon
+    await db.insert(pendingEventsTable).values({
       titolo: eventTitle,
-      data_inizio: null,
-      data_fine: null,
-      date_originali: null,
-      luogo: null,
-      luogo_originale: null,
-      latitudine: null,
-      longitudine: null,
       link: textContent.includes("http") ? textContent : null,
       descrizione: eventDesc,
       immagine: imageFilename,
       fonte: `Telegram (${userDisplay})`,
-      is_new: true,
-      testo_estratto: null,
-      is_festival: false,
-      parent_id: null,
+      isFestival: false,
       tags: ["Telegram", "Segnalazione"],
-      dettagli_extra: {
+      dettagliExtra: {
         id_key: tempId,
         parent_temp_id: null,
         metodo_estrazione: `Segnalazione Telegram da ${userDisplay}`,
@@ -235,12 +203,7 @@ router.post("/telegram-webhook", async (req, res): Promise<void> => {
         telegram_chat_id: chatId,
         ricevuto_il: new Date().toISOString().replace("T", " ").slice(0, 19),
       },
-    };
-
-    const cacheFile = path.resolve(workspaceRoot, "preview_cache.json");
-    const cache = await getPreviewCache(cacheFile);
-    cache.push(rawEvent);
-    await savePreviewCache(cacheFile, cache);
+    });
 
     req.log.info(`New Telegram submission saved: '${eventTitle}'`);
 

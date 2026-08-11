@@ -31,7 +31,6 @@ This file helps AI coding agents understand the monorepo structure, key packages
 - Do not manually edit generated sources under `lib/api-client-react/src/generated` or `lib/api-zod/src/generated`.
 - Backend `artifacts/api-server` expects environment variables from the repo root `.env` file when started.
 - `lib/db/src/schema` is the source of truth for DB schema definitions; apply changes via `pnpm --filter @workspace/db run push`.
-- `replit.md` contains more run & operate details and can be referenced for commands.
 
 ## What agents should do first
 - Identify whether changes are in backend, frontend, codegen, or DB schema before applying fixes.

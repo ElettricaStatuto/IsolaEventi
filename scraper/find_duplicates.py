@@ -5,7 +5,7 @@ import os
 from google import genai
 from google.genai import types
 
-def check_duplicates_ai(groups, use_proxy=False):
+def check_duplicates_ai(groups):
     """
     groups: list of groups of events to check.
     Each group: { "date": "YYYY-MM-DD", "events": [ { "id_key": "...", "titolo": "...", "luogo": "...", "descrizione": "..." } ] }
@@ -17,21 +17,11 @@ def check_duplicates_ai(groups, use_proxy=False):
     except ImportError:
         pass
 
-    if use_proxy:
-        api_key = os.environ.get("REPLIT_API_KEY")
-        client = genai.Client(
-            api_key=api_key,
-            http_options=types.HttpOptions(
-                base_url="https://production-modelfarm.replit.com"
-            )
-        )
-        MODEL = "gemini-3.1-flash-lite"
-    else:
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            return {"error": "Missing GEMINI_API_KEY"}
-        client = genai.Client(api_key=api_key)
-        MODEL = "gemini-3.1-flash-lite"
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        return {"error": "Missing GEMINI_API_KEY"}
+    client = genai.Client(api_key=api_key)
+    MODEL = "gemini-3.1-flash-lite"
 
     results = []
 
@@ -94,9 +84,8 @@ def main():
 
         payload = json.loads(input_data)
         groups = payload.get("groups", [])
-        use_proxy = payload.get("use_proxy", False)
 
-        res = check_duplicates_ai(groups, use_proxy=use_proxy)
+        res = check_duplicates_ai(groups)
         print(json.dumps(res))
     except Exception as e:
         print(json.dumps({"error": str(e)}))

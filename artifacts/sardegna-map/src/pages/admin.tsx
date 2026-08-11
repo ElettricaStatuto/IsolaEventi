@@ -213,7 +213,6 @@ export function Admin() {
   const [keyError, setKeyError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("scraping");
   const [analysisTarget, setAnalysisTarget] = useState<"both" | "both_source" | "image" | "text" | "source_page">("both");
-  const [aiProvider, setAiProvider] = useState<"direct" | "replit">("direct");
   const [useAiCrawler, setUseAiCrawler] = useState<boolean>(false);
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [analysisLogs, setAnalysisLogs] = useState<string[]>([]);
@@ -863,7 +862,7 @@ export function Admin() {
             "Content-Type": "application/json",
             "x-admin-key": adminKey,
           },
-          body: JSON.stringify({ events: payload, target: analysisTarget, use_proxy: aiProvider === "replit" }),
+          body: JSON.stringify({ events: payload, target: analysisTarget }),
           signal: abortControllerRef.current.signal,
         });
 
@@ -961,7 +960,7 @@ export function Admin() {
             "Content-Type": "application/json",
             "x-admin-key": adminKey,
           },
-          body: JSON.stringify({ events: payload, target: analysisTarget, use_proxy: aiProvider === "replit" }),
+          body: JSON.stringify({ events: payload, target: analysisTarget }),
           signal: abortControllerRef.current.signal,
         });
 
@@ -1311,7 +1310,7 @@ export function Admin() {
             "Content-Type": "application/json",
             "x-admin-key": adminKey,
           },
-          body: JSON.stringify({ events: payload, target: analysisTarget, use_proxy: aiProvider === "replit" }),
+          body: JSON.stringify({ events: payload, target: analysisTarget }),
           signal: abortControllerRef.current.signal,
         });
 
@@ -1615,7 +1614,7 @@ export function Admin() {
       const response = await fetch("/api/events/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
-        body: JSON.stringify({ events: payload, target: analysisTarget, use_proxy: aiProvider === "replit" }),
+        body: JSON.stringify({ events: payload, target: analysisTarget }),
         signal: abortControllerRef.current.signal,
       });
 
@@ -1833,8 +1832,6 @@ export function Admin() {
               toggleAnalyzeOne={toggleAnalyzeOne}
               openEventDetails={openEventDetails}
               deletePreviewEvent={deletePreviewEvent}
-              aiProvider={aiProvider}
-              setAiProvider={setAiProvider}
               handleMergeSelectedIntoFestival={handleMergeSelectedIntoFestival}
               analysisTarget={analysisTarget}
               setAnalysisTarget={setAnalysisTarget}
@@ -1889,8 +1886,6 @@ export function Admin() {
               setSelectedPubAnalyzeIds={setSelectedPubAnalyzeIds}
               handleAnalyzeAllPublishedFiltered={handleAnalyzeAllPublishedFiltered}
               handleDeleteAllPublishedFiltered={handleDeleteAllPublishedFiltered}
-              aiProvider={aiProvider}
-              setAiProvider={setAiProvider}
               analysisTarget={analysisTarget}
               setAnalysisTarget={setAnalysisTarget}
               handleAnalyzePublished={handleAnalyzePublished}

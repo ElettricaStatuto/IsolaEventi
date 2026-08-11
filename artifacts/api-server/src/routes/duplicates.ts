@@ -1,7 +1,6 @@
 import { Router } from "express";
-import { db, eventsTable, ignoredDuplicatesTable } from "@workspace/db";
-import { eq, or, and } from "drizzle-orm";
-import fs from "fs";
+import { db, eventsTable, pendingEventsTable, ignoredDuplicatesTable } from "@workspace/db";
+import { eq, or } from "drizzle-orm";
 import path from "path";
 import { spawn } from "child_process";
 import { requireAdminKey } from "../middlewares/auth.js";
@@ -23,24 +22,18 @@ function stringSimilarity(str1: string, str2: string): number {
 
 // 1. Find duplicates
 router.post("/duplicates/find", requireAdminKey, async (req, res): Promise<void> => {
-  const { use_proxy } = req.body;
   const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
     ? path.resolve(process.cwd(), "../..")
     : process.cwd();
 
-  const cacheFile = path.resolve(workspaceRoot, "preview_cache.json");
-
   try {
-    // A. Load preview events
-    let previews: any[] = [];
-    if (fs.existsSync(cacheFile)) {
-      const data = fs.readFileSync(cacheFile, "utf8");
-      previews = JSON.parse(data).map((ev: any, idx: number) => ({
-        ...ev,
-        id_key: `prev-${idx}`, // Keep reference to original index in cache
-        is_pending: true,
-      }));
-    }
+    // A. Load pending events from Neon
+    const pendingRows = await db.select().from(pendingEventsTable);
+    const previews = pendingRows.map((ev) => ({
+      ...ev,
+      id_key: `pend-${ev.id}`, // Keep reference to the pending_events row
+      is_pending: true,
+    }));
 
     // B. Load published/analyzed events
     const published = await db.select().from(eventsTable);
@@ -57,7 +50,7 @@ router.post("/duplicates/find", requireAdminKey, async (req, res): Promise<void>
     // C. Group all events by date
     const groupsByDate: { [date: string]: any[] } = {};
     for (const ev of allEvents) {
-      const date = ev.dataInizio || ev.data_inizio;
+      const date = ev.dataInizio;
       if (!date) continue;
       if (!groupsByDate[date]) groupsByDate[date] = [];
       groupsByDate[date].push(ev);
@@ -72,8 +65,8 @@ router.post("/duplicates/find", requireAdminKey, async (req, res): Promise<void>
       for (let i = 0; i < events.length; i++) {
         for (let j = i + 1; j < events.length; j++) {
           const sim = stringSimilarity(
-            events[i].titolo || events[i].titolo_originale || "",
-            events[j].titolo || events[j].titolo_originale || ""
+            events[i].titolo || events[i].titoloOriginale || "",
+            events[j].titolo || events[j].titoloOriginale || ""
           );
           if (sim >= 0.3) {
             suspiciousEventsSet.add(events[i]);
@@ -87,7 +80,7 @@ router.post("/duplicates/find", requireAdminKey, async (req, res): Promise<void>
           date,
           events: Array.from(suspiciousEventsSet).map((ev: any) => ({
             id_key: ev.id_key,
-            titolo: ev.titolo || ev.titolo_originale,
+            titolo: ev.titolo || ev.titoloOriginale,
             luogo: ev.luogo,
             descrizione: ev.descrizione,
           })),
@@ -107,7 +100,7 @@ router.post("/duplicates/find", requireAdminKey, async (req, res): Promise<void>
       env: { ...process.env },
     });
 
-    child.stdin.write(JSON.stringify({ groups: suspiciousGroups, use_proxy }));
+    child.stdin.write(JSON.stringify({ groups: suspiciousGroups }));
     child.stdin.end();
 
     let stdoutData = "";
@@ -137,8 +130,8 @@ router.post("/duplicates/find", requireAdminKey, async (req, res): Promise<void>
       const ev2 = allEvents.find(e => e.id_key === item.pair[1]);
       if (!ev1 || !ev2) continue;
 
-      const t1 = ev1.titolo || ev1.titolo_originale;
-      const t2 = ev2.titolo || ev2.titolo_originale;
+      const t1 = ev1.titolo || ev1.titoloOriginale;
+      const t2 = ev2.titolo || ev2.titoloOriginale;
 
       const isIgnored = ignored.some(ign => 
         (ign.titolo1 === t1 && ign.titolo2 === t2) || 
@@ -190,31 +183,25 @@ router.post("/duplicates/merge", requireAdminKey, async (req, res): Promise<void
     return;
   }
 
-  const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
-    ? path.resolve(process.cwd(), "../..")
-    : process.cwd();
-  const cacheFile = path.resolve(workspaceRoot, "preview_cache.json");
-
   try {
     // A. Parse which events to delete
     const deleteKeys = [event1_id_key, event2_id_key];
-    const prevIndicesToDelete = new Set<number>();
+    const pendingIdsToDelete: number[] = [];
     const dbIdsToDelete: number[] = [];
 
     for (const key of deleteKeys) {
-      if (key.startsWith("prev-")) {
-        prevIndicesToDelete.add(parseInt(key.replace("prev-", ""), 10));
+      if (key.startsWith("pend-")) {
+        pendingIdsToDelete.push(parseInt(key.replace("pend-", ""), 10));
       } else if (key.startsWith("pub-")) {
         dbIdsToDelete.push(parseInt(key.replace("pub-", ""), 10));
       }
     }
 
-    // B. If any was a preview in cache, remove it from cache
-    if (prevIndicesToDelete.size > 0 && fs.existsSync(cacheFile)) {
-      const data = fs.readFileSync(cacheFile, "utf8");
-      const previews = JSON.parse(data);
-      const nextPreviews = previews.filter((_: any, idx: number) => !prevIndicesToDelete.has(idx));
-      fs.writeFileSync(cacheFile, JSON.stringify(nextPreviews, null, 2), "utf8");
+    // B. If any was a pending event, remove it from pending_events
+    if (pendingIdsToDelete.length > 0) {
+      await db.delete(pendingEventsTable).where(
+        or(...pendingIdsToDelete.map(id => eq(pendingEventsTable.id, id)))
+      );
     }
 
     // C. If any was a published event in DB, delete it

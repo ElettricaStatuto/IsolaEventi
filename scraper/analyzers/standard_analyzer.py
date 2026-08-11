@@ -57,12 +57,10 @@ def analyze_standard_event(
     ev_dict: dict,
     target: str = "text",
     force_festival: bool = False,
-    use_proxy: bool = False,
     model_name: str = "gemini-3.1-flash-lite"
 ) -> dict:
     """Analizza una locandina (immagine/testo) e genera la scheda evento strutturata."""
     from google import genai
-    from google.genai import types
 
     try:
         from dotenv import load_dotenv
@@ -71,24 +69,15 @@ def analyze_standard_event(
     except ImportError:
         pass
 
-    if use_proxy:
-        api_key = os.environ.get("REPLIT_API_KEY")
-        client = genai.Client(
-            api_key=api_key,
-            http_options=types.HttpOptions(
-                base_url="https://production-modelfarm.replit.com"
-            )
-        )
-    else:
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            return {
-                "testo_estratto": "Chiave API Gemini mancante.",
-                "is_festival": False,
-                "sotto_eventi": [],
-                "link_organizzatore": None
-            }
-        client = genai.Client(api_key=api_key)
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        return {
+            "testo_estratto": "Chiave API Gemini mancante.",
+            "is_festival": False,
+            "sotto_eventi": [],
+            "link_organizzatore": None
+        }
+    client = genai.Client(api_key=api_key)
 
     titolo = ev_dict.get("titolo", "")
     descrizione = ev_dict.get("descrizione") or ""
@@ -140,12 +129,19 @@ def analyze_standard_event(
     # Caricamento eventuale immagine della locandina (JPG / PNG)
     if target in ("both", "image", "both_source") and image_url:
         if image_url.startswith("http://") or image_url.startswith("https://"):
-            headers = {"User-Agent": "Mozilla/5.0"}
-            resp = requests.get(image_url, headers=headers, timeout=10)
-            if resp.status_code == 200:
-                from PIL import Image
-                img = Image.open(io.BytesIO(resp.content))
-                contents.append(img)
+            try:
+                headers = {"User-Agent": "Mozilla/5.0"}
+                resp = requests.get(image_url, headers=headers, timeout=15)
+                print(json.dumps({"log": f"🔍 Downloading HTTP image from {image_url} (Status: {resp.status_code})"}), flush=True)
+                if resp.status_code == 200:
+                    from PIL import Image
+                    img = Image.open(io.BytesIO(resp.content))
+                    contents.append(img)
+                    print(json.dumps({"log": f"✅ Image loaded successfully into Gemini context: {img.size} {img.format}"}), flush=True)
+                else:
+                    print(json.dumps({"log": f"❌ HTTP image download failed: {resp.status_code}"}), flush=True)
+            except Exception as e:
+                print(json.dumps({"log": f"❌ Error downloading/opening HTTP image: {str(e)}"}), flush=True)
         else:
             base_project = Path(__file__).resolve().parent.parent.parent
             possible_paths = [

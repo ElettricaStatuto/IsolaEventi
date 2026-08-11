@@ -11,7 +11,7 @@ from .prompts import PROMPT_ANALISI_PDF
 logger = logging.getLogger(__name__)
 
 
-def struttura_eventi_da_pdf(pdf_path: str, use_proxy: bool = False) -> list[dict]:
+def struttura_eventi_da_pdf(pdf_path: str) -> list[dict]:
     """Analizza il PDF con Gemini per estrarre testo grezzo e strutturare eventi base."""
     from google import genai
     from google.genai import types
@@ -23,19 +23,10 @@ def struttura_eventi_da_pdf(pdf_path: str, use_proxy: bool = False) -> list[dict
     except ImportError:
         pass
 
-    if use_proxy:
-        api_key = os.environ.get("REPLIT_API_KEY")
-        client = genai.Client(
-            api_key=api_key,
-            http_options=types.HttpOptions(
-                base_url="https://production-modelfarm.replit.com"
-            )
-        )
-    else:
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            return [{"titolo": "Errore", "descrizione": "Chiave API Gemini mancante per PDF."}]
-        client = genai.Client(api_key=api_key)
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        return [{"titolo": "Errore", "descrizione": "Chiave API Gemini mancante per PDF."}]
+    client = genai.Client(api_key=api_key)
 
     contents = [PROMPT_ANALISI_PDF]
 

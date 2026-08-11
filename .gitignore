@@ -11,6 +11,10 @@ out-tsc
 # dependencies
 node_modules
 
+# Python
+__pycache__/
+*.pyc
+
 # IDEs and editors
 /.idea
 .project
@@ -55,4 +59,9 @@ Thumbs.db
 .env.development
 .env.test
 .env.production
+
+# Local runtime data (everything durable lives in Neon now, not on disk)
+preview_cache.json
+data/telegram_archive.json
+data/logs/
 

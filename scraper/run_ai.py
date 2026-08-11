@@ -18,12 +18,10 @@ def main():
         if isinstance(payload, dict):
             events = payload.get("events", [])
             target = payload.get("target", "both")
-            use_proxy = payload.get("use_proxy", False)
             mode = payload.get("mode", "analyze")
         else:
             events = payload
             target = "both"
-            use_proxy = False
             mode = "analyze"
 
         results = []
@@ -35,7 +33,7 @@ def main():
             
             try:
                 # Add link to context for source page extraction if target is source_page
-                ai_data = analyze_event(ev, target=target, use_proxy=use_proxy, mode=mode)
+                ai_data = analyze_event(ev, target=target, mode=mode)
                 
                 # Check if it returned a flat error dictionary from the analyzer
                 if isinstance(ai_data, dict) and "testo_estratto" in ai_data and "dati_curati_ai" not in ai_data:

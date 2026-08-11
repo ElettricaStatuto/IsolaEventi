@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { and, gte, lte, ilike, sql, eq, isNull, inArray } from "drizzle-orm";
-import { db, eventsTable, rejectedEventsTable, pendingEventsTable } from "@workspace/db";
+import { db, eventsTable, rejectedEventsTable, pendingEventsTable, rawScrapesTable } from "@workspace/db";
 import {
   ListEventsQueryParams,
   ListEventsResponse,
@@ -329,7 +329,6 @@ router.post("/events/refresh/preview", requireAdminKey, (req, res): void => {
     : process.cwd();
 
   const scraperScript = path.resolve(workspaceRoot, "scraper_runner.py");
-  const cacheFile = path.resolve(workspaceRoot, "preview_cache.json");
 
   res.setHeader("Content-Type", "application/json-lines");
   res.setHeader("Cache-Control", "no-cache");
@@ -374,8 +373,6 @@ router.post("/events/refresh/preview", requireAdminKey, (req, res): void => {
           if (line.startsWith("{") && line.includes('"events"')) {
             const parsed = JSON.parse(line);
             if (parsed.events && Array.isArray(parsed.events)) {
-              fs.writeFileSync(cacheFile, JSON.stringify(parsed.events, null, 2), "utf8");
-              
               // 1. Registra prima il testo grezzo e la scansione completa nella tabella di audit raw_scrapes
               let rawScrapeId: number | null = null;
               try {
@@ -543,26 +540,6 @@ router.get("/events/admin-stats", requireAdminKey, async (req, res): Promise<voi
   } catch (err) {
     req.log.error({ err }, "Failed to load admin stats");
     res.status(500).json({ success: false, error: String(err) });
-  }
-});
-
-router.get("/events/refresh/preview/cache", requireAdminKey, (req, res): void => {
-  const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
-    ? path.resolve(process.cwd(), "../..")
-    : process.cwd();
-  const cacheFile = path.resolve(workspaceRoot, "preview_cache.json");
-  
-  try {
-    if (fs.existsSync(cacheFile)) {
-      const data = fs.readFileSync(cacheFile, "utf8");
-      const events = JSON.parse(data);
-      res.json({ success: true, events });
-    } else {
-      res.json({ success: true, events: [] });
-    }
-  } catch (err) {
-    req.log.error({ err }, "Failed to read preview cache");
-    res.json({ success: false, events: [], messaggio: String(err) });
   }
 });
 
@@ -962,22 +939,76 @@ router.post("/events/upload-pdf", requireAdminKey, upload.single("file"), async 
   }
 });
 
-router.put("/events/refresh/preview/cache", requireAdminKey, (req, res): void => {
-  const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
-    ? path.resolve(process.cwd(), "../..")
-    : process.cwd();
-  const cacheFile = path.resolve(workspaceRoot, "preview_cache.json");
-  
+// Sincronizza le modifiche fatte in UI sugli eventi "In Attesa" direttamente su Neon
+// (pending_events): aggiorna per id se già presente, altrimenti per dettagli_extra.id_key,
+// altrimenti inserisce una nuova riga. Nessun file locale coinvolto.
+router.put("/events/refresh/preview/cache", requireAdminKey, async (req, res): Promise<void> => {
   try {
     const { events } = req.body;
-    if (Array.isArray(events)) {
-      fs.writeFileSync(cacheFile, JSON.stringify(events, null, 2), "utf8");
-      res.json({ success: true });
-    } else {
+    if (!Array.isArray(events)) {
       res.status(400).json({ error: "Invalid events array" });
+      return;
     }
+
+    for (const ev of events) {
+      const values = {
+        titolo: ev.titolo || "Evento Senza Titolo",
+        titoloOriginale: ev.titolo_originale || ev.titolo || null,
+        categoria: ev.categoria || null,
+        dataInizio: ev.data_inizio || null,
+        dataFine: ev.data_fine || null,
+        dateOriginali: ev.date_originali || null,
+        oraInizio: ev.ora_inizio || null,
+        oraFine: ev.ora_fine || null,
+        luogo: ev.luogo || null,
+        luogoOriginale: ev.luogo_originale || ev.luogo || null,
+        latitudine: ev.latitudine ?? null,
+        longitudine: ev.longitudine ?? null,
+        link: ev.link || null,
+        linkOrganizzatore: ev.link_organizzatore || null,
+        linkBiglietti: ev.link_biglietti || null,
+        descrizione: ev.descrizione || null,
+        immagine: ev.immagine || null,
+        fonte: ev.fonte || "",
+        testoEstratto: ev.testo_estratto || null,
+        isFestival: ev.is_festival ?? false,
+        isIngressoGratuito: ev.is_ingresso_gratuito ?? false,
+        parentTempId: ev.dettagli_extra?.parent_temp_id || null,
+        sottoEventi: ev.sotto_eventi || null,
+        tags: ev.tags || null,
+        artisti: ev.artisti || null,
+        bioArtisti: ev.bio_artisti || null,
+        socialContatti: ev.social_contatti || null,
+        dettagliExtra: ev.dettagli_extra || null,
+      };
+
+      try {
+        if (typeof ev.id === "number") {
+          await db.update(pendingEventsTable).set(values).where(eq(pendingEventsTable.id, ev.id));
+          continue;
+        }
+
+        const idKey = ev.dettagli_extra?.id_key;
+        if (idKey) {
+          const [existing] = await db
+            .select({ id: pendingEventsTable.id })
+            .from(pendingEventsTable)
+            .where(sql`${pendingEventsTable.dettagliExtra}->>'id_key' = ${idKey}`);
+          if (existing) {
+            await db.update(pendingEventsTable).set(values).where(eq(pendingEventsTable.id, existing.id));
+            continue;
+          }
+        }
+
+        await db.insert(pendingEventsTable).values(values);
+      } catch (evErr) {
+        req.log.warn({ evErr, title: ev.titolo }, "Failed to sync one pending event");
+      }
+    }
+
+    res.json({ success: true });
   } catch (err) {
-    req.log.error({ err }, "Failed to write preview cache");
+    req.log.error({ err }, "Failed to sync pending events to DB");
     res.status(500).json({ error: String(err) });
   }
 });
@@ -1299,33 +1330,26 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
   }));
 });
 
-function archiveTelegramSubmission(ev: any, workspaceRoot: string) {
+// Archivia la segnalazione Telegram originale (pre-analisi AI) nella tabella di audit
+// raw_scrapes su Neon, per non perdere il testo grezzo una volta che l'AI lo arricchisce.
+async function archiveTelegramSubmission(ev: any): Promise<void> {
   try {
     if (!ev.titolo?.startsWith("Segnalazione da") && !ev.fonte?.startsWith("Telegram")) {
       return;
     }
-    const archiveFile = path.resolve(workspaceRoot, "data/telegram_archive.json");
-    const dataDir = path.dirname(archiveFile);
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
+    const idKey = ev.dettagli_extra?.id_key;
+    if (idKey) {
+      const [existing] = await db
+        .select({ id: rawScrapesTable.id })
+        .from(rawScrapesTable)
+        .where(sql`${rawScrapesTable.jsonAiRisposta}->'dettagli_extra'->>'id_key' = ${idKey}`);
+      if (existing) return;
     }
-    let archiveList: any[] = [];
-    if (fs.existsSync(archiveFile)) {
-      try {
-        archiveList = JSON.parse(fs.readFileSync(archiveFile, "utf8"));
-      } catch (e) {}
-    }
-    const exists = archiveList.some(item => 
-      (item.dettagli_extra?.id_key && item.dettagli_extra.id_key === ev.dettagli_extra?.id_key) ||
-      (item.titolo === ev.titolo && item.descrizione === ev.descrizione)
-    );
-    if (!exists) {
-      archiveList.push({
-        ...ev,
-        archiviato_il: new Date().toISOString()
-      });
-      fs.writeFileSync(archiveFile, JSON.stringify(archiveList, null, 2), "utf8");
-    }
+    await db.insert(rawScrapesTable).values({
+      urlFonte: ev.fonte || "Telegram",
+      testoGrezzo: `${ev.titolo}\n${ev.descrizione || ""}`,
+      jsonAiRisposta: ev,
+    });
   } catch (err) {
     console.error("Errore salvataggio archivio telegram:", err);
   }
@@ -1334,7 +1358,7 @@ function archiveTelegramSubmission(ev: any, workspaceRoot: string) {
 router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> => {
   req.log.info("Starting on-demand AI analysis for events");
 
-  const { events, target, use_proxy, mode = "analyze" } = req.body;
+  const { events, target, mode = "analyze" } = req.body;
   if (!events || !Array.isArray(events) || events.length === 0) {
     res.status(400).json({ error: "No events provided" });
     return;
@@ -1346,7 +1370,7 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
 
   // Archivia le segnalazioni originali Telegram prima dell'analisi
   for (const ev of events) {
-    archiveTelegramSubmission(ev, workspaceRoot);
+    await archiveTelegramSubmission(ev);
   }
 
   const aiScript = path.resolve(workspaceRoot, "scraper/run_ai.py");
@@ -1357,7 +1381,7 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
       env: { ...process.env },
     });
 
-    child.stdin.write(JSON.stringify({ events, target, use_proxy, mode }));
+    child.stdin.write(JSON.stringify({ events, target, mode }));
     child.stdin.end();
 
     let stdoutData = "";
@@ -1405,8 +1429,8 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
               titolo: r.titolo || "Evento Senza Titolo",
               titoloOriginale: r.titolo || "Evento Senza Titolo",
               categoria: r.categoria || parent.categoria || null,
-              dataInizio: r.data_inizio ? new Date(r.data_inizio) : parent.dataInizio,
-              dataFine: r.data_fine ? new Date(r.data_fine) : parent.dataFine,
+              dataInizio: r.data_inizio && !isNaN(new Date(r.data_inizio).getTime()) ? r.data_inizio : parent.dataInizio,
+              dataFine: r.data_fine && !isNaN(new Date(r.data_fine).getTime()) ? r.data_fine : parent.dataFine,
               oraInizio: r.ora_inizio || null,
               oraFine: r.ora_fine || null,
               luogo: r.luogo || parent.luogo,
@@ -1433,11 +1457,11 @@ router.post("/events/analyze", requireAdminKey, async (req, res): Promise<void> 
           // First fetch the parent event to check current dates and details
           const [parent] = await db.select().from(eventsTable).where(eq(eventsTable.id, r.id));
           if (parent) {
-            const aiDataInizio = r.data_inizio ? new Date(r.data_inizio) : null;
-            const aiDataFine = r.data_fine ? new Date(r.data_fine) : null;
+            const aiDataInizio = r.data_inizio && !isNaN(new Date(r.data_inizio).getTime()) ? r.data_inizio : null;
+            const aiDataFine = r.data_fine && !isNaN(new Date(r.data_fine).getTime()) ? r.data_fine : null;
             let { dataInizio, dataFine } = getFestivalDateRange(
-              aiDataInizio && !isNaN(aiDataInizio.getTime()) ? aiDataInizio : parent.dataInizio, 
-              aiDataFine && !isNaN(aiDataFine.getTime()) ? aiDataFine : parent.dataFine, 
+              aiDataInizio || parent.dataInizio,
+              aiDataFine || parent.dataFine,
               r.sotto_eventi || []
             );
 
