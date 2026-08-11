@@ -438,42 +438,50 @@ def main():
                 emit_log(f"🤖 Esecuzione Crawler AI Gemini sull'evento '{ev.titolo}'...")
                 extra_kwargs = {"force_festival": True} if args.force_festival else {}
                 ai_result = analyze_event(ev.to_dict(), mode="extract", **extra_kwargs)
-                
-                # In mode="extract" ai_result is a JSON object with info_festival_padre and eventi_figli_estratti
+
+                # In mode="extract" ai_result è il documento JSON unificato (schema_version 2.0):
+                # "dati_curati_ai" per l'evento padre, "lista_sotto_eventi_estratti" per i figli.
                 extracted_list = []
-                info_padre = {}
+                dati_curati = {}
                 if isinstance(ai_data := ai_result, dict):
-                    extracted_list = ai_data.get("eventi_figli_estratti", [])
-                    info_padre = ai_data.get("info_festival_padre", {})
+                    extracted_list = ai_data.get("lista_sotto_eventi_estratti", [])
+                    dati_curati = ai_data.get("dati_curati_ai", {}) or {}
                 elif isinstance(ai_data, list):
                     extracted_list = ai_data
 
                 ev.is_festival = len(extracted_list) > 0 or args.force_festival
-                
+
                 # Se l'AI ha trovato informazioni sul Festival, aggiorniamo l'evento contenitore
-                if info_padre.get("titolo_festival"):
-                    ev.titolo = info_padre.get("titolo_festival")
-                if info_padre.get("descrizione_introduttiva"):
-                    ev.testo_estratto = info_padre.get("descrizione_introduttiva")
-                if info_padre.get("data_inizio_generale"):
-                    ev.data_inizio = _parse_mixed_date(info_padre.get("data_inizio_generale"))
-                if info_padre.get("data_fine_generale"):
-                    ev.data_fine = _parse_mixed_date(info_padre.get("data_fine_generale"))
-                
+                if dati_curati.get("titolo"):
+                    ev.titolo = dati_curati.get("titolo")
+                if dati_curati.get("testo_estratto"):
+                    ev.testo_estratto = dati_curati.get("testo_estratto")
+                if dati_curati.get("data_inizio"):
+                    ev.data_inizio = _parse_mixed_date(dati_curati.get("data_inizio"))
+                if dati_curati.get("data_fine"):
+                    ev.data_fine = _parse_mixed_date(dati_curati.get("data_fine"))
+
                 sotto_eventi_objs = []
                 for se in extracted_list:
-                    # Map the flat JSON back to SottoEvento
+                    if se.get("is_evento") is False:
+                        continue
+                    # Map the unified evento-figlio JSON back to SottoEvento
                     se_obj = SottoEvento(
                         titolo=se.get("titolo", "Evento Senza Titolo"),
                         data_inizio=se.get("data_inizio", ""),
                         data_fine=se.get("data_fine", ""),
                         date_testuali=se.get("data_inizio", ""),
                         luogo=se.get("luogo", ""),
-                        url=se.get("url_riferimento", ""),
-                        descrizione=se.get("pezzo_di_testo_di_riferimento", "")
+                        url=se.get("link_organizzatore") or se.get("link_biglietti") or "",
+                        descrizione=se.get("testo_estratto", ""),
+                        ora_inizio=se.get("ora_inizio"),
+                        ora_fine=se.get("ora_fine"),
+                        artisti=se.get("artisti", []),
+                        tags=se.get("tags", []),
+                        is_ingresso_gratuito=se.get("is_ingresso_gratuito", False),
                     )
                     sotto_eventi_objs.append(se_obj)
-                    
+
                 ev.sotto_eventi = sotto_eventi_objs
                 emit_log(f"L'AI Extractor ha trovato {len(ev.sotto_eventi)} sotto-eventi grezzi.")
 

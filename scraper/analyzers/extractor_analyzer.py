@@ -28,7 +28,7 @@ def extract_sub_events_from_program(
 
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
-        return {"is_festival": False, "eventi_figli_estratti": [], "info_festival_padre": {}}
+        return {"is_festival": False, "lista_sotto_eventi_estratti": [], "dati_curati_ai": {}}
     client = genai.Client(api_key=api_key)
 
     prompt = PROMPT_ESTRAZIONE_PROGRAMMA_FESTIVAL.replace("{descrizione}", descrizione)
@@ -65,4 +65,4 @@ def extract_sub_events_from_program(
         return parsed_json
     except Exception as e:
         logger.error(f"Errore estrazione sotto-eventi AI: {e}")
-        return {"is_festival": False, "eventi_figli_estratti": [], "info_festival_padre": {}, "errore": str(e)}
+        return {"is_festival": False, "lista_sotto_eventi_estratti": [], "dati_curati_ai": {}, "errore": str(e)}
