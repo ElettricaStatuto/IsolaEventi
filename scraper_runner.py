@@ -451,7 +451,8 @@ def main():
 
                 ev.is_festival = len(extracted_list) > 0 or args.force_festival
 
-                # Se l'AI ha trovato informazioni sul Festival, aggiorniamo l'evento contenitore
+                # Applichiamo all'evento padre TUTTO quello che l'AI ha generato in
+                # dati_curati_ai — non solo titolo/testo/date come in precedenza.
                 if dati_curati.get("titolo"):
                     ev.titolo = dati_curati.get("titolo")
                 if dati_curati.get("testo_estratto"):
@@ -460,12 +461,29 @@ def main():
                     ev.data_inizio = _parse_mixed_date(dati_curati.get("data_inizio"))
                 if dati_curati.get("data_fine"):
                     ev.data_fine = _parse_mixed_date(dati_curati.get("data_fine"))
+                if dati_curati.get("luogo"):
+                    ev.luogo = dati_curati.get("luogo")
+                if dati_curati.get("categoria"):
+                    ev.categoria = dati_curati.get("categoria")
+                ev.ora_inizio = dati_curati.get("ora_inizio") or ev.ora_inizio
+                ev.ora_fine = dati_curati.get("ora_fine") or ev.ora_fine
+                ev.link_organizzatore = dati_curati.get("link_organizzatore") or ev.link_organizzatore
+                ev.link_biglietti = dati_curati.get("link_biglietti") or ev.link_biglietti
+                ev.is_ingresso_gratuito = dati_curati.get("is_ingresso_gratuito", ev.is_ingresso_gratuito)
+                ev.artisti = dati_curati.get("artisti") or ev.artisti
+                ev.tags = dati_curati.get("tags") or ev.tags
+                ev.is_evento = dati_curati.get("is_evento", True)
+                ev.dettagli_dominio = dati_curati.get("dettagli_dominio")
+                approfondimenti_padre = dati_curati.get("approfondimenti_extra", {}) or {}
+                ev.bio_artisti = approfondimenti_padre.get("bio_artisti") or ev.bio_artisti
+                ev.social_contatti = approfondimenti_padre.get("social_contatti") or ev.social_contatti
 
                 sotto_eventi_objs = []
                 for se in extracted_list:
                     if se.get("is_evento") is False:
                         continue
-                    # Map the unified evento-figlio JSON back to SottoEvento
+                    # Map the unified evento-figlio JSON back to SottoEvento, campo per campo
+                    approfondimenti_figlio = se.get("approfondimenti_extra", {}) or {}
                     se_obj = SottoEvento(
                         titolo=se.get("titolo", "Evento Senza Titolo"),
                         data_inizio=se.get("data_inizio", ""),
@@ -479,6 +497,13 @@ def main():
                         artisti=se.get("artisti", []),
                         tags=se.get("tags", []),
                         is_ingresso_gratuito=se.get("is_ingresso_gratuito", False),
+                        categoria=se.get("categoria"),
+                        is_evento=se.get("is_evento", True),
+                        link_organizzatore=se.get("link_organizzatore"),
+                        link_biglietti=se.get("link_biglietti"),
+                        dettagli_dominio=se.get("dettagli_dominio"),
+                        bio_artisti=approfondimenti_figlio.get("bio_artisti", []),
+                        social_contatti=approfondimenti_figlio.get("social_contatti", []),
                     )
                     sotto_eventi_objs.append(se_obj)
 
@@ -517,6 +542,8 @@ def main():
                 "artisti": getattr(ev, 'artisti', []),
                 "bio_artisti": getattr(ev, 'bio_artisti', []),
                 "social_contatti": getattr(ev, 'social_contatti', []),
+                "is_evento": getattr(ev, 'is_evento', True),
+                "dettagli_dominio": getattr(ev, 'dettagli_dominio', None),
                 "dettagli_extra": {
                     **getattr(ev, 'dettagli_extra', {}),
                     "id_key": temp_id,
@@ -531,7 +558,7 @@ def main():
                     child_dict = {
                         "titolo": se.titolo,
                         "titolo_originale": se.titolo,
-                        "categoria": ev.categoria or None,
+                        "categoria": getattr(se, 'categoria', None) or ev.categoria or None,
                         "data_inizio": _parse_mixed_date(se.data_inizio),
                         "data_fine": _parse_mixed_date(se.data_fine) if se.data_fine else _parse_mixed_date(se.data_inizio),
                         "date_originali": se.date_testuali,
@@ -542,8 +569,8 @@ def main():
                         "latitudine": obj["lat"],
                         "longitudine": obj["lon"],
                         "link": getattr(se, 'url', None) or ev.url,
-                        "link_organizzatore": getattr(ev, 'link_organizzatore', None),
-                        "link_biglietti": getattr(ev, 'link_biglietti', None),
+                        "link_organizzatore": getattr(se, 'link_organizzatore', None) or getattr(ev, 'link_organizzatore', None),
+                        "link_biglietti": getattr(se, 'link_biglietti', None) or getattr(ev, 'link_biglietti', None),
                         "descrizione": se.descrizione,
                         "immagine": getattr(se, 'immagine', None) or ev.immagine,
                         "fonte": ev.fonte or "",
@@ -554,8 +581,10 @@ def main():
                         "parent_id": None,
                         "tags": getattr(se, 'tags', []),
                         "artisti": getattr(se, 'artisti', []),
-                        "bio_artisti": [],
-                        "social_contatti": [],
+                        "bio_artisti": getattr(se, 'bio_artisti', []),
+                        "social_contatti": getattr(se, 'social_contatti', []),
+                        "is_evento": getattr(se, 'is_evento', True),
+                        "dettagli_dominio": getattr(se, 'dettagli_dominio', None),
                         "dettagli_extra": {
                             "festival_padre": ev.titolo,
                             "is_extracted": True,

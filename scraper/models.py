@@ -18,6 +18,15 @@ class SottoEvento:
     tags: List[str] = field(default_factory=list)
     is_ingresso_gratuito: bool = False
 
+    # Campi arricchiti dallo schema AI unificato (v2.0)
+    categoria: Optional[str] = None
+    is_evento: bool = True
+    link_organizzatore: Optional[str] = None
+    link_biglietti: Optional[str] = None
+    dettagli_dominio: Optional[dict] = None
+    bio_artisti: List[dict] = field(default_factory=list)
+    social_contatti: List[str] = field(default_factory=list)
+
 @dataclass
 class Evento:
     titolo: str
@@ -48,6 +57,8 @@ class Evento:
     bio_artisti: List[dict] = field(default_factory=list)
     social_contatti: List[str] = field(default_factory=list)
     tags: List[str] = field(default_factory=list)
+    is_evento: bool = True
+    dettagli_dominio: Optional[dict] = None
 
     def to_dict(self) -> dict:
         return {k: v for k, v in self.__dict__.items()}
