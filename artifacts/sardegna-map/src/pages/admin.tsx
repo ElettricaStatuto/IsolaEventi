@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Loader2, Info, CheckCircle2, XCircle, ShieldCheck, ArrowLeft, Eye, Database,
-  Trash2, RotateCcw, AlertTriangle, Calendar, MapPin, Globe, Search, RefreshCw, Clock, Terminal, Upload, BarChart3, Brain, FileText, Sun, Moon
+  Trash2, RotateCcw, AlertTriangle, Calendar, MapPin, Globe, Search, RefreshCw, Clock, Terminal, Upload, BarChart3, Brain, FileText, Sun, Moon, Copy
 } from "lucide-react";
 import { AdminStats } from "@/components/admin-stats";
 import { ScraperPanel } from "@/components/admin/ScraperPanel";
@@ -20,6 +20,7 @@ import { PublishedEventsTable } from "@/components/admin/PublishedEventsTable";
 import { RejectedEventsTable } from "@/components/admin/RejectedEventsTable";
 import { EventDetailsModal } from "@/components/admin/EventDetailsModal";
 import { CrawlerLogsModal } from "@/components/admin/CrawlerLogsModal";
+import { MergeModal } from "@/components/merge-modal";
 import { getAssetUrl, getEventImageUrl } from "../lib/utils";
 
 const LS_KEY = "sardegna_admin_key";
@@ -272,6 +273,57 @@ export function Admin() {
       loadPreviewCache();
     }
   }, [activeTab, keyVerified, previewEvents.length, loadingPreview, loadPreviewCache]);
+
+  // ── Duplicates tab ──
+  const [duplicatePairs, setDuplicatePairs] = useState<{ date: string; event1: any; event2: any }[]>([]);
+  const [isFindingDuplicates, setIsFindingDuplicates] = useState(false);
+  const [duplicatesError, setDuplicatesError] = useState<string | null>(null);
+  const [duplicateMergePair, setDuplicateMergePair] = useState<{ date: string; event1: any; event2: any } | null>(null);
+
+  const findDuplicates = useCallback(async () => {
+    setIsFindingDuplicates(true);
+    setDuplicatesError(null);
+    try {
+      const data: any = await fetchJson("/api/duplicates/find", "POST", {}, adminKey);
+      if (data.success) {
+        setDuplicatePairs(data.duplicates || []);
+      } else {
+        setDuplicatesError(data.error || "Ricerca duplicati fallita.");
+      }
+    } catch (e) {
+      setDuplicatesError(String(e));
+    } finally {
+      setIsFindingDuplicates(false);
+    }
+  }, [adminKey]);
+
+  const handleIgnoreDuplicate = useCallback(async (pair: { date: string; event1: any; event2: any }) => {
+    try {
+      await fetchJson("/api/duplicates/ignore", "POST", {
+        title1: pair.event1.titolo || pair.event1.titolo_originale,
+        title2: pair.event2.titolo || pair.event2.titolo_originale,
+        date: pair.date,
+      }, adminKey);
+      setDuplicatePairs(prev => prev.filter(p => p !== pair));
+    } catch (e) {
+      setDuplicatesError(String(e));
+    }
+  }, [adminKey]);
+
+  const handleConfirmMerge = useCallback(async (mergedEvent: any, ev1Key: string, ev2Key: string) => {
+    try {
+      await fetchJson("/api/duplicates/merge", "POST", {
+        mergedEvent,
+        event1_id_key: ev1Key,
+        event2_id_key: ev2Key,
+      }, adminKey);
+      setDuplicatePairs(prev => prev.filter(p => p.event1.id_key !== ev1Key));
+      setDuplicateMergePair(null);
+      // Il pannello Pubblicati potrebbe non essere aggiornato: lo ricarica al prossimo focus tab
+    } catch (e) {
+      setDuplicatesError(String(e));
+    }
+  }, [adminKey]);
 
   // ── Published tab ──
   const [publishedEvents, setPublishedEvents] = useState<DbEvent[]>([]);
@@ -1787,7 +1839,7 @@ export function Admin() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6 max-w-4xl">
+          <TabsList className="grid w-full grid-cols-7 max-w-5xl">
             <TabsTrigger value="scraping">
               <Eye className="w-4 h-4 mr-1" /> Scraping
             </TabsTrigger>
@@ -1799,6 +1851,9 @@ export function Admin() {
             </TabsTrigger>
             <TabsTrigger value="analyzed">
               <CheckCircle2 className="w-4 h-4 mr-1" /> Analizzati
+            </TabsTrigger>
+            <TabsTrigger value="duplicates">
+              <Copy className="w-4 h-4 mr-1" /> Duplicati
             </TabsTrigger>
             <TabsTrigger value="rejected">
               <AlertTriangle className="w-4 h-4 mr-1" /> Scartati
@@ -1941,6 +1996,69 @@ export function Admin() {
             />
           </TabsContent>
 
+          {/* ── DUPLICATES TAB ── */}
+          <TabsContent value="duplicates" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Copy className="w-4 h-4" /> Eventi Duplicati
+                </CardTitle>
+                <CardDescription>
+                  Cerca coppie di eventi (in attesa o già pubblicati) che descrivono probabilmente lo stesso evento,
+                  confermate da un'analisi AI, per fonderle in un unico evento definitivo.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4">
+                <div className="flex items-center gap-3">
+                  <Button onClick={findDuplicates} disabled={isFindingDuplicates}>
+                    {isFindingDuplicates ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Ricerca in corso...</>
+                    ) : (
+                      <><Search className="w-4 h-4 mr-2" /> Trova Duplicati</>
+                    )}
+                  </Button>
+                  {duplicatePairs.length > 0 && (
+                    <span className="text-xs text-muted-foreground">{duplicatePairs.length} coppie sospette trovate</span>
+                  )}
+                </div>
+
+                {duplicatesError && (
+                  <div className="text-xs text-red-500 border border-red-500/30 bg-red-500/10 rounded p-2">{duplicatesError}</div>
+                )}
+
+                {duplicatePairs.length === 0 && !isFindingDuplicates && !duplicatesError && (
+                  <p className="text-xs text-muted-foreground italic">Nessuna ricerca ancora eseguita, oppure nessun duplicato trovato.</p>
+                )}
+
+                <div className="flex flex-col gap-3">
+                  {duplicatePairs.map((pair, i) => (
+                    <div key={i} className="border rounded-lg p-3 flex flex-col gap-2 bg-muted/10">
+                      <div className="text-[10px] font-bold text-muted-foreground uppercase">{pair.date}</div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="border rounded p-2 bg-background text-xs">
+                          <div className="font-semibold">{pair.event1.titolo || pair.event1.titolo_originale}</div>
+                          <div className="text-muted-foreground mt-1">{pair.event1.fonte} · {pair.event1.luogo || "—"}</div>
+                        </div>
+                        <div className="border rounded p-2 bg-background text-xs">
+                          <div className="font-semibold">{pair.event2.titolo || pair.event2.titolo_originale}</div>
+                          <div className="text-muted-foreground mt-1">{pair.event2.fonte} · {pair.event2.luogo || "—"}</div>
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => handleIgnoreDuplicate(pair)}>
+                          Non è un duplicato
+                        </Button>
+                        <Button size="sm" onClick={() => setDuplicateMergePair(pair)}>
+                          Fondi in un evento
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* ── REJECTED TAB ── */}
           <TabsContent value="rejected" className="mt-4">
             <RejectedEventsTable
@@ -2045,6 +2163,13 @@ export function Admin() {
           publishedEvents={publishedEvents}
           openEventDetails={openEventDetails}
           adminKey={adminKey}
+        />
+
+        {/* Merge duplicates modal */}
+        <MergeModal
+          pair={duplicateMergePair}
+          onClose={() => setDuplicateMergePair(null)}
+          onConfirm={handleConfirmMerge}
         />
 
         {/* Global error */}

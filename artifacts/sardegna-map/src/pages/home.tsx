@@ -26,12 +26,12 @@ export function Home() {
     return () => window.removeEventListener("toggle-map-view", handleToggle);
   }, []);
 
-  // Fetch all events (no server-side date filter — filtering happens client-side)
+  // Fetch all events not yet ended (client-side filtering handles the rest)
   const {
     data: events = [],
     isLoading,
     isError,
-  } = useListEvents({}, { query: { queryKey: getListEventsQueryKey({}) } });
+  } = useListEvents({ solo_futuri: true }, { query: { queryKey: getListEventsQueryKey({ solo_futuri: true }) } });
 
   // Derive selectedEventId from URL
   const selectedEventId = params?.idAndSlug ? parseInt(params.idAndSlug.split("-")[0], 10) : null;

@@ -107,7 +107,7 @@ router.get("/events", async (req, res): Promise<void> => {
     return;
   }
 
-  const { date_from, date_to, luogo, titolo, fonte } = parsed.data;
+  const { date_from, date_to, luogo, titolo, fonte, solo_futuri } = parsed.data;
 
   // Filtro eventi più vecchi di 3 mesi
   const cutoffDate = new Date();
@@ -122,8 +122,15 @@ router.get("/events", async (req, res): Promise<void> => {
   } else if (date_from) {
     // If date_from is provided but older than cutoff, we still rely on cutoff
   }
-  
+
   if (date_to) conditions.push(lte(eventsTable.dataInizio, date_to));
+
+  // Nasconde gli eventi gia' terminati: per un festival (con data_fine) conta
+  // l'ultimo giorno, non il primo, cosi' resta visibile fino a che non finisce.
+  if (solo_futuri) {
+    const todayString = new Date().toISOString().split("T")[0];
+    conditions.push(sql`COALESCE(${eventsTable.dataFine}, ${eventsTable.dataInizio}) >= ${todayString}`);
+  }
   if (luogo) conditions.push(ilike(eventsTable.luogo, `%${luogo}%`));
   if (titolo) conditions.push(ilike(eventsTable.titolo, `%${titolo}%`));
   if (fonte) conditions.push(ilike(eventsTable.fonte, `%${fonte}%`));

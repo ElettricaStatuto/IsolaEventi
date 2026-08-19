@@ -198,6 +198,10 @@ titolo?: string;
  * Filter by source/site name (partial match)
  */
 fonte?: string;
+/**
+ * If true, exclude events that have already ended (uses data_fine, falling back to data_inizio, compared to today)
+ */
+solo_futuri?: boolean;
 };
 
 export type RestoreRejectedEvent200 = {

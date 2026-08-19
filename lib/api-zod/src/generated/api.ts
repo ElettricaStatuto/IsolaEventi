@@ -24,7 +24,8 @@ export const ListEventsQueryParams = zod.object({
   "date_to": zod.coerce.string().optional(),
   "luogo": zod.coerce.string().optional(),
   "titolo": zod.coerce.string().optional(),
-  "fonte": zod.coerce.string().optional()
+  "fonte": zod.coerce.string().optional(),
+  "solo_futuri": zod.coerce.boolean().optional()
 })
 
 export const ListEventsResponseItem = zod.object({
