@@ -279,6 +279,7 @@ export function Admin() {
   const [isFindingDuplicates, setIsFindingDuplicates] = useState(false);
   const [duplicatesError, setDuplicatesError] = useState<string | null>(null);
   const [duplicateMergePair, setDuplicateMergePair] = useState<{ date: string; event1: any; event2: any } | null>(null);
+  const [isMergingAll, setIsMergingAll] = useState(false);
 
   const findDuplicates = useCallback(async () => {
     setIsFindingDuplicates(true);
@@ -324,6 +325,30 @@ export function Admin() {
       setDuplicatesError(String(e));
     }
   }, [adminKey]);
+
+  const handleMergeAllDuplicates = useCallback(async () => {
+    if (!window.confirm(
+      `Fondere automaticamente TUTTI i ${duplicatePairs.length} duplicati trovati?\n\n` +
+      `Per ogni coppia verrà tenuto un solo evento, scegliendo i dati più completi tra i due. ` +
+      `L'azione non è reversibile.`
+    )) return;
+
+    setIsMergingAll(true);
+    setDuplicatesError(null);
+    try {
+      const data: any = await fetchJson("/api/duplicates/merge-all", "POST", {}, adminKey);
+      if (data.success) {
+        setDuplicatePairs([]);
+        setAnalysisLogs(prev => [...prev, `✅ Duplicati fusi: ${data.fuse}/${data.totale}${data.errori ? ` (${data.errori} errori)` : ""}`]);
+      } else {
+        setDuplicatesError(data.error || "Fusione automatica fallita.");
+      }
+    } catch (e) {
+      setDuplicatesError(String(e));
+    } finally {
+      setIsMergingAll(false);
+    }
+  }, [adminKey, duplicatePairs.length]);
 
   // ── Published tab ──
   const [publishedEvents, setPublishedEvents] = useState<DbEvent[]>([]);
@@ -2010,7 +2035,7 @@ export function Admin() {
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
                 <div className="flex items-center gap-3">
-                  <Button onClick={findDuplicates} disabled={isFindingDuplicates}>
+                  <Button onClick={findDuplicates} disabled={isFindingDuplicates || isMergingAll}>
                     {isFindingDuplicates ? (
                       <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Ricerca in corso...</>
                     ) : (
@@ -2018,7 +2043,20 @@ export function Admin() {
                     )}
                   </Button>
                   {duplicatePairs.length > 0 && (
-                    <span className="text-xs text-muted-foreground">{duplicatePairs.length} coppie sospette trovate</span>
+                    <>
+                      <span className="text-xs text-muted-foreground">{duplicatePairs.length} coppie sospette trovate</span>
+                      <Button
+                        variant="destructive"
+                        onClick={handleMergeAllDuplicates}
+                        disabled={isMergingAll || isFindingDuplicates}
+                      >
+                        {isMergingAll ? (
+                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Fusione in corso...</>
+                        ) : (
+                          <><Trash2 className="w-4 h-4 mr-2" /> Elimina Tutti i Duplicati</>
+                        )}
+                      </Button>
+                    </>
                   )}
                 </div>
 
