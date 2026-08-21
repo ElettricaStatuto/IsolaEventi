@@ -418,23 +418,30 @@ router.post("/events/refresh/preview", requireAdminKey, (req, res): void => {
               }
 
               // 2. Persistenza diretta ed unificata su Neon PostgreSQL con controllo anti-duplicati
+              // (controlla sia gli eventi ancora in attesa sia quelli gia' approvati/pubblicati,
+              // altrimenti un evento gia' approvato ricompare come "nuovo" alla scansione successiva)
               const existingPending = await db.select({
                 titolo: pendingEventsTable.titolo,
                 dataInizio: pendingEventsTable.dataInizio,
                 luogo: pendingEventsTable.luogo
               }).from(pendingEventsTable);
+              const existingPublished = await db.select({
+                titolo: eventsTable.titolo,
+                dataInizio: eventsTable.dataInizio,
+              }).from(eventsTable);
 
               for (const ev of parsed.events) {
                 try {
                   const evTitle = ev.titolo || "Evento da Scraper";
                   const evDate = ev.data_inizio || null;
-                  
-                  // Controlla se esiste già un evento simile nello stesso giorno
-                  const isDuplicate = existingPending.some(ex => {
+
+                  // Controlla se esiste già un evento simile nello stesso giorno (in attesa o pubblicato)
+                  const isDuplicateOf = (ex: { titolo: string; dataInizio: string | null }) => {
                     const sameDate = (ex.dataInizio === evDate) || (!ex.dataInizio && !evDate);
                     const titleSim = calculateTitleSimilarity(ex.titolo, evTitle);
                     return sameDate && titleSim >= 0.80;
-                  });
+                  };
+                  const isDuplicate = existingPending.some(isDuplicateOf) || existingPublished.some(isDuplicateOf);
 
                   if (isDuplicate) {
                     req.log.info({ title: evTitle }, "Skipping duplicate event in pending_events");
@@ -696,22 +703,28 @@ router.post("/events/scrape-url", requireAdminKey, async (req, res): Promise<voi
       }
 
       // 2. Persistenza su Neon PostgreSQL con controllo anti-duplicati
+      // (controlla sia gli eventi ancora in attesa sia quelli gia' approvati/pubblicati)
       const existingPending = await db.select({
         titolo: pendingEventsTable.titolo,
         dataInizio: pendingEventsTable.dataInizio,
         luogo: pendingEventsTable.luogo
       }).from(pendingEventsTable);
+      const existingPublished = await db.select({
+        titolo: eventsTable.titolo,
+        dataInizio: eventsTable.dataInizio,
+      }).from(eventsTable);
 
       for (const ev of resultJson.events) {
         try {
           const evTitle = ev.titolo || "Evento Scrapato";
           const evDate = ev.data_inizio || null;
-          
-          const isDuplicate = existingPending.some(ex => {
+
+          const isDuplicateOf = (ex: { titolo: string; dataInizio: string | null }) => {
             const sameDate = (ex.dataInizio === evDate) || (!ex.dataInizio && !evDate);
             const titleSim = calculateTitleSimilarity(ex.titolo, evTitle);
             return sameDate && titleSim >= 0.80;
-          });
+          };
+          const isDuplicate = existingPending.some(isDuplicateOf) || existingPublished.some(isDuplicateOf);
 
           if (isDuplicate) {
             req.log.info({ title: evTitle }, "Skipping duplicate event in pending_events");
