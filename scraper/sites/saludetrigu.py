@@ -248,6 +248,8 @@ class SaludeTriguScraper(BaseScraper):
                 ora_fine=f.ora_fine,
                 is_ingresso_gratuito=f.is_ingresso_gratuito,
                 link_biglietti=f.link_biglietti,
+                latitudine=f.latitudine,
+                longitudine=f.longitudine,
             )
             for f in figli
         ]

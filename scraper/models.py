@@ -27,6 +27,12 @@ class SottoEvento:
     bio_artisti: List[dict] = field(default_factory=list)
     social_contatti: List[str] = field(default_factory=list)
 
+    # Coordinate precise del singolo sotto-evento, quando disponibili -
+    # un sotto-evento puo' trovarsi in un luogo diverso dal padre (es. un
+    # festival itinerante), quindi non basta ereditare quelle del padre.
+    latitudine: Optional[float] = None
+    longitudine: Optional[float] = None
+
 @dataclass
 class Evento:
     titolo: str
