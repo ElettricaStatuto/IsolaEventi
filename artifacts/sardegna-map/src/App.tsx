@@ -8,7 +8,8 @@ import NotFound from "@/pages/not-found";
 import { Home } from "./pages/home";
 import { Stats } from "./pages/stats";
 import { FestivalPage } from "./pages/festival";
-import { Map, BarChart2, Sun, Moon } from "lucide-react";
+import { CalendarPage } from "./pages/calendar";
+import { Map, BarChart2, CalendarDays, Sun, Moon } from "lucide-react";
 
 // Lazy-loaded — Vite creates a separate chunk, excluded from the public bundle
 const Admin = lazy(() => import("./pages/admin").then((m) => ({ default: m.Admin })));
@@ -53,6 +54,9 @@ function Layout({ children }: { children: React.ReactNode }) {
             >
               <Map className="w-4 h-4 text-primary" /> Mappa
             </button>
+            <Link href="/calendario" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted text-sm font-medium transition-colors text-foreground">
+              <CalendarDays className="w-4 h-4 text-secondary" /> Calendario
+            </Link>
             <Link href="/stats" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted text-sm font-medium transition-colors text-foreground">
               <BarChart2 className="w-4 h-4 text-secondary" /> Statistiche
             </Link>
@@ -97,6 +101,7 @@ function Router() {
           <Switch>
             <Route path="/" component={Home} />
             <Route path="/eventi/:idAndSlug" component={Home} />
+            <Route path="/calendario" component={CalendarPage} />
             <Route path="/stats" component={Stats} />
             <Route path="/festival/:id" component={FestivalPage} />
             <Route component={NotFound} />
