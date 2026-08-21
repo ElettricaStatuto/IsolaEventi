@@ -61,6 +61,11 @@ class Evento:
     dettagli_dominio: Optional[dict] = None
     documento_ai: Optional[dict] = None
 
+    # Coordinate precise, quando la fonte le fornisce gia' (es. API strutturate) -
+    # se presenti, il runner evita di ri-geocodificare il testo del luogo.
+    latitudine: Optional[float] = None
+    longitudine: Optional[float] = None
+
     def to_dict(self) -> dict:
         return {k: v for k, v in self.__dict__.items()}
 

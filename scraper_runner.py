@@ -25,6 +25,7 @@ from scraper.sites.paradisola import ParadisolaScraper
 from scraper.sites.sardegnaturismo import SardegnaTurismoScraper
 from scraper.sites.eventiinsardegna import EventiInSardegnaScraper
 from scraper.sites.timeinjazz import TimeInJazzScraper
+from scraper.sites.saludetrigu import SaludeTriguScraper
 from scraper.ai_analyzer import analyze_event
 from scraper.models import SottoEvento
 
@@ -303,6 +304,9 @@ def main():
         if not enabled_sources or "timeinjazz" in enabled_sources:
             scrapers.append(TimeInJazzScraper())
 
+        if not enabled_sources or "saludetrigu" in enabled_sources:
+            scrapers.append(SaludeTriguScraper())
+
         # Configurazione target per eventiinsardegna.it
         eventiinsardegna_targets = []
         if not enabled_sources or "eventiinsardegna_calendar" in enabled_sources:
@@ -399,8 +403,8 @@ def main():
         data_inizio = _parse_mixed_date(ev.data_inizio)
         data_fine = _parse_mixed_date(ev.data_fine) if ev.data_fine else data_inizio
 
-        lat, lon = None, None
-        if ev.luogo:
+        lat, lon = getattr(ev, 'latitudine', None), getattr(ev, 'longitudine', None)
+        if (lat is None or lon is None) and ev.luogo:
             coords = geocode(ev.luogo)
             if coords:
                 lat, lon = coords

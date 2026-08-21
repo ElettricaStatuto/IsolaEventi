@@ -94,6 +94,7 @@ export const ScraperPanel: React.FC<ScraperPanelProps> = ({
                   setSelectedSources([
                     "paradisola",
                     "sardegnaturismo",
+                    "saludetrigu",
                     "timeinjazz",
                     "eventiinsardegna_calendar",
                     "eventiinsardegna_alghero",
@@ -158,6 +159,25 @@ export const ScraperPanel: React.FC<ScraperPanelProps> = ({
                     SardegnaTurismo.it
                   </Label>
                   <p className="text-xs text-muted-foreground">Portale ufficiale della Regione Sardegna</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="src-saludetrigu"
+                  checked={selectedSources.includes("saludetrigu")}
+                  onCheckedChange={(checked) =>
+                    setSelectedSources((prev) =>
+                      checked ? [...prev, "saludetrigu"] : prev.filter((x) => x !== "saludetrigu")
+                    )
+                  }
+                  className="mt-0.5"
+                />
+                <div>
+                  <Label htmlFor="src-saludetrigu" className="text-sm font-semibold cursor-pointer">
+                    Salude&Trigu (saludetrigu.it)
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Camera di Commercio di Sassari — eventi Nord Sardegna, via API strutturata</p>
                 </div>
               </div>
 
