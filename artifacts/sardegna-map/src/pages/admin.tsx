@@ -336,7 +336,7 @@ export function Admin() {
     setIsMergingAll(true);
     setDuplicatesError(null);
     try {
-      const data: any = await fetchJson("/api/duplicates/merge-all", "POST", {}, adminKey);
+      const data: any = await fetchJson("/api/duplicates/merge-all", "POST", { pairs: duplicatePairs }, adminKey);
       if (data.success) {
         setDuplicatePairs([]);
         setAnalysisLogs(prev => [...prev, `✅ Duplicati fusi: ${data.fuse}/${data.totale}${data.errori ? ` (${data.errori} errori)` : ""}`]);
@@ -348,7 +348,7 @@ export function Admin() {
     } finally {
       setIsMergingAll(false);
     }
-  }, [adminKey, duplicatePairs.length]);
+  }, [adminKey, duplicatePairs]);
 
   // ── Published tab ──
   const [publishedEvents, setPublishedEvents] = useState<DbEvent[]>([]);

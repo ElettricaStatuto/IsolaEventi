@@ -308,20 +308,39 @@ router.post("/duplicates/merge", requireAdminKey, async (req, res): Promise<void
 
 // 4. Merge ALL confirmed duplicate pairs automatically (nessuna revisione manuale
 // campo per campo: per ogni coppia sceglie i valori piu' completi tra i due eventi).
+//
+// Riceve le coppie gia' trovate da /duplicates/find (il client le ha gia' in mano
+// dopo aver premuto "Trova Duplicati"): rifare qui la ricerca da zero raddoppierebbe
+// il tempo (incluse le chiamate AI a Gemini per ogni gruppo), rischiando il timeout
+// del browser su richieste con molte coppie. Se non vengono passate coppie, la
+// ricerca viene comunque eseguita come fallback per compatibilita'.
 router.post("/duplicates/merge-all", requireAdminKey, async (req, res): Promise<void> => {
   try {
-    const pairs = await findDuplicatePairs();
+    const pairs: { date: string; event1: any; event2: any }[] =
+      Array.isArray(req.body?.pairs) && req.body.pairs.length > 0
+        ? req.body.pairs
+        : await findDuplicatePairs();
+
     let fuse = 0;
     let errori = 0;
 
-    for (const pair of pairs) {
-      try {
-        const merged = autoSelectMergedEvent(pair.event1, pair.event2, pair.date);
-        await mergeDuplicatePair(pair.event1.id_key, pair.event2.id_key, merged);
-        fuse++;
-      } catch (e) {
-        errori++;
-        req.log.error({ err: e, pair }, "Failed to auto-merge duplicate pair");
+    // Esegue le fusioni a piccoli lotti in parallelo invece che una alla volta,
+    // per stare ben sotto i tempi di timeout anche con molte coppie.
+    const BATCH_SIZE = 8;
+    for (let i = 0; i < pairs.length; i += BATCH_SIZE) {
+      const batch = pairs.slice(i, i + BATCH_SIZE);
+      const risultati = await Promise.allSettled(
+        batch.map(pair => {
+          const merged = autoSelectMergedEvent(pair.event1, pair.event2, pair.date);
+          return mergeDuplicatePair(pair.event1.id_key, pair.event2.id_key, merged);
+        })
+      );
+      for (const r of risultati) {
+        if (r.status === "fulfilled") fuse++;
+        else {
+          errori++;
+          req.log.error({ err: r.reason }, "Failed to auto-merge duplicate pair");
+        }
       }
     }
 
