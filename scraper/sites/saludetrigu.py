@@ -5,22 +5,29 @@ via la REST API pubblica di "The Events Calendar" (plugin WordPress).
 Niente parsing HTML: il sito espone /wp-json/tribe/events/v1/events con dati
 gia' strutturati (titolo, date/orari precisi, venue con coordinate GPS, immagine,
 costo, sito web) - molto piu' affidabile di uno scraping di pagina.
+
+Ogni singolo evento appartenente a un festival/rassegna riporta in descrizione
+un link "Vai all'evento completo" verso la pagina generale del festival
+(un post WordPress normale, non un evento). Usiamo quel link come chiave per
+raggruppare le serate/date sparse in un unico Evento Padre con i suoi
+Sotto-eventi, invece di lasciarle come voci scollegate.
 """
 import logging
 import re
 import time
 from typing import List, Optional
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 
 import requests
 from bs4 import BeautifulSoup
 
 from ..base import BaseScraper
-from ..models import Evento
+from ..models import Evento, SottoEvento
 
 logger = logging.getLogger(__name__)
 
 API_URL = "https://saludetrigu.it/wp-json/tribe/events/v1/events"
+POSTS_API_URL = "https://saludetrigu.it/wp-json/wp/v2/posts"
 PER_PAGE = 50
 MAX_PAGINE = 40  # rete di sicurezza anti-loop, non un limite di business (oggi il sito ha ~29 pagine)
 
@@ -29,6 +36,8 @@ MAX_PAGINE = 40  # rete di sicurezza anti-loop, non un limite di business (oggi 
 # nell'URL (/en/evento/..., /es/evento/..., /fr/evento/...). Teniamo solo
 # l'italiano (nessun prefisso) per non importare 3-4 doppioni per evento.
 _PREFISSI_LINGUA_DA_SCARTARE = ("/en/", "/es/", "/fr/")
+
+_RE_EVENTO_COMPLETO = re.compile(r'href="([^"]+)">\s*Vai all.?evento completo', re.IGNORECASE)
 
 
 def _e_versione_non_italiana(url: Optional[str]) -> bool:
@@ -67,12 +76,22 @@ def _splitta_data_ora(valore: Optional[str]) -> tuple[Optional[str], Optional[st
     return data, ora
 
 
+def _estrai_link_evento_completo(descrizione_html: Optional[str], url_base: str) -> Optional[str]:
+    if not descrizione_html:
+        return None
+    m = _RE_EVENTO_COMPLETO.search(descrizione_html)
+    if not m:
+        return None
+    return urljoin(url_base, m.group(1))
+
+
 class SaludeTriguScraper(BaseScraper):
     nome_fonte = "saludetrigu.it"
     url_base = "https://saludetrigu.it"
 
     def scrapa_eventi(self) -> List[Evento]:
         eventi: List[Evento] = []
+        link_festival: dict[int, str] = {}  # indice in `eventi` -> link "evento completo"
         pagina = 1
         totale_pagine = None
 
@@ -95,13 +114,16 @@ class SaludeTriguScraper(BaseScraper):
             for ev in grezzi:
                 evento = self._mappa_evento(ev)
                 if evento:
+                    link = _estrai_link_evento_completo(ev.get("description"), self.url_base)
+                    if link:
+                        link_festival[len(eventi)] = link
                     eventi.append(evento)
 
             logger.info(f"[{self.nome_fonte}] pagina {pagina}/{totale_pagine}: {len(grezzi)} eventi")
             pagina += 1
             time.sleep(self.pausa)
 
-        return eventi
+        return self._raggruppa_festival(eventi, link_festival)
 
     def _mappa_evento(self, ev: dict) -> Optional[Evento]:
         if _e_versione_non_italiana(ev.get("url")):
@@ -150,4 +172,96 @@ class SaludeTriguScraper(BaseScraper):
                 "categoria_originale_sito": ", ".join(categorie) if categorie else None,
                 "costo_originale_sito": costo_raw,
             },
+        )
+
+    def _raggruppa_festival(self, eventi: List[Evento], link_festival: dict[int, str]) -> List[Evento]:
+        """Raggruppa le serate che condividono lo stesso link 'evento completo'
+        in un unico Evento Padre (is_festival=True) con i suoi Sotto-eventi.
+        Gli eventi senza link, o i cui link compaiono una sola volta, restano
+        voci indipendenti cosi' come sono.
+        """
+        gruppi: dict[str, list[int]] = {}
+        for idx, link in link_festival.items():
+            gruppi.setdefault(link, []).append(idx)
+
+        indici_raggruppati: set[int] = set()
+        padri: List[Evento] = []
+
+        for link, indici in gruppi.items():
+            if len(indici) < 2:
+                continue  # una sola data: non e' un vero festival, la lasciamo com'e'
+
+            indici_raggruppati.update(indici)
+            figli = [eventi[i] for i in indici]
+            padre = self._costruisci_padre_festival(link, figli)
+            if padre:
+                padri.append(padre)
+            else:
+                # Se non riusciamo a costruire il padre, non perdiamo i dati:
+                # lasciamo le serate come voci indipendenti.
+                indici_raggruppati.difference_update(indici)
+
+        risultato = padri + [ev for i, ev in enumerate(eventi) if i not in indici_raggruppati]
+        return risultato
+
+    def _costruisci_padre_festival(self, link_completo: str, figli: List[Evento]) -> Optional[Evento]:
+        slug = urlparse(link_completo).path.strip("/").split("/")[-1]
+        titolo_padre = None
+        descrizione_padre = None
+        immagine_padre = None
+
+        try:
+            risposta = self.session.get(
+                POSTS_API_URL, params={"slug": slug, "_embed": 1}, timeout=self.timeout
+            )
+            risposta.raise_for_status()
+            risultati = risposta.json()
+            if risultati:
+                post = risultati[0]
+                titolo_padre = _pulisci_html(post.get("title", {}).get("rendered"))
+                descrizione_padre = (
+                    _pulisci_html(post.get("excerpt", {}).get("rendered"))
+                    or _pulisci_html(post.get("content", {}).get("rendered"))
+                )
+                media = (post.get("_embedded") or {}).get("wp:featuredmedia") or []
+                if media:
+                    immagine_padre = media[0].get("source_url")
+        except (requests.RequestException, ValueError) as e:
+            logger.warning(f"[{self.nome_fonte}] Impossibile recuperare la pagina festival '{slug}': {e}")
+
+        if not titolo_padre:
+            titolo_padre = slug.replace("-", " ").strip().title()
+
+        date_inizio = sorted(f.data_inizio for f in figli if f.data_inizio)
+        date_fine = sorted((f.data_fine or f.data_inizio) for f in figli if (f.data_fine or f.data_inizio))
+
+        sotto_eventi = [
+            SottoEvento(
+                titolo=f.titolo,
+                data_inizio=f.data_inizio or "",
+                data_fine=f.data_fine or f.data_inizio or "",
+                luogo=f.luogo,
+                url=f.url,
+                descrizione=f.descrizione,
+                immagine=f.immagine,
+                ora_inizio=f.ora_inizio,
+                ora_fine=f.ora_fine,
+                is_ingresso_gratuito=f.is_ingresso_gratuito,
+                link_biglietti=f.link_biglietti,
+            )
+            for f in figli
+        ]
+
+        return Evento(
+            titolo=titolo_padre,
+            data_inizio=date_inizio[0] if date_inizio else None,
+            data_fine=date_fine[-1] if date_fine else None,
+            luogo=None,  # il festival attraversa piu' luoghi, i sotto-eventi hanno il proprio
+            url=link_completo,
+            descrizione=descrizione_padre,
+            immagine=immagine_padre or next((f.immagine for f in figli if f.immagine), None),
+            fonte=self.nome_fonte,
+            is_festival=True,
+            sotto_eventi=sotto_eventi,
+            dettagli_extra={"evento_completo_url": link_completo, "numero_date": len(figli)},
         )
