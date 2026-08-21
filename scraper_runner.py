@@ -12,7 +12,7 @@ import os
 import re
 import sys
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
@@ -375,18 +375,19 @@ def main():
 
     # Process events and analyze via AI if new
     events_to_save = []
-    
+
     # Date parsing and filtering
-    cutoff_date = datetime.now()
-    # Subtract 90 days as approx 3 months
-    cutoff_date = cutoff_date - timedelta(days=90)
-    cutoff_str = cutoff_date.strftime("%Y-%m-%d")
-    
+    oggi_str = datetime.now().strftime("%Y-%m-%d")
+
     for ev in filtrati:
         data_inizio = _parse_mixed_date(ev.data_inizio)
-        if data_inizio and data_inizio < cutoff_str:
-            continue # ignore events older than 3 months
-            
+        data_fine = _parse_mixed_date(ev.data_fine) if ev.data_fine else data_inizio
+        # Non raccogliere eventi gia' terminati: per un festival (con data_fine)
+        # conta l'ultimo giorno, non il primo, cosi' un evento in corso non
+        # sparisce a meta'.
+        if (data_fine or data_inizio) and (data_fine or data_inizio) < oggi_str:
+            continue
+
         found_id = None
         for db_id, db_title in existing_events:
             if are_titles_similar(ev.titolo, db_title):
@@ -399,9 +400,6 @@ def main():
             # L'analisi AI è stata disabilitata in fase di scraping per permettere
             # l'esecuzione manuale su richiesta dell'utente tramite interfaccia.
             pass
-            
-        data_inizio = _parse_mixed_date(ev.data_inizio)
-        data_fine = _parse_mixed_date(ev.data_fine) if ev.data_fine else data_inizio
 
         lat, lon = getattr(ev, 'latitudine', None), getattr(ev, 'longitudine', None)
         if (lat is None or lon is None) and ev.luogo:
