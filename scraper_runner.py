@@ -435,14 +435,25 @@ def main():
         for obj in events_to_save:
             ev = obj["ev"]
             
-            # Se è uno scraping URL libero o se l'utente ha attivato lo switch Crawler AI, esegui l'estrazione AI dei sotto-eventi
+            # Se è uno scraping URL libero o se l'utente ha attivato lo switch Crawler AI,
+            # esegui l'analisi AI completa dell'evento - leggendo la pagina fonte originale
+            # (non solo il breve testo già scrapato) cosi' da ottenere un articolo vero e,
+            # se l'AI riconosce un festival/programma multi-data, anche i sotto-eventi.
             if args.url or args.force_festival:
                 emit_log(f"🤖 Esecuzione Crawler AI Gemini sull'evento '{ev.titolo}'...")
-                extra_kwargs = {"force_festival": True} if args.force_festival else {}
-                ai_result = analyze_event(ev.to_dict(), mode="extract", **extra_kwargs)
+                ha_link = bool(ev.url and ev.url.startswith("http"))
+                ai_ev_dict = {**ev.to_dict(), "link": ev.url}
+                if ha_link and ev.immagine:
+                    target = "both_source"  # locandina + pagina fonte riletta in diretta
+                elif ha_link:
+                    target = "source_page"
+                else:
+                    target = "text"  # nessun link valido: usa il testo gia' scrapato
+                ai_result = analyze_event(ai_ev_dict, target=target, mode="analyze", force_festival=args.force_festival)
 
-                # In mode="extract" ai_result è il documento JSON unificato (schema_version 2.0):
-                # "dati_curati_ai" per l'evento padre, "lista_sotto_eventi_estratti" per i figli.
+                # Lo standard analyzer restituisce il documento JSON unificato (schema_version 2.0):
+                # "dati_curati_ai" per l'evento padre, "lista_sotto_eventi_estratti" per i figli
+                # (compilata dall'AI stessa se riconosce piu' date/serate nel testo).
                 extracted_list = []
                 dati_curati = {}
                 if isinstance(ai_data := ai_result, dict):
