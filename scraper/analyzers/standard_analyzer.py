@@ -152,7 +152,6 @@ def analyze_standard_event(
             ]
             img_path = None
             for p in possible_paths:
-                import json
                 print(json.dumps({"log": f"🔍 AI checked path: {p} (Exists: {p.exists()})"}), flush=True)
                 if p.exists():
                     img_path = p
