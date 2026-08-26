@@ -1766,11 +1766,18 @@ export function Admin() {
           
           if (inspectingEvent.is_pending) {
             const nextEvents = [...previewEvents];
-            let idx = previewEvents.findIndex(
-              (e) => e.dettagli_extra?.id_key && e.dettagli_extra.id_key === inspectingEvent.dettagli_extra?.id_key
-            );
+            // Preferisce l'id numerico reale della riga (affidabile), poi l'id_key
+            // temporaneo. NON usare mai tmpId come indice dell'array: e' un
+            // identificativo del payload inviato al backend, non una posizione in
+            // previewEvents - usarlo cosi' punta a una riga a caso (o a nessuna),
+            // facendo fallire il salvataggio in silenzio.
+            let idx = inspectingEvent.id != null
+              ? previewEvents.findIndex((e) => e.id === inspectingEvent.id)
+              : -1;
             if (idx === -1) {
-              idx = parseInt(tmpId!, 10);
+              idx = previewEvents.findIndex(
+                (e) => e.dettagli_extra?.id_key && e.dettagli_extra.id_key === inspectingEvent.dettagli_extra?.id_key
+              );
             }
             if (idx !== -1 && nextEvents[idx]) {
                nextEvents[idx] = { ...nextEvents[idx], ...updatedEvent };
