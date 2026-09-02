@@ -12,11 +12,18 @@ export interface HealthStatus {
 /**
  * @nullable
  */
+export type EventDettagliDominio = { [key: string]: unknown } | null;
+
+/**
+ * @nullable
+ */
 export type EventDettagliExtra = { [key: string]: unknown } | null;
 
 export interface Event {
   id: number;
   titolo: string;
+  /** @nullable */
+  categoria?: string | null;
   /** @nullable */
   data_inizio?: string | null;
   /** @nullable */
@@ -42,9 +49,15 @@ export interface Event {
   /** @nullable */
   is_festival?: boolean | null;
   /** @nullable */
+  is_evento?: boolean | null;
+  /** @nullable */
   link_organizzatore?: string | null;
   /** @nullable */
   tags?: string[] | null;
+  /** @nullable */
+  artisti?: string[] | null;
+  /** @nullable */
+  dettagli_dominio?: EventDettagliDominio;
   /** @nullable */
   dettagli_extra?: EventDettagliExtra;
 }

@@ -277,6 +277,8 @@ components:
           type: integer
         titolo:
           type: string
+        categoria:
+          type: ["string", "null"]
         data_inizio:
           type: ["string", "null"]
         data_fine:
@@ -303,12 +305,21 @@ components:
           type: ["string", "null"]
         is_festival:
           type: ["boolean", "null"]
+        is_evento:
+          type: ["boolean", "null"]
         link_organizzatore:
           type: ["string", "null"]
         tags:
           type: ["array", "null"]
           items:
             type: string
+        artisti:
+          type: ["array", "null"]
+          items:
+            type: string
+        dettagli_dominio:
+          type: ["object", "null"]
+          additionalProperties: true
         dettagli_extra:
           type: ["object", "null"]
           additionalProperties: true

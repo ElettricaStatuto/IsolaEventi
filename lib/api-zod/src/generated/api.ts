@@ -31,6 +31,7 @@ export const ListEventsQueryParams = zod.object({
 export const ListEventsResponseItem = zod.object({
   "id": zod.number(),
   "titolo": zod.string(),
+  "categoria": zod.string().nullish(),
   "data_inizio": zod.string().nullish(),
   "data_fine": zod.string().nullish(),
   "luogo": zod.string().nullish(),
@@ -44,8 +45,11 @@ export const ListEventsResponseItem = zod.object({
   "parent_id": zod.number().nullish(),
   "testo_estratto": zod.string().nullish(),
   "is_festival": zod.boolean().nullish(),
+  "is_evento": zod.boolean().nullish(),
   "link_organizzatore": zod.string().nullish(),
   "tags": zod.array(zod.string()).nullish(),
+  "artisti": zod.array(zod.string()).nullish(),
+  "dettagli_dominio": zod.record(zod.string(), zod.unknown()).nullish(),
   "dettagli_extra": zod.record(zod.string(), zod.unknown()).nullish()
 })
 export const ListEventsResponse = zod.array(ListEventsResponseItem)
@@ -204,6 +208,7 @@ export const GetEventParams = zod.object({
 export const GetEventResponse = zod.object({
   "id": zod.number(),
   "titolo": zod.string(),
+  "categoria": zod.string().nullish(),
   "data_inizio": zod.string().nullish(),
   "data_fine": zod.string().nullish(),
   "luogo": zod.string().nullish(),
@@ -217,8 +222,11 @@ export const GetEventResponse = zod.object({
   "parent_id": zod.number().nullish(),
   "testo_estratto": zod.string().nullish(),
   "is_festival": zod.boolean().nullish(),
+  "is_evento": zod.boolean().nullish(),
   "link_organizzatore": zod.string().nullish(),
   "tags": zod.array(zod.string()).nullish(),
+  "artisti": zod.array(zod.string()).nullish(),
+  "dettagli_dominio": zod.record(zod.string(), zod.unknown()).nullish(),
   "dettagli_extra": zod.record(zod.string(), zod.unknown()).nullish()
 })
 
@@ -252,6 +260,7 @@ export const UpdateEventParams = zod.object({
 export const UpdateEventBody = zod.object({
   "id": zod.number(),
   "titolo": zod.string(),
+  "categoria": zod.string().nullish(),
   "data_inizio": zod.string().nullish(),
   "data_fine": zod.string().nullish(),
   "luogo": zod.string().nullish(),
@@ -265,8 +274,11 @@ export const UpdateEventBody = zod.object({
   "parent_id": zod.number().nullish(),
   "testo_estratto": zod.string().nullish(),
   "is_festival": zod.boolean().nullish(),
+  "is_evento": zod.boolean().nullish(),
   "link_organizzatore": zod.string().nullish(),
   "tags": zod.array(zod.string()).nullish(),
+  "artisti": zod.array(zod.string()).nullish(),
+  "dettagli_dominio": zod.record(zod.string(), zod.unknown()).nullish(),
   "dettagli_extra": zod.record(zod.string(), zod.unknown()).nullish()
 })
 
