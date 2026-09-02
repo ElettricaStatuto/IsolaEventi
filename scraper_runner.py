@@ -446,97 +446,118 @@ def main():
         for obj in events_to_save:
             ev = obj["ev"]
             
-            # Se è uno scraping URL libero o se l'utente ha attivato lo switch Crawler AI,
-            # esegui l'analisi AI completa dell'evento - leggendo la pagina fonte originale
-            # (non solo il breve testo già scrapato) cosi' da ottenere un articolo vero e,
-            # se l'AI riconosce un festival/programma multi-data, anche i sotto-eventi.
-            if args.url or args.force_festival:
-                emit_log(f"🤖 Esecuzione Crawler AI Gemini sull'evento '{ev.titolo}'...")
-                ha_link = bool(ev.url and ev.url.startswith("http"))
-                ai_ev_dict = {**ev.to_dict(), "link": ev.url}
-                if ha_link and ev.immagine:
-                    target = "both_source"  # locandina + pagina fonte riletta in diretta
-                elif ha_link:
-                    target = "source_page"
-                else:
-                    target = "text"  # nessun link valido: usa il testo gia' scrapato
-                ai_result = analyze_event(ai_ev_dict, target=target, mode="analyze", force_festival=args.force_festival)
+            # Ogni evento scansionato passa dal Crawler AI: legge la pagina fonte
+            # originale (non solo il breve testo gia' scrapato) cosi' da ottenere
+            # un articolo vero e, se l'AI riconosce un festival/programma
+            # multi-data, anche i sotto-eventi. Prima era dietro un checkbox
+            # opzionale, ora e' sempre attivo per compilare bene lo schema JSON
+            # su ogni fonte.
+            emit_log(f"🤖 Esecuzione Crawler AI Gemini sull'evento '{ev.titolo}'...")
+            ha_link = bool(ev.url and ev.url.startswith("http"))
+            ai_ev_dict = {**ev.to_dict(), "link": ev.url}
+            if ha_link and ev.immagine:
+                target = "both_source"  # locandina + pagina fonte riletta in diretta
+            elif ha_link:
+                target = "source_page"
+            else:
+                target = "text"  # nessun link valido: usa il testo gia' scrapato
+            ai_result = analyze_event(ai_ev_dict, target=target, mode="analyze", force_festival=args.force_festival)
 
-                # Lo standard analyzer restituisce il documento JSON unificato (schema_version 2.0):
-                # "dati_curati_ai" per l'evento padre, "lista_sotto_eventi_estratti" per i figli
-                # (compilata dall'AI stessa se riconosce piu' date/serate nel testo).
-                extracted_list = []
-                dati_curati = {}
-                if isinstance(ai_data := ai_result, dict):
-                    extracted_list = ai_data.get("lista_sotto_eventi_estratti", [])
-                    dati_curati = ai_data.get("dati_curati_ai", {}) or {}
-                elif isinstance(ai_data, list):
-                    extracted_list = ai_data
+            # Lo standard analyzer restituisce il documento JSON unificato (schema_version 2.0):
+            # "dati_curati_ai" per l'evento padre, "lista_sotto_eventi_estratti" per i figli
+            # (compilata dall'AI stessa se riconosce piu' date/serate nel testo).
+            extracted_list = []
+            dati_curati = {}
+            if isinstance(ai_data := ai_result, dict):
+                extracted_list = ai_data.get("lista_sotto_eventi_estratti", [])
+                dati_curati = ai_data.get("dati_curati_ai", {}) or {}
+            elif isinstance(ai_data, list):
+                extracted_list = ai_data
 
-                ev.is_festival = len(extracted_list) > 0 or args.force_festival
+            ev.is_festival = len(extracted_list) > 0 or args.force_festival
 
-                # Applichiamo all'evento padre TUTTO quello che l'AI ha generato in
-                # dati_curati_ai — non solo titolo/testo/date come in precedenza.
-                if dati_curati.get("titolo"):
-                    ev.titolo = dati_curati.get("titolo")
-                if dati_curati.get("testo_estratto"):
-                    ev.testo_estratto = dati_curati.get("testo_estratto")
-                if dati_curati.get("data_inizio"):
-                    ev.data_inizio = _parse_mixed_date(dati_curati.get("data_inizio"))
-                if dati_curati.get("data_fine"):
-                    ev.data_fine = _parse_mixed_date(dati_curati.get("data_fine"))
-                if dati_curati.get("luogo"):
-                    ev.luogo = dati_curati.get("luogo")
-                if dati_curati.get("categoria"):
-                    ev.categoria = dati_curati.get("categoria")
-                ev.ora_inizio = dati_curati.get("ora_inizio") or ev.ora_inizio
-                ev.ora_fine = dati_curati.get("ora_fine") or ev.ora_fine
-                ev.link_organizzatore = dati_curati.get("link_organizzatore") or ev.link_organizzatore
-                ev.link_biglietti = dati_curati.get("link_biglietti") or ev.link_biglietti
-                ev.is_ingresso_gratuito = dati_curati.get("is_ingresso_gratuito", ev.is_ingresso_gratuito)
-                ev.artisti = dati_curati.get("artisti") or ev.artisti
-                ev.tags = dati_curati.get("tags") or ev.tags
-                ev.is_evento = dati_curati.get("is_evento", True)
-                ev.dettagli_dominio = dati_curati.get("dettagli_dominio")
-                approfondimenti_padre = dati_curati.get("approfondimenti_extra", {}) or {}
-                ev.bio_artisti = approfondimenti_padre.get("bio_artisti") or ev.bio_artisti
-                ev.social_contatti = approfondimenti_padre.get("social_contatti") or ev.social_contatti
+            # Applichiamo all'evento padre TUTTO quello che l'AI ha generato in
+            # dati_curati_ai — non solo titolo/testo/date come in precedenza.
+            if dati_curati.get("titolo"):
+                ev.titolo = dati_curati.get("titolo")
+            if dati_curati.get("testo_estratto"):
+                ev.testo_estratto = dati_curati.get("testo_estratto")
+            if dati_curati.get("data_inizio"):
+                ev.data_inizio = _parse_mixed_date(dati_curati.get("data_inizio"))
+            if dati_curati.get("data_fine"):
+                ev.data_fine = _parse_mixed_date(dati_curati.get("data_fine"))
+            if dati_curati.get("luogo"):
+                ev.luogo = dati_curati.get("luogo")
+            if dati_curati.get("categoria"):
+                ev.categoria = dati_curati.get("categoria")
+            ev.ora_inizio = dati_curati.get("ora_inizio") or ev.ora_inizio
+            ev.ora_fine = dati_curati.get("ora_fine") or ev.ora_fine
+            ev.link_organizzatore = dati_curati.get("link_organizzatore") or ev.link_organizzatore
+            ev.link_biglietti = dati_curati.get("link_biglietti") or ev.link_biglietti
+            ev.is_ingresso_gratuito = dati_curati.get("is_ingresso_gratuito", ev.is_ingresso_gratuito)
+            ev.artisti = dati_curati.get("artisti") or ev.artisti
+            ev.tags = dati_curati.get("tags") or ev.tags
+            ev.is_evento = dati_curati.get("is_evento", True)
+            ev.dettagli_dominio = dati_curati.get("dettagli_dominio")
+            approfondimenti_padre = dati_curati.get("approfondimenti_extra", {}) or {}
+            ev.bio_artisti = approfondimenti_padre.get("bio_artisti") or ev.bio_artisti
+            ev.social_contatti = approfondimenti_padre.get("social_contatti") or ev.social_contatti
 
-                # Documento AI completo e non modificato (schema unificato v2.0),
-                # da registrare cosi' com'e' nella tabella ai_analysis.
-                ev.documento_ai = {k: v for k, v in ai_data.items() if k != "_usage"} if isinstance(ai_data, dict) else None
+            # Documento AI completo e non modificato (schema unificato v2.0),
+            # da registrare cosi' com'e' nella tabella ai_analysis.
+            ev.documento_ai = {k: v for k, v in ai_data.items() if k != "_usage"} if isinstance(ai_data, dict) else None
 
-                sotto_eventi_objs = []
-                for se in extracted_list:
-                    if se.get("is_evento") is False:
-                        continue
-                    # Map the unified evento-figlio JSON back to SottoEvento, campo per campo
-                    approfondimenti_figlio = se.get("approfondimenti_extra", {}) or {}
-                    se_obj = SottoEvento(
-                        titolo=se.get("titolo", "Evento Senza Titolo"),
-                        data_inizio=se.get("data_inizio", ""),
-                        data_fine=se.get("data_fine", ""),
-                        date_testuali=se.get("data_inizio", ""),
-                        luogo=se.get("luogo", ""),
-                        url=se.get("link_organizzatore") or se.get("link_biglietti") or "",
-                        descrizione=se.get("testo_estratto", ""),
-                        ora_inizio=se.get("ora_inizio"),
-                        ora_fine=se.get("ora_fine"),
-                        artisti=se.get("artisti", []),
-                        tags=se.get("tags", []),
-                        is_ingresso_gratuito=se.get("is_ingresso_gratuito", False),
-                        categoria=se.get("categoria"),
-                        is_evento=se.get("is_evento", True),
-                        link_organizzatore=se.get("link_organizzatore"),
-                        link_biglietti=se.get("link_biglietti"),
-                        dettagli_dominio=se.get("dettagli_dominio"),
-                        bio_artisti=approfondimenti_figlio.get("bio_artisti", []),
-                        social_contatti=approfondimenti_figlio.get("social_contatti", []),
-                    )
-                    sotto_eventi_objs.append(se_obj)
+            sotto_eventi_objs = []
+            for se in extracted_list:
+                if se.get("is_evento") is False:
+                    continue
+                # Map the unified evento-figlio JSON back to SottoEvento, campo per campo
+                approfondimenti_figlio = se.get("approfondimenti_extra", {}) or {}
+                se_obj = SottoEvento(
+                    titolo=se.get("titolo", "Evento Senza Titolo"),
+                    data_inizio=se.get("data_inizio", ""),
+                    data_fine=se.get("data_fine", ""),
+                    date_testuali=se.get("data_inizio", ""),
+                    luogo=se.get("luogo", ""),
+                    url=se.get("link_organizzatore") or se.get("link_biglietti") or "",
+                    descrizione=se.get("testo_estratto", ""),
+                    ora_inizio=se.get("ora_inizio"),
+                    ora_fine=se.get("ora_fine"),
+                    artisti=se.get("artisti", []),
+                    tags=se.get("tags", []),
+                    is_ingresso_gratuito=se.get("is_ingresso_gratuito", False),
+                    categoria=se.get("categoria"),
+                    is_evento=se.get("is_evento", True),
+                    link_organizzatore=se.get("link_organizzatore"),
+                    link_biglietti=se.get("link_biglietti"),
+                    dettagli_dominio=se.get("dettagli_dominio"),
+                    bio_artisti=approfondimenti_figlio.get("bio_artisti", []),
+                    social_contatti=approfondimenti_figlio.get("social_contatti", []),
+                )
+                sotto_eventi_objs.append(se_obj)
 
-                ev.sotto_eventi = sotto_eventi_objs
-                emit_log(f"L'AI Extractor ha trovato {len(ev.sotto_eventi)} sotto-eventi grezzi.")
+            ev.sotto_eventi = sotto_eventi_objs
+            emit_log(f"L'AI Extractor ha trovato {len(ev.sotto_eventi)} sotto-eventi grezzi.")
+
+            # Monitoraggio qualita': un estratto del testo generato e i campi
+            # chiave dello schema JSON ancora vuoti dopo l'analisi, cosi' si vede
+            # nel log dell'admin cosa l'AI ha effettivamente prodotto per ogni
+            # evento invece di scoprirlo solo dopo aprendo la scheda.
+            estratto = (ev.testo_estratto or "").replace("\n", " ").strip()
+            anteprima = estratto[:150] + ("…" if len(estratto) > 150 else "")
+            emit_log(f"   ↳ Testo: {anteprima}" if anteprima else "   ↳ Testo: (vuoto)")
+            campi_chiave = {
+                "categoria": ev.categoria,
+                "luogo": ev.luogo,
+                "data_inizio": ev.data_inizio,
+                "artisti": ev.artisti,
+                "tags": ev.tags,
+            }
+            mancanti = [nome for nome, valore in campi_chiave.items() if not valore]
+            if mancanti:
+                emit_log(f"   ⚠️ Campi mancanti: {', '.join(mancanti)}")
+            else:
+                emit_log(f"   ✅ Campi principali completi")
 
             # Genera un ID temporaneo per mantenere i legami
             import uuid

@@ -5,13 +5,11 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Eye, Search, CheckCircle2, Brain, XCircle, Upload } from "lucide-react";
+import { Loader2, Search, CheckCircle2, Brain, XCircle, Upload } from "lucide-react";
 
 export interface ScraperPanelProps {
   selectedSources: string[];
   setSelectedSources: React.Dispatch<React.SetStateAction<string[]>>;
-  useAiCrawler?: boolean;
-  setUseAiCrawler?: (val: boolean) => void;
   loadingPreview: boolean;
   keyVerified: boolean;
   handlePreview: () => void;
@@ -35,8 +33,6 @@ export interface ScraperPanelProps {
 export const ScraperPanel: React.FC<ScraperPanelProps> = ({
   selectedSources,
   setSelectedSources,
-  useAiCrawler = false,
-  setUseAiCrawler,
   loadingPreview,
   keyVerified,
   handlePreview,
@@ -61,24 +57,15 @@ export const ScraperPanel: React.FC<ScraperPanelProps> = ({
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center justify-between">
           <span>Preview eventi dalle fonti</span>
-          {setUseAiCrawler && (
-            <div className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 px-3 py-1.5 rounded-lg">
-              <Brain className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="toggle-ai-crawler"
-                  checked={useAiCrawler}
-                  onCheckedChange={(checked) => setUseAiCrawler(!!checked)}
-                />
-                <Label htmlFor="toggle-ai-crawler" className="text-xs font-semibold cursor-pointer text-indigo-700 dark:text-indigo-300">
-                  Analisi Profonda con Crawler AI (Gemini 3.1 Pro)
-                </Label>
-              </div>
-            </div>
-          )}
+          <div className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 px-3 py-1.5 rounded-lg">
+            <Brain className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+              Ogni evento viene letto e analizzato dall'AI
+            </span>
+          </div>
         </CardTitle>
         <CardDescription>
-          Avvia lo scraper o il Crawler AI sulle fonti selezionate. Gli eventi estratti verranno salvati direttamente nel DB in attesa di approvazione.
+          Avvia il Crawler AI sulle fonti selezionate: apre la pagina fonte di ogni evento e ne estrae automaticamente categoria, artisti, testo e gli altri campi. Gli eventi estratti verranno salvati direttamente nel DB in attesa di approvazione.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -290,16 +277,16 @@ export const ScraperPanel: React.FC<ScraperPanelProps> = ({
         <Button
           onClick={handlePreview}
           disabled={loadingPreview || selectedSources.length === 0}
-          className={`w-full max-w-md mt-2 ${useAiCrawler ? "bg-indigo-600 hover:bg-indigo-700 text-white" : ""}`}
+          className="w-full max-w-md mt-2 bg-indigo-600 hover:bg-indigo-700 text-white"
         >
           {loadingPreview ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> {useAiCrawler ? "Crawler AI in corso su fonti…" : "Scraping in corso…"}
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Crawler AI in corso su fonti…
             </>
           ) : (
             <>
-              {useAiCrawler ? <Brain className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
-              {useAiCrawler ? `Avvia Crawler AI Gemini (${selectedSources.length} fonti)` : `Avvia Scraper (${selectedSources.length} fonti)`}
+              <Brain className="w-4 h-4 mr-2" />
+              {`Avvia Crawler AI Gemini (${selectedSources.length} fonti)`}
             </>
           )}
         </Button>

@@ -214,7 +214,6 @@ export function Admin() {
   const [keyError, setKeyError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("scraping");
   const [analysisTarget, setAnalysisTarget] = useState<"both" | "both_source" | "image" | "text" | "source_page">("both");
-  const [useAiCrawler, setUseAiCrawler] = useState<boolean>(false);
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [analysisLogs, setAnalysisLogs] = useState<string[]>([]);
   const [analyzingStep, setAnalyzingStep] = useState<"idle" | "preview" | "published">("idle");
@@ -510,7 +509,7 @@ export function Admin() {
           "Content-Type": "application/json",
           "x-admin-key": adminKey.trim()
         },
-        body: JSON.stringify({ sources: selectedSources, useAiCrawler })
+        body: JSON.stringify({ sources: selectedSources })
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       if (!resp.body) throw new Error("No response body");
@@ -1900,8 +1899,6 @@ export function Admin() {
             <ScraperPanel
               selectedSources={selectedSources}
               setSelectedSources={setSelectedSources}
-              useAiCrawler={useAiCrawler}
-              setUseAiCrawler={setUseAiCrawler}
               loadingPreview={loadingPreview}
               keyVerified={keyVerified}
               handlePreview={handlePreview}
