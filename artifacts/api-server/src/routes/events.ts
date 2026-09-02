@@ -54,6 +54,44 @@ async function recordAiAnalysis(
   }
 }
 
+// Fonte unica di verita' per la mappatura da un evento "grezzo" (snake_case,
+// prodotto da scraper/AI in Python) ai campi condivisi tra pending_events ed
+// events. Ogni punto del codice che scrive un evento passa da qui, cosi' un
+// campo nuovo o dimenticato si aggiunge in un solo posto invece che in ognuno
+// dei blocchi di insert/update sparsi nel file.
+function buildCoreEventValues(ev: any) {
+  return {
+    titolo: ev.titolo || "Evento Senza Titolo",
+    titoloOriginale: ev.titolo_originale || ev.titolo || null,
+    categoria: ev.categoria || null,
+    dataInizio: ev.data_inizio || null,
+    dataFine: ev.data_fine || null,
+    dateOriginali: ev.date_originali || null,
+    oraInizio: ev.ora_inizio || null,
+    oraFine: ev.ora_fine || null,
+    luogo: ev.luogo || null,
+    luogoOriginale: ev.luogo_originale || ev.luogo || null,
+    latitudine: ev.latitudine ?? null,
+    longitudine: ev.longitudine ?? null,
+    link: ev.link || null,
+    linkOrganizzatore: ev.link_organizzatore || null,
+    linkBiglietti: ev.link_biglietti || null,
+    descrizione: ev.descrizione || null,
+    immagine: ev.immagine || null,
+    fonte: ev.fonte || "",
+    testoEstratto: ev.testo_estratto || null,
+    isFestival: ev.is_festival ?? false,
+    isIngressoGratuito: ev.is_ingresso_gratuito ?? false,
+    isEvento: ev.is_evento ?? true,
+    tags: ev.tags || null,
+    artisti: ev.artisti || null,
+    bioArtisti: ev.bio_artisti || null,
+    socialContatti: ev.social_contatti || null,
+    dettagliDominio: ev.dettagli_dominio || null,
+    dettagliExtra: ev.dettagli_extra || null,
+  };
+}
+
 function calculateTitleSimilarity(s1: string, s2: string): number {
   if (!s1 || !s2) return 0;
   const str1 = s1.toLowerCase().trim().replace(/[^a-z0-9]/g, "");
@@ -449,37 +487,12 @@ router.post("/events/refresh/preview", requireAdminKey, (req, res): void => {
                   }
 
                   const [insertedPending] = await db.insert(pendingEventsTable).values({
+                    ...buildCoreEventValues(ev),
                     titolo: evTitle,
-                    titoloOriginale: ev.titolo_originale || ev.titolo || null,
-                    categoria: ev.categoria || null,
-                    dataInizio: evDate,
-                    dataFine: ev.data_fine || null,
-                    dateOriginali: ev.date_originali || null,
-                    oraInizio: ev.ora_inizio || null,
-                    oraFine: ev.ora_fine || null,
-                    luogo: ev.luogo || null,
-                    luogoOriginale: ev.luogo_originale || ev.luogo || null,
-                    latitudine: ev.latitudine || null,
-                    longitudine: ev.longitudine || null,
-                    link: ev.link || null,
-                    linkOrganizzatore: ev.link_organizzatore || null,
-                    linkBiglietti: ev.link_biglietti || null,
-                    descrizione: ev.descrizione || null,
-                    immagine: ev.immagine || null,
                     fonte: ev.fonte || "Scraper Multi-fonte",
-                    testoEstratto: ev.testo_estratto || null,
-                    isFestival: ev.is_festival ?? false,
-                    isIngressoGratuito: ev.is_ingresso_gratuito ?? false,
-                    isEvento: ev.is_evento ?? true,
                     parentTempId: ev.dettagli_extra?.parent_temp_id || null,
                     rawScrapeId: rawScrapeId,
                     sottoEventi: ev.sotto_eventi || null,
-                    tags: ev.tags || null,
-                    artisti: ev.artisti || null,
-                    bioArtisti: ev.bio_artisti || null,
-                    socialContatti: ev.social_contatti || null,
-                    dettagliDominio: ev.dettagli_dominio || null,
-                    dettagliExtra: ev.dettagli_extra || null,
                   }).returning({ id: pendingEventsTable.id });
 
                   if (insertedPending) {
@@ -732,37 +745,13 @@ router.post("/events/scrape-url", requireAdminKey, async (req, res): Promise<voi
           }
 
           const [insertedPending] = await db.insert(pendingEventsTable).values({
+            ...buildCoreEventValues(ev),
             titolo: evTitle,
-            titoloOriginale: ev.titolo_originale || ev.titolo || null,
-            categoria: ev.categoria || null,
-            dataInizio: evDate,
-            dataFine: ev.data_fine || null,
-            dateOriginali: ev.date_originali || null,
-            oraInizio: ev.ora_inizio || null,
-            oraFine: ev.ora_fine || null,
-            luogo: ev.luogo || null,
-            luogoOriginale: ev.luogo_originale || ev.luogo || null,
-            latitudine: ev.latitudine || null,
-            longitudine: ev.longitudine || null,
             link: ev.link || url,
-            linkOrganizzatore: ev.link_organizzatore || null,
-            linkBiglietti: ev.link_biglietti || null,
-            descrizione: ev.descrizione || null,
-            immagine: ev.immagine || null,
             fonte: ev.fonte || "Scraper URL",
-            testoEstratto: ev.testo_estratto || null,
-            isFestival: ev.is_festival ?? false,
-            isIngressoGratuito: ev.is_ingresso_gratuito ?? false,
-            isEvento: ev.is_evento ?? true,
             parentTempId: ev.dettagli_extra?.parent_temp_id || null,
             rawScrapeId: rawScrapeId,
             sottoEventi: ev.sotto_eventi || null,
-            tags: ev.tags || null,
-            artisti: ev.artisti || null,
-            bioArtisti: ev.bio_artisti || null,
-            socialContatti: ev.social_contatti || null,
-            dettagliDominio: ev.dettagli_dominio || null,
-            dettagliExtra: ev.dettagli_extra || null,
           }).returning({ id: pendingEventsTable.id });
 
           if (insertedPending) {
@@ -953,36 +942,11 @@ router.post("/events/upload-pdf", requireAdminKey, upload.single("file"), async 
       for (const ev of resultJson.events) {
         try {
           const [insertedPending] = await db.insert(pendingEventsTable).values({
+            ...buildCoreEventValues(ev),
             titolo: ev.titolo || "Evento da PDF",
-            titoloOriginale: ev.titolo_originale || ev.titolo || null,
-            categoria: ev.categoria || null,
-            dataInizio: ev.data_inizio || null,
-            dataFine: ev.data_fine || null,
-            dateOriginali: ev.date_originali || null,
-            oraInizio: ev.ora_inizio || null,
-            oraFine: ev.ora_fine || null,
-            luogo: ev.luogo || null,
-            luogoOriginale: ev.luogo_originale || ev.luogo || null,
-            latitudine: ev.latitudine || null,
-            longitudine: ev.longitudine || null,
-            link: ev.link || null,
-            linkOrganizzatore: ev.link_organizzatore || null,
-            linkBiglietti: ev.link_biglietti || null,
-            descrizione: ev.descrizione || null,
-            immagine: ev.immagine || null,
             fonte: ev.fonte || "Estrattore PDF",
-            testoEstratto: ev.testo_estratto || null,
-            isFestival: ev.is_festival ?? false,
-            isIngressoGratuito: ev.is_ingresso_gratuito ?? false,
-            isEvento: ev.is_evento ?? true,
             parentTempId: ev.dettagli_extra?.parent_temp_id || null,
             sottoEventi: ev.sotto_eventi || null,
-            tags: ev.tags || null,
-            artisti: ev.artisti || null,
-            bioArtisti: ev.bio_artisti || null,
-            socialContatti: ev.social_contatti || null,
-            dettagliDominio: ev.dettagli_dominio || null,
-            dettagliExtra: ev.dettagli_extra || null,
           }).returning({ id: pendingEventsTable.id });
 
           if (insertedPending) {
@@ -1015,36 +979,9 @@ router.put("/events/refresh/preview/cache", requireAdminKey, async (req, res): P
 
     for (const ev of events) {
       const values = {
-        titolo: ev.titolo || "Evento Senza Titolo",
-        titoloOriginale: ev.titolo_originale || ev.titolo || null,
-        categoria: ev.categoria || null,
-        dataInizio: ev.data_inizio || null,
-        dataFine: ev.data_fine || null,
-        dateOriginali: ev.date_originali || null,
-        oraInizio: ev.ora_inizio || null,
-        oraFine: ev.ora_fine || null,
-        luogo: ev.luogo || null,
-        luogoOriginale: ev.luogo_originale || ev.luogo || null,
-        latitudine: ev.latitudine ?? null,
-        longitudine: ev.longitudine ?? null,
-        link: ev.link || null,
-        linkOrganizzatore: ev.link_organizzatore || null,
-        linkBiglietti: ev.link_biglietti || null,
-        descrizione: ev.descrizione || null,
-        immagine: ev.immagine || null,
-        fonte: ev.fonte || "",
-        testoEstratto: ev.testo_estratto || null,
-        isFestival: ev.is_festival ?? false,
-        isIngressoGratuito: ev.is_ingresso_gratuito ?? false,
-        isEvento: ev.is_evento ?? true,
+        ...buildCoreEventValues(ev),
         parentTempId: ev.dettagli_extra?.parent_temp_id || null,
         sottoEventi: ev.sotto_eventi || null,
-        tags: ev.tags || null,
-        artisti: ev.artisti || null,
-        bioArtisti: ev.bio_artisti || null,
-        socialContatti: ev.social_contatti || null,
-        dettagliDominio: ev.dettagli_dominio || null,
-        dettagliExtra: ev.dettagli_extra || null,
       };
 
       try {
@@ -1220,36 +1157,13 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
 
         if (existingId) {
           if (ev.dettagli_extra?.id_key) tempIdMap[ev.dettagli_extra.id_key] = existingId;
+          const { fonte: _fonte, ...coreValues } = buildCoreEventValues(ev);
           await db.update(eventsTable)
             .set({
-              titolo: ev.titolo,
-              titoloOriginale: ev.titolo_originale || ev.titolo,
-              categoria: ev.categoria || null,
-              dataInizio: dataInizio,
-              dataFine: dataFine,
-              dateOriginali: ev.date_originali || null,
-              oraInizio: ev.ora_inizio || null,
-              oraFine: ev.ora_fine || null,
-              luogo: ev.luogo,
-              luogoOriginale: ev.luogo_originale || ev.luogo,
-              latitudine: ev.latitudine,
-              longitudine: ev.longitudine,
-              link: ev.link,
-              linkOrganizzatore: ev.link_organizzatore || null,
-              linkBiglietti: ev.link_biglietti || null,
-              descrizione: ev.descrizione,
-              immagine: ev.immagine,
-              testoEstratto: ev.testo_estratto || null,
-              isFestival: ev.is_festival ?? false,
-              isIngressoGratuito: ev.is_ingresso_gratuito ?? false,
+              ...coreValues,
+              dataInizio,
+              dataFine,
               parentId: ev.parent_id || null,
-              tags: ev.tags || null,
-              artisti: ev.artisti || null,
-              bioArtisti: ev.bio_artisti || null,
-              socialContatti: ev.social_contatti || null,
-              isEvento: ev.is_evento ?? true,
-              dettagliDominio: ev.dettagli_dominio || null,
-              dettagliExtra: ev.dettagli_extra || null,
               aggiornatoIl: new Date(),
             })
             .where(eq(eventsTable.id, existingId));
@@ -1257,35 +1171,10 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
           aggiornati++;
         } else {
           const [inserted] = await db.insert(eventsTable).values({
-            titolo: ev.titolo,
-            titoloOriginale: ev.titolo_originale || ev.titolo,
-            categoria: ev.categoria || null,
-            dataInizio: dataInizio,
-            dataFine: dataFine,
-            dateOriginali: ev.date_originali || null,
-            oraInizio: ev.ora_inizio || null,
-            oraFine: ev.ora_fine || null,
-            luogo: ev.luogo,
-            luogoOriginale: ev.luogo_originale || ev.luogo,
-            latitudine: ev.latitudine,
-            longitudine: ev.longitudine,
-            link: ev.link,
-            linkOrganizzatore: ev.link_organizzatore || null,
-            linkBiglietti: ev.link_biglietti || null,
-            descrizione: ev.descrizione,
-            immagine: ev.immagine,
-            fonte: ev.fonte || "",
-            testoEstratto: ev.testo_estratto || null,
-            isFestival: ev.is_festival ?? false,
-            isIngressoGratuito: ev.is_ingresso_gratuito ?? false,
+            ...buildCoreEventValues(ev),
+            dataInizio,
+            dataFine,
             parentId: ev.parent_id || null,
-            tags: ev.tags || null,
-            artisti: ev.artisti || null,
-            bioArtisti: ev.bio_artisti || null,
-            socialContatti: ev.social_contatti || null,
-            isEvento: ev.is_evento ?? true,
-            dettagliDominio: ev.dettagli_dominio || null,
-            dettagliExtra: ev.dettagli_extra || null,
           }).returning({ id: eventsTable.id });
 
           const parentId = inserted?.id;
@@ -1320,36 +1209,12 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
         }
 
         if (existingId) {
+          const { fonte: _fonte, ...coreValues } = buildCoreEventValues(ev);
           await db.update(eventsTable)
             .set({
-              titolo: ev.titolo,
-              titoloOriginale: ev.titolo_originale || ev.titolo,
-              categoria: ev.categoria || null,
-              dataInizio: ev.data_inizio,
-              dataFine: ev.data_fine,
-              dateOriginali: ev.date_originali || null,
-              oraInizio: ev.ora_inizio || null,
-              oraFine: ev.ora_fine || null,
-              luogo: ev.luogo,
-              luogoOriginale: ev.luogo_originale || ev.luogo,
-              latitudine: ev.latitudine,
-              longitudine: ev.longitudine,
-              link: ev.link,
-              linkOrganizzatore: ev.link_organizzatore || null,
-              linkBiglietti: ev.link_biglietti || null,
-              descrizione: ev.descrizione,
-              immagine: ev.immagine,
-              testoEstratto: ev.testo_estratto || null,
+              ...coreValues,
               isFestival: false,
-              isIngressoGratuito: ev.is_ingresso_gratuito ?? false,
               parentId: mappedParentId,
-              tags: ev.tags || null,
-              artisti: ev.artisti || null,
-              bioArtisti: ev.bio_artisti || null,
-              socialContatti: ev.social_contatti || null,
-              isEvento: ev.is_evento ?? true,
-              dettagliDominio: ev.dettagli_dominio || null,
-              dettagliExtra: ev.dettagli_extra || null,
               aggiornatoIl: new Date(),
             })
             .where(eq(eventsTable.id, existingId));
@@ -1357,35 +1222,9 @@ router.post("/events/approve", requireAdminKey, async (req, res): Promise<void> 
           aggiornati++;
         } else {
           await db.insert(eventsTable).values({
-            titolo: ev.titolo,
-            titoloOriginale: ev.titolo_originale || ev.titolo,
-            categoria: ev.categoria || null,
-            dataInizio: ev.data_inizio,
-            dataFine: ev.data_fine,
-            dateOriginali: ev.date_originali || null,
-            oraInizio: ev.ora_inizio || null,
-            oraFine: ev.ora_fine || null,
-            luogo: ev.luogo,
-            luogoOriginale: ev.luogo_originale || ev.luogo,
-            latitudine: ev.latitudine,
-            longitudine: ev.longitudine,
-            link: ev.link,
-            linkOrganizzatore: ev.link_organizzatore || null,
-            linkBiglietti: ev.link_biglietti || null,
-            descrizione: ev.descrizione,
-            immagine: ev.immagine,
-            fonte: ev.fonte || "",
-            testoEstratto: ev.testo_estratto || null,
+            ...buildCoreEventValues(ev),
             isFestival: false,
-            isIngressoGratuito: ev.is_ingresso_gratuito ?? false,
             parentId: mappedParentId,
-            tags: ev.tags || null,
-            artisti: ev.artisti || null,
-            bioArtisti: ev.bio_artisti || null,
-            socialContatti: ev.social_contatti || null,
-            isEvento: ev.is_evento ?? true,
-            dettagliDominio: ev.dettagli_dominio || null,
-            dettagliExtra: ev.dettagli_extra || null,
           });
           nuovi++;
         }
