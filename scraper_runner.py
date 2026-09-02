@@ -385,6 +385,7 @@ def main():
     # Date parsing and filtering
     oggi_str = datetime.now().strftime("%Y-%m-%d")
 
+    scaduti = 0
     for ev in filtrati:
         data_inizio = _parse_mixed_date(ev.data_inizio)
         data_fine = _parse_mixed_date(ev.data_fine) if ev.data_fine else data_inizio
@@ -392,6 +393,7 @@ def main():
         # conta l'ultimo giorno, non il primo, cosi' un evento in corso non
         # sparisce a meta'.
         if (data_fine or data_inizio) and (data_fine or data_inizio) < oggi_str:
+            scaduti += 1
             continue
 
         found_id = None
@@ -422,6 +424,9 @@ def main():
             "is_new": is_new,
             "row_id": found_id
         })
+
+    if scaduti:
+        emit_log(f"Scartati in automatico {scaduti} eventi con data gia' passata.")
 
     if 'cur' in locals() and cur:
         try:
