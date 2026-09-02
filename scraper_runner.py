@@ -334,6 +334,12 @@ def main():
             emit_log(f"Inizio scraping da: {s.nome_fonte}...")
             eventi = s.scrapa_eventi()
             emit_log(f"Completato {s.nome_fonte}: trovati {len(eventi)} articoli.")
+            if len(eventi) == 0:
+                # Zero risultati e' spesso sintomo di un problema temporaneo (rete,
+                # blocco anti-bot, sito momentaneamente irraggiungibile) piuttosto
+                # che di "nessun evento in programma": lo segnaliamo esplicitamente
+                # cosi' non si confonde con un esito normale.
+                emit_log(f"⚠️ {s.nome_fonte} non ha restituito alcun evento: potrebbe essere un problema temporaneo del sito, riprova tra qualche minuto.")
 
             # Se lo scraper è un festival, crea/aggiorna il padre e segna tutti i figli
             if getattr(s, 'festival_name', None):
