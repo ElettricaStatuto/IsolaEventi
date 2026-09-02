@@ -1,3 +1,4 @@
+import re
 import time
 import logging
 from abc import ABC, abstractmethod
@@ -19,6 +20,23 @@ HEADERS = {
     "Accept-Language": "it-IT,it;q=0.9,en;q=0.8",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
+
+# Pattern di titoli che sono in realta' pagine indice/navigazione (es. widget
+# "Eventi Agosto 2026 a Villasimius" su paradisola.it), non eventi specifici.
+# Condiviso tra tutti gli scraper cosi' che un pattern nuovo trovato su una
+# fonte si possa riusare subito sulle altre.
+_PATTERN_PAGINA_INDICE = [
+    re.compile(r"^\s*eventi\s+\w+\s+\d{4}\s+(a|ad|in)\s+.+$", re.IGNORECASE),
+]
+
+
+def sembra_pagina_indice(titolo: Optional[str]) -> bool:
+    """True se il titolo sembra una pagina di navigazione/calendario per
+    citta' o mese, non un evento specifico (es. "Eventi Agosto 2026 a X")."""
+    if not titolo:
+        return False
+    titolo_pulito = titolo.strip()
+    return any(p.match(titolo_pulito) for p in _PATTERN_PAGINA_INDICE)
 
 
 class BaseScraper(ABC):

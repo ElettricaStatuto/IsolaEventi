@@ -14,7 +14,7 @@ import re
 from typing import Optional
 from urllib.parse import urljoin
 
-from ..base import BaseScraper
+from ..base import BaseScraper, sembra_pagina_indice
 from ..models import Evento
 
 logger = logging.getLogger(__name__)
@@ -84,6 +84,11 @@ class ParadisolaScraper(BaseScraper):
         # Titolo pulito (senza emoji, senza prefisso data)
         titolo_completo = a.get("title") or a.get_text(strip=True)
         titolo = titolo_completo.strip()
+
+        # Scarta le pagine di navigazione tipo "Eventi Agosto 2026 a Villasimius":
+        # non sono eventi specifici, sono widget di calendario per citta'/mese.
+        if sembra_pagina_indice(titolo):
+            return None
 
         # URL assoluto
         href = a.get("href", "")
