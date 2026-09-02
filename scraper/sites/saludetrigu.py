@@ -96,14 +96,31 @@ class SaludeTriguScraper(BaseScraper):
         totale_pagine = None
 
         while pagina <= MAX_PAGINE and (totale_pagine is None or pagina <= totale_pagine):
-            try:
-                risposta = self.session.get(
-                    API_URL, params={"per_page": PER_PAGE, "page": pagina}, timeout=self.timeout
-                )
-                risposta.raise_for_status()
-                dati = risposta.json()
-            except (requests.RequestException, ValueError) as e:
-                logger.error(f"[{self.nome_fonte}] Errore pagina {pagina}: {e}")
+            dati = None
+            tentativi = 2 if pagina == 1 else 1  # un retry solo sulla prima pagina, quella critica
+            ultimo_errore: Optional[Exception] = None
+            for tentativo in range(tentativi):
+                try:
+                    risposta = self.session.get(
+                        API_URL, params={"per_page": PER_PAGE, "page": pagina}, timeout=self.timeout
+                    )
+                    risposta.raise_for_status()
+                    dati = risposta.json()
+                    break
+                except (requests.RequestException, ValueError) as e:
+                    ultimo_errore = e
+                    if tentativo < tentativi - 1:
+                        logger.warning(f"[{self.nome_fonte}] Errore pagina {pagina} (tentativo {tentativo + 1}/{tentativi}): {e}, riprovo...")
+                        time.sleep(self.pausa)
+
+            if dati is None:
+                logger.error(f"[{self.nome_fonte}] Errore pagina {pagina}: {ultimo_errore}")
+                if pagina == 1:
+                    # Se fallisce gia' la prima pagina non abbiamo nessun dato:
+                    # rilanciamo per far comparire l'errore nel log dell'admin,
+                    # invece di restituire silenziosamente una lista vuota che
+                    # sembra "nessun evento" invece di "errore di rete".
+                    raise ultimo_errore
                 break
 
             totale_pagine = dati.get("total_pages", pagina)
