@@ -374,6 +374,13 @@ REGOLE TASSATIVE DI FORMATTAZIONE E GESTIONE FESTIVAL / SOTTO-EVENTI:
    - Determina se si tratta di una "grafica pulita e pubblicabile" (file JPG originale esportato dal computer, volantino digitale ben definito, locandina nativa ad alta definizione) o se è una "foto scattata a un foglio/schermo" (foto sgranata con smartphone, presenza di dita, sfondi, angolazione imperfetta, riflessi).
    - Inserisci il verdetto booleano in `approfondimenti_extra.immagine_pulita_e_pubblicabile` e descrivi l'eventuale problema in `approfondimenti_extra.motivo_immagine_non_pulita`.
 
+7. REGOLA LINK ORGANIZZATORE (RICERCA WEB):
+   - La pagina fonte che stai leggendo si trova su questo dominio: {{link_fonte}}
+   - Se il testo/immagine non indica gia' esplicitamente il sito ufficiale dell'evento o dell'organizzatore, USA lo strumento di ricerca Google per cercarlo (es. "<nome evento> sito ufficiale", "<nome organizzatore> Sardegna").
+   - Inserisci il link trovato in `link_organizzatore` SOLO se: (a) sei ragionevolmente sicuro che sia il sito autentico e specifico di QUESTO evento/organizzatore (dominio riconducibile al nome, contenuti coerenti con quanto descritto nel testo sorgente), e (b) è un dominio DIVERSO da quello della pagina fonte sopra indicata - se l'unico "sito" che trovi è lo stesso portale/aggregatore da cui hai gia' letto il testo, NON e' informazione utile aggiuntiva: lascia `link_organizzatore` a `null` invece di ripetere lo stesso dominio.
+   - Scarta sempre aggregatori di eventi generici, social network, o siti di un evento omonimo ma diverso.
+   - Se hai dei dubbi sull'autenticità o non trovi nulla di affidabile, lascia `link_organizzatore` a `null`. È SEVERAMENTE VIETATO inventare o indovinare un URL.
+
 STRUTTURA JSON OBBLIGATORIA:
 {json.dumps(_DOCUMENTO_EXAMPLE, indent=2, ensure_ascii=False)}
 

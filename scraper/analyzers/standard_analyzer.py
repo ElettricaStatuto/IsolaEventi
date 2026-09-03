@@ -8,6 +8,7 @@ import os
 import time
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 import requests
 
 from .prompts import PROMPT_ANALISI_LOCANDINA_STANDARD, STANDARD_RESPONSE_SCHEMA
@@ -149,10 +150,12 @@ def analyze_standard_event(
             f"- Concentrati solo ed esclusivamente sulle informazioni relative a questa specifica serata/attività: '{titolo}'."
         )
 
+    link_fonte_dominio = urlparse(link).netloc if link else "(nessuna pagina fonte, solo testo/immagine forniti)"
     prompt = (
         PROMPT_ANALISI_LOCANDINA_STANDARD
         .replace("{festival_instruction}", festival_instruction)
         .replace("{model_name}", model_name)
+        .replace("{link_fonte}", link_fonte_dominio)
         .replace("{descrizione}", descrizione)
     )
     contents = [prompt]
@@ -207,6 +210,7 @@ def analyze_standard_event(
             model=model_name,
             contents=contents,
             config=types.GenerateContentConfig(
+                tools=[types.Tool(google_search=types.GoogleSearch())],
                 response_mime_type="application/json",
                 response_json_schema=STANDARD_RESPONSE_SCHEMA,
             ),
