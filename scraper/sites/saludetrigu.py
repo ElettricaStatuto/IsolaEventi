@@ -16,8 +16,10 @@ con i suoi Sotto-eventi, invece di lasciarle come voci scollegate.
 import datetime
 import json
 import logging
+import re
 import time
 from typing import List, Optional
+from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 import requests
@@ -29,6 +31,13 @@ logger = logging.getLogger(__name__)
 
 URL_CALENDARIO = "https://saludetrigu.it/calendario-eventi/"
 URL_BASE = "https://saludetrigu.it"
+
+# Ogni pagina di UNA singola occorrenza riporta in fondo un link "Vai
+# all'evento completo" verso la pagina generale della rassegna (un post
+# WordPress normale, es. /2026/05/summerbeach-2026-.../), che contiene
+# l'intero programma con tutte le date - molto piu' ricca di una singola
+# occorrenza. Lo cerchiamo per usare QUELLA pagina come fonte per il padre.
+_RE_EVENTO_COMPLETO = re.compile(r"vai all.?evento completo", re.IGNORECASE)
 
 
 def _pulisci_html(testo: Optional[str]) -> Optional[str]:
@@ -117,6 +126,27 @@ class SaludeTriguScraper(BaseScraper):
         raise ultimo_errore
 
     # ------------------------------------------------------------------
+    def _link_programma_completo(self, url_occorrenza: Optional[str]) -> Optional[str]:
+        """Apre la pagina di una singola occorrenza e cerca il link 'Vai
+        all'evento completo'. Se non lo trova (o la richiesta fallisce),
+        restituisce None: chi chiama ricade sull'occorrenza stessa, non e'
+        un errore bloccante."""
+        if not url_occorrenza:
+            return None
+        try:
+            risposta = self.session.get(url_occorrenza, timeout=self.timeout)
+            risposta.raise_for_status()
+        except requests.RequestException as e:
+            logger.warning(f"[{self.nome_fonte}] Impossibile aprire '{url_occorrenza}' per cercare il link al programma completo: {e}")
+            return None
+
+        soup = BeautifulSoup(risposta.text, "html.parser")
+        for a in soup.find_all("a", href=True):
+            if _RE_EVENTO_COMPLETO.search(a.get_text(strip=True)):
+                return urljoin(URL_BASE, a["href"])
+        return None
+
+    # ------------------------------------------------------------------
     def _evento_singolo(self, occ: dict) -> Evento:
         data_iso, ora = _data_ora_da_ts(occ.get("start_ts"))
         return Evento(
@@ -154,12 +184,18 @@ class SaludeTriguScraper(BaseScraper):
         data_fine, _ = _data_ora_da_ts(ultimo.get("start_ts"))
         immagine = next((o.get("thumbnail") for o in occs if o.get("thumbnail")), None)
 
+        # Preferiamo la pagina "programma completo" (con TUTTE le date e un
+        # vero articolo) al link della singola prima occorrenza, quando
+        # disponibile - e' quella che poi il Crawler AI andra' a leggere.
+        url_padre = self._link_programma_completo(primo.get("link")) or primo.get("link")
+        time.sleep(self.pausa)
+
         return Evento(
             titolo=_pulisci_html(titolo),
             data_inizio=data_inizio,
             data_fine=data_fine,
             luogo=None,  # il festival attraversa piu' luoghi, i sotto-eventi hanno il proprio
-            url=primo.get("link"),
+            url=url_padre,
             immagine=immagine,
             fonte=self.nome_fonte,
             is_festival=True,
