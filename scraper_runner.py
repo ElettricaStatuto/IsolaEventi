@@ -536,14 +536,16 @@ def main():
                 )
                 sotto_eventi_objs.append(se_obj)
 
-            if sotto_eventi_objs:
-                # L'AI ha trovato sotto-eventi leggendo la pagina fonte: li usiamo.
+            if ev.sotto_eventi:
+                # Lo scraper aveva gia' raggruppato i sotto-eventi in modo
+                # affidabile (es. da un'API strutturata): li teniamo sempre.
+                # Il link letto dall'AI e' spesso quello di UNA singola
+                # data/occorrenza, non della pagina generale del festival,
+                # quindi anche se l'AI trova "qualcosa" non puo' conoscere
+                # le altre date come lo scraper.
+                pass
+            elif sotto_eventi_objs:
                 ev.sotto_eventi = sotto_eventi_objs
-            # Se l'AI non ha trovato nulla ma lo scraper aveva gia' raggruppato
-            # dei sotto-eventi in modo affidabile (es. da un'API strutturata),
-            # NON li cancelliamo: il link letto dall'AI e' spesso quello di una
-            # singola data/occorrenza, non della pagina generale del festival,
-            # quindi e' normale che l'AI da sola non veda le altre date.
             emit_log(f"L'AI Extractor ha trovato {len(sotto_eventi_objs)} sotto-eventi grezzi.")
 
             # Monitoraggio qualita': un estratto del testo generato e i campi
