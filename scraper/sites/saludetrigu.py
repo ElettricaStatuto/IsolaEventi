@@ -117,6 +117,19 @@ class SaludeTriguScraper(BaseScraper):
                         # anti-bot invece dei dati veri. Includiamo un estratto
                         # del corpo cosi' l'errore nel log e' diagnosticabile.
                         estratto = risposta.text[:200].replace("\n", " ").strip()
+                        if "sgcaptcha" in estratto.lower():
+                            # Blocco anti-bot attivo sul nostro IP (plugin di
+                            # sicurezza dell'hosting, non Cloudflare): non e'
+                            # transitorio come un errore di rete, riprovare
+                            # subito non serve a nulla. Falliamo rapidamente
+                            # con un messaggio chiaro invece di consumare le
+                            # attese di retry per niente.
+                            raise RuntimeError(
+                                "Il sito ha bloccato le nostre richieste con una verifica "
+                                "anti-bot (captcha di sicurezza dell'hosting). Non e' un problema "
+                                "di rete: bisogna aspettare che il blocco scada, oppure aprire "
+                                "saludetrigu.it in un browser normale per sbloccare l'IP."
+                            ) from e
                         raise ValueError(f"{e} — corpo risposta: {estratto!r}") from e
                     break
                 except (requests.RequestException, ValueError) as e:
