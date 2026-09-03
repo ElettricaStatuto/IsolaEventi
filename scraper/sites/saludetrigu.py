@@ -97,21 +97,32 @@ class SaludeTriguScraper(BaseScraper):
 
         while pagina <= MAX_PAGINE and (totale_pagine is None or pagina <= totale_pagine):
             dati = None
-            tentativi = 2 if pagina == 1 else 1  # un retry solo sulla prima pagina, quella critica
+            # Sulla prima pagina insistiamo di piu' e con attese crescenti: un
+            # blocco anti-bot temporaneo (es. sfida Cloudflare) puo' durare
+            # piu' della singola pausa standard tra le pagine.
+            attese = [0, 3, 8] if pagina == 1 else [0]
             ultimo_errore: Optional[Exception] = None
-            for tentativo in range(tentativi):
+            for tentativo, attesa in enumerate(attese):
+                if attesa:
+                    time.sleep(attesa)
                 try:
                     risposta = self.session.get(
                         API_URL, params={"per_page": PER_PAGE, "page": pagina}, timeout=self.timeout
                     )
                     risposta.raise_for_status()
-                    dati = risposta.json()
+                    try:
+                        dati = risposta.json()
+                    except ValueError as e:
+                        # Risposta 200 ma non-JSON: spesso una pagina di sfida
+                        # anti-bot invece dei dati veri. Includiamo un estratto
+                        # del corpo cosi' l'errore nel log e' diagnosticabile.
+                        estratto = risposta.text[:200].replace("\n", " ").strip()
+                        raise ValueError(f"{e} — corpo risposta: {estratto!r}") from e
                     break
                 except (requests.RequestException, ValueError) as e:
                     ultimo_errore = e
-                    if tentativo < tentativi - 1:
-                        logger.warning(f"[{self.nome_fonte}] Errore pagina {pagina} (tentativo {tentativo + 1}/{tentativi}): {e}, riprovo...")
-                        time.sleep(self.pausa)
+                    if tentativo < len(attese) - 1:
+                        logger.warning(f"[{self.nome_fonte}] Errore pagina {pagina} (tentativo {tentativo + 1}/{len(attese)}): {e}, riprovo...")
 
             if dati is None:
                 logger.error(f"[{self.nome_fonte}] Errore pagina {pagina}: {ultimo_errore}")
