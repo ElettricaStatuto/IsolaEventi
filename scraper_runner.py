@@ -568,6 +568,37 @@ def main():
             else:
                 emit_log(f"   ✅ Campi principali completi")
 
+            # Analizza anche ogni singolo sotto-evento sul proprio link (non
+            # solo il padre): piu' lento e piu' richieste verso la fonte, ma
+            # da' un articolo dedicato a ogni singola data/serata invece di
+            # lasciare la card vuota. Un fallimento su un sotto-evento non
+            # blocca gli altri ne' tocca i suoi dati gia' scrapati.
+            if ev.sotto_eventi:
+                emit_log(f"   🤖 Analisi dei {len(ev.sotto_eventi)} sotto-eventi...")
+                for idx_se, se in enumerate(ev.sotto_eventi, 1):
+                    if not se.url or not se.url.startswith("http"):
+                        continue
+                    time.sleep(1.5)  # pausa di cortesia tra una richiesta e l'altra
+                    try:
+                        se_target = "both_source" if se.immagine else "source_page"
+                        se_result = analyze_event(
+                            {"titolo": se.titolo, "link": se.url, "immagine": se.immagine},
+                            target=se_target, mode="analyze",
+                        )
+                        se_dati = se_result.get("dati_curati_ai", {}) or {} if isinstance(se_result, dict) else {}
+                        if se_dati.get("testo_estratto"):
+                            se.descrizione = se_dati.get("testo_estratto")
+                        if se_dati.get("categoria"):
+                            se.categoria = se_dati.get("categoria")
+                        if se_dati.get("artisti"):
+                            se.artisti = se_dati.get("artisti")
+                        if se_dati.get("tags"):
+                            se.tags = se_dati.get("tags")
+                        esito = "✅" if se_dati.get("testo_estratto") else "⚠️ nessun testo"
+                        emit_log(f"      [{idx_se}/{len(ev.sotto_eventi)}] {esito} {se.titolo} ({se.data_inizio})")
+                    except Exception as e:
+                        emit_log(f"      [{idx_se}/{len(ev.sotto_eventi)}] ❌ Errore su '{se.titolo}': {e}")
+
             # Genera un ID temporaneo per mantenere i legami
             import uuid
             temp_id = f"temp_{uuid.uuid4().hex[:8]}"
