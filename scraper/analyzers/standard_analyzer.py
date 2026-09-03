@@ -5,7 +5,9 @@ import io
 import json
 import logging
 import os
+import time
 from pathlib import Path
+from typing import Optional
 import requests
 
 from .prompts import PROMPT_ANALISI_LOCANDINA_STANDARD, STANDARD_RESPONSE_SCHEMA
@@ -13,44 +15,59 @@ from .prompts import PROMPT_ANALISI_LOCANDINA_STANDARD, STANDARD_RESPONSE_SCHEMA
 logger = logging.getLogger(__name__)
 
 
-def extract_text_from_url(url: str) -> str:
-    """Scarica ed estrae il testo pulito da una pagina web sorgente."""
-    try:
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/125.0.0.0 Safari/537.36"
-            ),
-        }
-        resp = requests.get(url, headers=headers, timeout=15)
-        if resp.status_code != 200:
-            return f"Errore caricamento pagina fonte: HTTP {resp.status_code}"
-            
-        from bs4 import BeautifulSoup
-        soup = BeautifulSoup(resp.content, "lxml")
-        
-        for element in soup(["script", "style", "nav", "footer", "header", "aside"]):
-            element.decompose()
-            
-        text = soup.get_text(separator=" ")
-        lines = (line.strip() for line in text.splitlines())
-        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-        clean_text = "\n".join(chunk for chunk in chunks if chunk)
-        
-        try:
-            raw_texts_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw_texts"
-            raw_texts_dir.mkdir(parents=True, exist_ok=True)
-            safe_name = "".join(c for c in url if c.isalnum() or c in ('-', '_')).rstrip()
-            file_path = raw_texts_dir / f"{safe_name[:50]}_scraped.txt"
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write(clean_text)
-        except Exception as e:
-            logger.warning(f"Impossibile salvare il testo grezzo: {e}")
+def extract_text_from_url(url: str) -> Optional[str]:
+    """Scarica ed estrae il testo pulito da una pagina web sorgente.
 
-        return clean_text[:8000]
-    except Exception as e:
-        return f"Errore estrazione testo da pagina fonte: {e}"
+    Ritorna None (dopo un breve retry) se il download o l'estrazione
+    falliscono, invece di una stringa che descrive l'errore: un errore di
+    rete non deve mai finire scambiato per il vero contenuto della pagina
+    e passato cosi' com'e' all'AI da analizzare - il chiamante decide come
+    trattare un fallimento reale.
+    """
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/125.0.0.0 Safari/537.36"
+        ),
+    }
+    ultimo_errore = None
+    for tentativo, attesa in enumerate([0, 3]):
+        if attesa:
+            time.sleep(attesa)
+        try:
+            resp = requests.get(url, headers=headers, timeout=15)
+            if resp.status_code != 200:
+                ultimo_errore = f"HTTP {resp.status_code}"
+                continue
+
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(resp.content, "lxml")
+
+            for element in soup(["script", "style", "nav", "footer", "header", "aside"]):
+                element.decompose()
+
+            text = soup.get_text(separator=" ")
+            lines = (line.strip() for line in text.splitlines())
+            chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+            clean_text = "\n".join(chunk for chunk in chunks if chunk)
+
+            try:
+                raw_texts_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw_texts"
+                raw_texts_dir.mkdir(parents=True, exist_ok=True)
+                safe_name = "".join(c for c in url if c.isalnum() or c in ('-', '_')).rstrip()
+                file_path = raw_texts_dir / f"{safe_name[:50]}_scraped.txt"
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(clean_text)
+            except Exception as e:
+                logger.warning(f"Impossibile salvare il testo grezzo: {e}")
+
+            return clean_text[:8000]
+        except Exception as e:
+            ultimo_errore = str(e)
+
+    logger.warning(f"Impossibile estrarre testo da '{url}' dopo i tentativi: {ultimo_errore}")
+    return None
 
 
 def analyze_standard_event(
@@ -93,7 +110,20 @@ def analyze_standard_event(
                 "sotto_eventi": [],
                 "link_organizzatore": None
             }
-        descrizione = extract_text_from_url(link)
+        testo_pagina = extract_text_from_url(link)
+        if testo_pagina is None:
+            # Pagina fonte irraggiungibile anche dopo i retry: NON mandiamo
+            # nulla all'AI (le mancherebbe qualunque contenuto vero da
+            # analizzare) e NON tocchiamo i dati gia' scrapati dell'evento -
+            # meglio un evento non ancora arricchito che uno con titolo,
+            # categoria e testo generati da un messaggio di errore.
+            return {
+                "testo_estratto": f"Errore: impossibile scaricare la pagina fonte '{link}' dopo i tentativi.",
+                "is_festival": False,
+                "sotto_eventi": [],
+                "link_organizzatore": None
+            }
+        descrizione = testo_pagina
 
     if dettagli_extra and dettagli_extra.get("pdf_path"):
         pdf_path = dettagli_extra["pdf_path"]
