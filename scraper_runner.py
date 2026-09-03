@@ -474,7 +474,7 @@ def main():
             elif isinstance(ai_data, list):
                 extracted_list = ai_data
 
-            ev.is_festival = len(extracted_list) > 0 or args.force_festival
+            ev.is_festival = len(extracted_list) > 0 or args.force_festival or bool(ev.sotto_eventi)
 
             # Applichiamo all'evento padre TUTTO quello che l'AI ha generato in
             # dati_curati_ai — non solo titolo/testo/date come in precedenza.
@@ -536,8 +536,15 @@ def main():
                 )
                 sotto_eventi_objs.append(se_obj)
 
-            ev.sotto_eventi = sotto_eventi_objs
-            emit_log(f"L'AI Extractor ha trovato {len(ev.sotto_eventi)} sotto-eventi grezzi.")
+            if sotto_eventi_objs:
+                # L'AI ha trovato sotto-eventi leggendo la pagina fonte: li usiamo.
+                ev.sotto_eventi = sotto_eventi_objs
+            # Se l'AI non ha trovato nulla ma lo scraper aveva gia' raggruppato
+            # dei sotto-eventi in modo affidabile (es. da un'API strutturata),
+            # NON li cancelliamo: il link letto dall'AI e' spesso quello di una
+            # singola data/occorrenza, non della pagina generale del festival,
+            # quindi e' normale che l'AI da sola non veda le altre date.
+            emit_log(f"L'AI Extractor ha trovato {len(sotto_eventi_objs)} sotto-eventi grezzi.")
 
             # Monitoraggio qualita': un estratto del testo generato e i campi
             # chiave dello schema JSON ancora vuoti dopo l'analisi, cosi' si vede
