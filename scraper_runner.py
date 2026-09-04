@@ -519,7 +519,14 @@ def main():
                     data_fine=se.get("data_fine", ""),
                     date_testuali=se.get("data_inizio", ""),
                     luogo=se.get("luogo", ""),
-                    url=se.get("link_organizzatore") or se.get("link_biglietti") or "",
+                    # NON usare link_organizzatore/link_biglietti come pagina-fonte:
+                    # sono il sito dell'organizzatore/della biglietteria, non la
+                    # pagina di QUESTO specifico sotto-evento (che spesso non esiste
+                    # come pagina a se' - un singolo concerto dentro un festival
+                    # raramente ha una sua pagina dedicata). Lasciando vuoto, chi
+                    # costruisce la preview ricade correttamente sulla pagina del
+                    # padre invece di un link indovinato/sbagliato.
+                    url="",
                     descrizione=se.get("testo_estratto", ""),
                     ora_inizio=se.get("ora_inizio"),
                     ora_fine=se.get("ora_fine"),

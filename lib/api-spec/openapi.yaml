@@ -319,6 +319,10 @@ components:
           type: ["array", "null"]
           items:
             type: string
+        social_contatti:
+          type: ["array", "null"]
+          items:
+            type: string
         dettagli_dominio:
           type: ["object", "null"]
           additionalProperties: true

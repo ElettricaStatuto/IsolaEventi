@@ -2,10 +2,11 @@ import React from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { XCircle, Globe, Calendar, MapPin, Clock, FileText } from "lucide-react";
+import { XCircle, Globe, Calendar, MapPin, Clock, FileText, Facebook, Instagram } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { getAssetUrl, googleMapsUrl } from "../lib/utils";
+import { getAssetUrl, googleMapsUrl, findSocialLink } from "../lib/utils";
+import { useWeather } from "../hooks/use-weather";
 
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
@@ -45,6 +46,7 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
   const [isLoadingSubEvents, setIsLoadingSubEvents] = React.useState(false);
   const miniMapRef = React.useRef<HTMLDivElement>(null);
   const leafletMiniMap = React.useRef<any>(null);
+  const weather = useWeather(event.latitudine, event.longitudine, event.data_inizio);
 
   React.useEffect(() => {
     if (!miniMapRef.current || event.latitudine == null || event.longitudine == null) return;
@@ -244,16 +246,48 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
                 </p>
               </div>
 
-              {event.link_organizzatore && (
-                <div className="mt-2">
-                  <a
-                    href={event.link_organizzatore}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold rounded-lg shadow-sm transition-all hover:scale-[1.01]"
-                  >
-                    <Globe className="w-3.5 h-3.5" /> Sito Organizzatore
-                  </a>
+              {(event.link_organizzatore || event.social_contatti?.length > 0) && (
+                <div className="mt-2 flex items-center gap-2">
+                  {event.link_organizzatore && (
+                    <a
+                      href={event.link_organizzatore}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold rounded-lg shadow-sm transition-all hover:scale-[1.01]"
+                    >
+                      <Globe className="w-3.5 h-3.5" /> Sito Organizzatore
+                    </a>
+                  )}
+                  {(() => {
+                    const fb = findSocialLink(event.social_contatti, "facebook");
+                    const ig = findSocialLink(event.social_contatti, "instagram");
+                    return (
+                      <>
+                        {fb && (
+                          <a
+                            href={fb}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Pagina Facebook"
+                            className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-[#1877F2] hover:brightness-110 text-white shadow-sm transition-all hover:scale-105"
+                          >
+                            <Facebook className="w-4 h-4" fill="currentColor" />
+                          </a>
+                        )}
+                        {ig && (
+                          <a
+                            href={ig}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Profilo Instagram"
+                            className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-tr from-amber-500 via-pink-600 to-purple-600 hover:brightness-110 text-white shadow-sm transition-all hover:scale-105"
+                          >
+                            <Instagram className="w-4 h-4" />
+                          </a>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               )}
             </div>
@@ -321,6 +355,14 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
                           {event.dettagli_extra.ora_fine && (
                             <> fino alle <strong className="text-foreground">{event.dettagli_extra.ora_fine}</strong></>
                           )}
+                        </span>
+                      </div>
+                    )}
+                    {weather && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground ml-6" title={weather.descrizione}>
+                        <span className="text-base leading-none">{weather.icon}</span>
+                        <span>
+                          {weather.descrizione} · <strong className="text-foreground">{Math.round(weather.tempMax)}°</strong> / {Math.round(weather.tempMin)}°
                         </span>
                       </div>
                     )}

@@ -33,3 +33,16 @@ export function googleMapsUrl(
   return `https://www.google.com/maps/search/?api=1&query=${latitudine},${longitudine}`;
 }
 
+/**
+ * Cerca nella lista `social_contatti` (URL/contatti liberi trovati dall'AI)
+ * il primo link verso una piattaforma specifica. Ritorna null se non c'e'.
+ */
+export function findSocialLink(
+  socialContatti: string[] | null | undefined,
+  platform: "facebook" | "instagram"
+): string | null {
+  if (!socialContatti) return null;
+  const host = platform === "facebook" ? "facebook.com" : "instagram.com";
+  return socialContatti.find((s) => s.toLowerCase().includes(host)) || null;
+}
+

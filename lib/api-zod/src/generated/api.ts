@@ -50,6 +50,7 @@ export const ListEventsResponseItem = zod.object({
   "link_organizzatore": zod.string().nullish(),
   "tags": zod.array(zod.string()).nullish(),
   "artisti": zod.array(zod.string()).nullish(),
+  "social_contatti": zod.array(zod.string()).nullish(),
   "dettagli_dominio": zod.record(zod.string(), zod.unknown()).nullish(),
   "dettagli_extra": zod.record(zod.string(), zod.unknown()).nullish()
 })
@@ -228,6 +229,7 @@ export const GetEventResponse = zod.object({
   "link_organizzatore": zod.string().nullish(),
   "tags": zod.array(zod.string()).nullish(),
   "artisti": zod.array(zod.string()).nullish(),
+  "social_contatti": zod.array(zod.string()).nullish(),
   "dettagli_dominio": zod.record(zod.string(), zod.unknown()).nullish(),
   "dettagli_extra": zod.record(zod.string(), zod.unknown()).nullish()
 })
@@ -281,6 +283,7 @@ export const UpdateEventBody = zod.object({
   "link_organizzatore": zod.string().nullish(),
   "tags": zod.array(zod.string()).nullish(),
   "artisti": zod.array(zod.string()).nullish(),
+  "social_contatti": zod.array(zod.string()).nullish(),
   "dettagli_dominio": zod.record(zod.string(), zod.unknown()).nullish(),
   "dettagli_extra": zod.record(zod.string(), zod.unknown()).nullish()
 })

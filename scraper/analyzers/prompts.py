@@ -402,6 +402,7 @@ REGOLE TASSATIVE DI FORMATTAZIONE E GESTIONE FESTIVAL / SOTTO-EVENTI:
    - Inserisci il link trovato in `link_organizzatore` SOLO se: (a) sei ragionevolmente sicuro che sia il sito autentico e specifico di QUESTO evento/organizzatore (dominio riconducibile al nome, contenuti coerenti con quanto descritto nel testo sorgente), e (b) è un dominio DIVERSO da quello della pagina fonte sopra indicata - se l'unico "sito" che trovi è lo stesso portale/aggregatore da cui hai gia' letto il testo, NON e' informazione utile aggiuntiva: lascia `link_organizzatore` a `null` invece di ripetere lo stesso dominio.
    - Scarta sempre aggregatori di eventi generici, social network, o siti di un evento omonimo ma diverso.
    - Se hai dei dubbi sull'autenticità o non trovi nulla di affidabile, lascia `link_organizzatore` a `null`. È SEVERAMENTE VIETATO inventare o indovinare un URL.
+   - Se durante la ricerca trovi (o hai gia' visto nel testo) la pagina Facebook e/o Instagram ufficiale dell'evento/organizzatore, aggiungi il loro URL completo in `approfondimenti_extra.social_contatti` (es. "https://www.facebook.com/nomepagina", "https://www.instagram.com/nomeprofilo"). Stessa cautela del punto sopra: solo se sei ragionevolmente sicuro che sia il profilo autentico, mai inventato.
 
 STRUTTURA JSON OBBLIGATORIA:
 {json.dumps(_DOCUMENTO_EXAMPLE, indent=2, ensure_ascii=False)}

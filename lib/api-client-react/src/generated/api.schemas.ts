@@ -59,6 +59,8 @@ export interface Event {
   /** @nullable */
   artisti?: string[] | null;
   /** @nullable */
+  social_contatti?: string[] | null;
+  /** @nullable */
   dettagli_dominio?: EventDettagliDominio;
   /** @nullable */
   dettagli_extra?: EventDettagliExtra;

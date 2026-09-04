@@ -7,6 +7,7 @@ import type { Event } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { Helmet } from "react-helmet-async";
 import { getAssetUrl, getEventImageUrl, googleMapsUrl } from "../lib/utils";
+import { WeatherBadge } from "../hooks/use-weather";
 
 interface EventListProps {
   events: Event[];
@@ -183,6 +184,12 @@ export function EventList({
                                 ? ` - ${format(new Date(evt.data_fine), "dd/MM/yyyy")}`
                                 : ""}
                             </span>
+                            <WeatherBadge
+                              latitudine={evt.latitudine}
+                              longitudine={evt.longitudine}
+                              dataInizio={evt.data_inizio}
+                              className="font-medium"
+                            />
                           </div>
                         )}
                         {evt.dettagli_extra?.ora_inizio && (
