@@ -142,7 +142,7 @@ export function EventList({
                           Festival
                         </div>
                       )}
-                      <h3 className={`font-bold text-foreground mb-1.5 leading-tight text-sm ${isFestival ? "pr-16 text-amber-950 dark:text-amber-100" : ""}`}>
+                      <h3 className={`font-bold text-foreground mb-1.5 leading-tight text-sm break-words ${isFestival ? "pr-16 text-amber-950 dark:text-amber-100" : ""}`}>
                         {evt.titolo}
                       </h3>
                       {(evt.is_ingresso_gratuito || (evt.tags && evt.tags.length > 0)) && (
@@ -239,9 +239,9 @@ export function EventList({
                               <span className="font-semibold flex items-center gap-1">
                                 📅 Programma ({associatedEvents.length} eventi):
                               </span>
-                              <ul className="list-disc pl-3.5 space-y-0.5 max-h-24 overflow-y-auto pr-1">
+                              <ul className="list-disc pl-3.5 space-y-1 max-h-32 overflow-y-auto pr-1">
                                 {associatedEvents.map(se => (
-                                  <li key={se.id} className="truncate hover:underline cursor-pointer text-amber-800 hover:text-amber-950 font-medium" onClick={(e) => {
+                                  <li key={se.id} className="break-words hover:underline cursor-pointer text-amber-800 hover:text-amber-950 font-medium" onClick={(e) => {
                                     e.stopPropagation();
                                     onSelectEvent(se.id);
                                   }}>

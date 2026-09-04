@@ -251,6 +251,18 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
+
+  /* Bug noto di Radix UI ScrollArea: il div interno del Viewport usa
+     "display: table; min-width: 100%" per calcolare le dimensioni dello
+     scroll. Questo pero' impedisce al testo lungo (es. i titoli degli
+     eventi nelle card) di andare a capo normalmente: il "table" prova a
+     stare tutto su una riga e il testo in eccesso viene tagliato via
+     invece di scendere su una nuova riga. Riportiamo il layout a blocco
+     normale, cosi' il testo torna a capo come ci si aspetta. */
+  [data-radix-scroll-area-viewport] > div {
+    display: block !important;
+    min-width: 0 !important;
+  }
 }
 
 /**

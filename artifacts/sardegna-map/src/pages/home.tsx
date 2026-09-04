@@ -116,8 +116,8 @@ export function Home() {
         <aside
           className={
             showEventList
-              ? "w-full lg:w-[380px] xl:w-[440px] flex-shrink-0 flex flex-col gap-3 h-full min-h-0"
-              : "w-full lg:flex-[2] flex-shrink-0 flex flex-col gap-0 h-full min-h-0"
+              ? "w-full lg:w-[380px] xl:w-[440px] flex-shrink-0 flex flex-col gap-3 h-full min-h-0 min-w-0"
+              : "w-full lg:flex-[2] flex-shrink-0 flex flex-col gap-0 h-full min-h-0 min-w-0"
           }
         >
           {/* Barra compatta: solo su mobile, solo quando i filtri sono chiusi

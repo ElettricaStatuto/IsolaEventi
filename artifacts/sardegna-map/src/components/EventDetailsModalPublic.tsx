@@ -157,7 +157,7 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
                   </Badge>
                 )}
               </div>
-              <CardTitle className="text-xl font-serif font-bold text-foreground leading-tight mt-1">
+              <CardTitle className="text-xl font-serif font-bold text-foreground leading-tight mt-1 break-words">
                 {event.titolo}
               </CardTitle>
               {parentEvent && (
