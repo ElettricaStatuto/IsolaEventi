@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { XCircle, Globe, Calendar, MapPin, Clock, FileText, Facebook, Instagram, Navigation, Loader2 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { getAssetUrl, googleMapsUrl, findSocialLink } from "../lib/utils";
+import { getAssetUrl, googleMapsUrl, findSocialLink, formatDurata } from "../lib/utils";
 import { useWeather } from "../hooks/use-weather";
 import { useTravelTime } from "../hooks/use-travel-time";
 
@@ -354,7 +354,7 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
                       {travelTime.state === "pronto" && travelTime.result && (
                         <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground">
                           <Navigation className="w-3.5 h-3.5 text-primary" />
-                          ~{travelTime.result.durataMinuti} min in auto ({travelTime.result.distanzaKm} km)
+                          ~{formatDurata(travelTime.result.durataMinuti)} in auto ({travelTime.result.distanzaKm} km)
                         </span>
                       )}
                       {travelTime.state === "errore" && (

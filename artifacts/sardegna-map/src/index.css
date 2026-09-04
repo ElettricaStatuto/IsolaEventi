@@ -46,10 +46,6 @@
   --color-chart-4: hsl(var(--chart-4));
   --color-chart-5: hsl(var(--chart-5));
 
-  --color-map-bg: hsl(var(--map-bg));
-  --color-map-bg-foreground: hsl(var(--map-bg-foreground));
-  --color-map-panel: hsl(var(--map-panel));
-
   --color-sidebar: hsl(var(--sidebar));
   --color-sidebar-foreground: hsl(var(--sidebar-foreground));
   --color-sidebar-border: hsl(var(--sidebar-border));
@@ -145,11 +141,6 @@
   --chart-4: 177 41% 30%;
   --chart-5: 280 25% 50%;
 
-  /* Sezione mappa: teal scuro dedicato, indipendente dal resto della palette */
-  --map-bg: 177 41% 21%;
-  --map-bg-foreground: 36 25% 94%;
-  --map-panel: 177 35% 16%;
-
   --app-font-sans: 'Plus Jakarta Sans', sans-serif;
   --app-font-serif: 'Fraunces', serif;
   --app-font-mono: Menlo, monospace;
@@ -240,10 +231,6 @@
   --chart-3: 40 50% 60%;
   --chart-4: 177 41% 45%;
   --chart-5: 280 25% 60%;
-
-  --map-bg: 177 45% 12%;
-  --map-bg-foreground: 36 25% 94%;
-  --map-panel: 177 40% 9%;
 
   --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
   --shadow-xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
@@ -390,48 +377,3 @@
   }
 }
 
-/**
- * Riveste la mappa Leaflet (di default bianca/azzurra, pensata per un sito
- * qualunque) con la palette del sito: sfondo teal scuro dedicato, popup e
- * controlli coerenti con card/bottoni invece del bianco spoglio standard.
- */
-.leaflet-container {
-  background: hsl(var(--map-bg)) !important;
-  font-family: var(--app-font-sans);
-}
-
-.leaflet-popup-content-wrapper {
-  background: hsl(var(--card)) !important;
-  color: hsl(var(--card-foreground)) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25) !important;
-}
-.leaflet-popup-tip {
-  background: hsl(var(--card)) !important;
-}
-.leaflet-popup-content { margin: 12px 14px !important; }
-.leaflet-popup-close-button {
-  color: hsl(var(--muted-foreground)) !important;
-}
-
-.leaflet-control-zoom {
-  border: none !important;
-  border-radius: 10px !important;
-  overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25) !important;
-}
-.leaflet-control-zoom a {
-  background: hsl(var(--map-panel)) !important;
-  color: hsl(var(--map-bg-foreground)) !important;
-  border-color: hsl(var(--map-bg) / 0.6) !important;
-}
-.leaflet-control-zoom a:hover {
-  background: hsl(var(--primary)) !important;
-  color: hsl(var(--primary-foreground)) !important;
-}
-.leaflet-control-attribution {
-  background: hsl(var(--map-panel) / 0.85) !important;
-  color: hsl(var(--map-bg-foreground) / 0.7) !important;
-  border-radius: 6px 0 0 0;
-}
-.leaflet-control-attribution a { color: hsl(var(--map-bg-foreground) / 0.9) !important; }

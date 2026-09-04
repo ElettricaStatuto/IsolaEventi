@@ -46,3 +46,16 @@ export function findSocialLink(
   return socialContatti.find((s) => s.toLowerCase().includes(host)) || null;
 }
 
+/**
+ * Formatta una durata in minuti come "1h 34min" (o solo "34 min" se sotto
+ * l'ora) invece del numero grezzo di minuti — più leggibile per i tempi di
+ * percorrenza stimati.
+ */
+export function formatDurata(minutiTotali: number): string {
+  const minuti = Math.round(minutiTotali);
+  const ore = Math.floor(minuti / 60);
+  const restoMinuti = minuti % 60;
+  if (ore === 0) return `${restoMinuti} min`;
+  return `${ore}h ${restoMinuti}min`;
+}
+

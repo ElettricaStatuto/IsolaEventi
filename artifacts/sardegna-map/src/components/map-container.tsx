@@ -3,29 +3,18 @@ import "leaflet/dist/leaflet.css";
 import { useEffect, useRef } from "react";
 import type { Event } from "@workspace/api-client-react";
 
-// Marker disegnato ad hoc nell'accento terracotta del sito, al posto del
-// pin blu di default di Leaflet — pensato per spiccare sullo sfondo scuro
-// della mappa. Il riquadro è 44x44px (soglia minima consigliata per un
-// bersaglio tap comodo su mobile) anche se il segno visibile è più piccolo.
-const PIN_COLOR = "#C2694A";
-const PIN_STROKE = "#1F4A48";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
-function buildPinIcon(): L.DivIcon {
-  return L.divIcon({
-    className: "sm-map-pin",
-    html: `
-      <div style="width:44px;height:44px;display:flex;align-items:flex-end;justify-content:center;">
-        <svg width="30" height="30" viewBox="0 0 24 24" style="filter:drop-shadow(0 2px 3px rgba(0,0,0,0.35));">
-          <path d="M12 2C7.58 2 4 5.58 4 10c0 6.5 8 12 8 12s8-5.5 8-12c0-4.42-3.58-8-8-8z" fill="${PIN_COLOR}" stroke="${PIN_STROKE}" stroke-width="1"/>
-          <circle cx="12" cy="10" r="3.4" fill="#FAF8F5"/>
-        </svg>
-      </div>
-    `,
-    iconSize: [44, 44],
-    iconAnchor: [22, 41],
-    popupAnchor: [0, -36],
-  });
-}
+// Fix Leaflet default icon using local bundled assets (avoids Vite bundler issues)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
+});
 
 interface MapContainerProps {
   events: Event[];
@@ -63,17 +52,13 @@ export function MapContainer({
       maxBounds: SARDINIA_BOUNDS,
       maxBoundsViscosity: 1.0,
       minZoom: 7,
-      maxZoom: 20,
+      maxZoom: 21,
     });
 
-    // Base scura e desaturata (CARTO Dark Matter) al posto del classico
-    // stile stradale colorato: si intona alla sezione mappa teal del sito
-    // invece di sembrare un widget di Google Maps incollato sopra.
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributations">CARTO</a>',
-      subdomains: "abcd",
-      maxZoom: 20,
+        '&copy; <a href="https://www.openstreetmap.org/copyright">Leaflet</a> | &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
     }).addTo(map);
 
     // Zoom control in bottom-right to avoid overlap with fullscreen button
@@ -110,21 +95,21 @@ export function MapContainer({
     events.forEach((evt) => {
       if (evt.latitudine == null || evt.longitudine == null) return;
 
-      const marker = L.marker([evt.latitudine, evt.longitudine], { icon: buildPinIcon() });
+      const marker = L.marker([evt.latitudine, evt.longitudine]);
 
       const dateStr = evt.data_inizio
         ? `${evt.data_inizio}${evt.data_fine && evt.data_fine !== evt.data_inizio ? " – " + evt.data_fine : ""}`
         : "";
 
-      const parentLink = evt.parent_id ? `<a href="/festival/${evt.parent_id}" style="font-size:11px;color:#5c6d54;text-decoration:underline;display:block;margin-top:4px;">↑ Vedi Festival Padre</a>` : '';
-      const festivalLink = (evt as any).children_count > 0 ? `<a href="/festival/${evt.id}" style="font-size:11px;color:white;font-weight:bold;display:block;margin-top:6px;background:${PIN_COLOR};padding:6px 10px;border-radius:8px;text-align:center;text-decoration:none;box-shadow: 0 1px 3px rgba(0,0,0,0.15);">🏆 Vedi Programma Festival</a>` : '';
+      const parentLink = evt.parent_id ? `<a href="/festival/${evt.parent_id}" style="font-size:11px;color:#6b21a8;text-decoration:underline;display:block;margin-top:4px;">↑ Vedi Festival Padre</a>` : '';
+      const festivalLink = (evt as any).children_count > 0 ? `<a href="/festival/${evt.id}" style="font-size:11px;color:white;font-weight:bold;display:block;margin-top:6px;background:#c0661b;padding:6px 10px;border-radius:4px;text-align:center;text-decoration:none;box-shadow: 0 1px 3px rgba(0,0,0,0.15);">🏆 Vedi Programma Festival</a>` : '';
 
       marker.bindPopup(`
         <div style="min-width:190px;font-family:sans-serif;">
           <strong style="font-size:13px;line-height:1.35;display:block;margin-bottom:5px;">${evt.titolo}</strong>
-          ${dateStr ? `<div style="font-size:11px;color:#847c6f;margin-bottom:3px;">${dateStr}</div>` : ""}
+          ${dateStr ? `<div style="font-size:11px;color:#666;margin-bottom:3px;">${dateStr}</div>` : ""}
           ${evt.luogo ? `<div style="font-size:11px;font-weight:600;margin-bottom:5px;">${evt.luogo}</div>` : ""}
-          ${(evt as any).link_organizzatore ? `<a href="${(evt as any).link_organizzatore}" target="_blank" rel="noreferrer" style="font-size:11px;color:${PIN_COLOR};font-weight:bold;text-decoration:underline;display:block;margin-top:4px;">Sito Organizzatore →</a>` : ""}
+          ${(evt as any).link_organizzatore ? `<a href="${(evt as any).link_organizzatore}" target="_blank" rel="noreferrer" style="font-size:11px;color:#d97706;font-weight:bold;text-decoration:underline;display:block;margin-top:4px;">Sito Organizzatore →</a>` : ""}
           ${parentLink}
           ${festivalLink}
         </div>
