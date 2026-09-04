@@ -66,8 +66,10 @@ export function Home() {
     setDateRange,
     searchQuery,
     setSearchQuery,
-    selectedCategory,
-    setSelectedCategory,
+    selectedCategories,
+    setSelectedCategories,
+    selectedTags,
+    setSelectedTags,
   } = useEventsFilter(events);
 
   const handleSelectEvent = (id: number) => {
@@ -83,6 +85,15 @@ export function Home() {
       // The router matches the ID and the useEffect loads it dynamically
       setLocation(`/eventi/${id}-evento`);
     }
+  };
+
+  // Cliccando un tag (dalla card in lista o dalla scheda dettaglio): chiude
+  // l'eventuale scheda aperta, mostra la lista (non la mappa) e filtra su
+  // quel solo tag - tutti gli eventi futuri con quella caratteristica.
+  const handleTagClick = (tag: string) => {
+    setSelectedTags([tag]);
+    setShowEventList(true);
+    setLocation("/");
   };
 
   return (
@@ -157,11 +168,15 @@ export function Home() {
                   };
 
                   return Object.entries(categoryStyles).map(([catName, style]) => {
-                    const isSelected = selectedCategory === catName;
+                    const isSelected = selectedCategories.includes(catName);
                     return (
                       <button
                         key={catName}
-                        onClick={() => setSelectedCategory(isSelected ? null : catName)}
+                        onClick={() =>
+                          setSelectedCategories((prev) =>
+                            isSelected ? prev.filter((c) => c !== catName) : [...prev, catName]
+                          )
+                        }
                         style={{
                           borderColor: isSelected ? style.color : "transparent",
                           backgroundColor: isSelected ? `${style.color}15` : "",
@@ -182,12 +197,35 @@ export function Home() {
               </div>
             </div>
 
+            {/* Tag attivo (impostato cliccando un tag su una card) */}
+            {selectedTags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {selectedTags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 bg-sky-100 dark:bg-sky-900/40 text-sky-900 dark:text-sky-200 text-[10px] font-semibold px-2 py-1 rounded-full border border-sky-300 dark:border-sky-700/60"
+                  >
+                    Tag: {tag}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTags((prev) => prev.filter((t) => t !== tag))}
+                      className="hover:text-red-600 cursor-pointer bg-transparent border-none p-0"
+                      aria-label={`Rimuovi filtro tag ${tag}`}
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
             {/* Indicatori filtri attivi e tasto reset */}
-            {(searchQuery || selectedCategory || dateRange) && (
+            {(searchQuery || selectedCategories.length > 0 || selectedTags.length > 0 || dateRange) && (
               <button
                 onClick={() => {
                   setSearchQuery("");
-                  setSelectedCategory(null);
+                  setSelectedCategories([]);
+                  setSelectedTags([]);
                   setDateRange(undefined);
                 }}
                 className="text-[10px] text-red-600 hover:text-red-700 font-bold flex items-center justify-center gap-1 bg-red-50 hover:bg-red-100 py-1.5 rounded-md border border-red-200 transition-colors cursor-pointer w-full"
@@ -203,6 +241,7 @@ export function Home() {
               events={filteredEvents}
               selectedEventId={selectedEventId}
               onSelectEvent={handleSelectEvent}
+              onTagClick={handleTagClick}
               isLoading={isLoading}
               isError={isError}
             />
@@ -245,6 +284,7 @@ export function Home() {
             allEvents={events}
             onSelectEvent={handleSelectEvent}
             imageUrl={getImageUrl}
+            onTagClick={handleTagClick}
           />
         ) : null;
       })()}

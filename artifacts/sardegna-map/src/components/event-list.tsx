@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import type { Event } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { Helmet } from "react-helmet-async";
-import { getAssetUrl, getEventImageUrl } from "../lib/utils";
+import { getAssetUrl, getEventImageUrl, googleMapsUrl } from "../lib/utils";
 
 interface EventListProps {
   events: Event[];
@@ -14,6 +14,9 @@ interface EventListProps {
   onSelectEvent: (id: number) => void;
   isLoading?: boolean;
   isError?: boolean;
+  /** Cliccando un tag si filtra il calendario su tutti gli eventi futuri
+   * con quel tag, senza aprire la scheda dell'evento. */
+  onTagClick?: (tag: string) => void;
 }
 
 export function EventList({
@@ -22,6 +25,7 @@ export function EventList({
   onSelectEvent,
   isLoading,
   isError,
+  onTagClick,
 }: EventListProps) {
   const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
@@ -140,13 +144,33 @@ export function EventList({
                       <h3 className={`font-bold text-foreground mb-1.5 leading-tight text-sm pr-16 ${isFestival ? "text-amber-950 dark:text-amber-100" : ""}`}>
                         {evt.titolo}
                       </h3>
-                      {evt.tags && evt.tags.length > 0 && (
+                      {(evt.is_ingresso_gratuito || (evt.tags && evt.tags.length > 0)) && (
                         <div className="flex flex-wrap gap-1 mb-2">
-                          {evt.tags.map((tag, i) => (
-                            <span key={i} className="bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded text-[10px] font-medium">
-                              {tag}
+                          {evt.is_ingresso_gratuito && (
+                            <span className="bg-emerald-500 text-white px-1.5 py-0.5 rounded text-[10px] font-bold">
+                              Gratuito
                             </span>
-                          ))}
+                          )}
+                          {evt.tags?.map((tag, i) =>
+                            onTagClick ? (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onTagClick(tag);
+                                }}
+                                title={`Vedi tutti gli eventi con il tag "${tag}"`}
+                                className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-1.5 py-0.5 rounded text-[10px] font-medium cursor-pointer transition-colors"
+                              >
+                                {tag}
+                              </button>
+                            ) : (
+                              <span key={i} className="bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded text-[10px] font-medium">
+                                {tag}
+                              </span>
+                            )
+                          )}
                         </div>
                       )}
                       <div className="flex flex-col gap-1.5 text-xs text-muted-foreground">
@@ -185,7 +209,21 @@ export function EventList({
                             </span>
                           </div>
                         )}
-                        
+                        {(() => {
+                          const mapsUrl = googleMapsUrl(evt.latitudine, evt.longitudine);
+                          return mapsUrl ? (
+                            <a
+                              href={mapsUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline mt-0.5 ml-5"
+                            >
+                              <MapPin className="w-3 h-3" /> Apri in Google Maps
+                            </a>
+                          ) : null;
+                        })()}
+
                         {isFestival && (() => {
                           const associatedEvents = events.filter(e => e.parent_id === evt.id);
                           if (associatedEvents.length === 0) return null;

@@ -26,6 +26,18 @@ CATEGORIE_VALIDE = [
     "Enogastronomia", "Folklore", "Sport", "Eventi per Bambini", "Altro",
 ]
 
+# Lista chiusa di tag: a differenza di `categoria` (una sola, obbligatoria),
+# un evento puo' avere PIU' tag insieme se pertinenti (es. un festival
+# "Musica" con anche un mercatino artigianale prende sia "Musica" sia
+# "Mercatino/Artigianato"). Elenco volutamente piccolo e concreto - niente
+# tag inventati liberamente dall'AI. L'ingresso gratuito NON e' un tag:
+# e' gia' un campo a se' (`is_ingresso_gratuito`), mostrato in UI come
+# bollino a parte invece che come tag selezionabile.
+TAG_VALIDI = [
+    "Musica", "Teatro", "Cinema", "Arte/Mostra", "Enogastronomia",
+    "Folklore/Tradizione", "Sport", "Bambini/Famiglie", "Mercatino/Artigianato",
+]
+
 # Domini per cui oggi chiediamo dettagli extra strutturati. Aggiungerne uno
 # nuovo (es. Enogastronomia) richiede: 1) un blocco "Dettagli<Dominio>" qui
 # sotto, 2) una chiave in DettagliDominio, 3) una voce in EVENTO_FIGLIO_EXAMPLE.
@@ -127,7 +139,7 @@ _JSON_SCHEMA_DEFS = {
             "link_biglietti": {"type": ["string", "null"]},
             "is_ingresso_gratuito": {"type": "boolean"},
             "artisti": {"type": "array", "items": {"type": "string"}},
-            "tags": {"type": "array", "items": {"type": "string"}},
+            "tags": {"type": "array", "items": {"type": "string", "enum": TAG_VALIDI}},
             "dettagli_dominio": {"$ref": "#/$defs/DettagliDominio"},
             "approfondimenti_extra": {"$ref": "#/$defs/ApprofondimentiExtra"},
         },
@@ -204,7 +216,7 @@ EVENTO_FIGLIO_EXAMPLE = {
     "link_biglietti": "URL vendita biglietti o null",
     "is_ingresso_gratuito": True,
     "artisti": ["Nome Artista 1", "Nome Artista 2"],
-    "tags": ["Tag primario", "Tag secondario"],
+    "tags": ["Musica", "Mercatino/Artigianato"],
     "dettagli_dominio": {
         "dettagli_cinema": None,
         "dettagli_teatro": None,
@@ -240,6 +252,15 @@ _DOCUMENTO_EXAMPLE = {
 }
 
 REGOLA_CATEGORIA_TXT = f'`categoria` deve essere ESATTAMENTE una tra: {json.dumps(CATEGORIE_VALIDE, ensure_ascii=False)}.'
+
+REGOLA_TAG_TXT = (
+    f'REGOLA `tags`: scegli SOLO tra questi valori, {json.dumps(TAG_VALIDI, ensure_ascii=False)} - '
+    "MAI inventarne altri. A differenza di `categoria` (una sola) puoi indicarne PIU' di uno se pertinenti "
+    "(es. un festival musicale con anche un mercatino artigianale prende sia \"Musica\" sia "
+    "\"Mercatino/Artigianato\"). Se nessuno di questi si applica davvero, lascia l'array vuoto - non forzare "
+    "un tag poco pertinente pur di averne uno. Non includere mai un concetto di \"ingresso gratuito\": quello "
+    "e' gestito a parte dal campo `is_ingresso_gratuito`."
+)
 
 REGOLA_DETTAGLI_DOMINIO_TXT = (
     "REGOLA `dettagli_dominio`: compila SOLO il blocco corrispondente alla `categoria` scelta "
@@ -354,6 +375,7 @@ REGOLE TASSATIVE DI FORMATTAZIONE E GESTIONE FESTIVAL / SOTTO-EVENTI:
 
 3. REGOLA CATEGORIA, DOMINIO E TESTO:
    - {REGOLA_CATEGORIA_TXT}
+   - {REGOLA_TAG_TXT}
    - {REGOLA_DETTAGLI_DOMINIO_TXT}
    - {REGOLA_IS_EVENTO_TXT}
    - `testo_estratto` deve essere un articolo giornalistico narrativo e accattivante (no elenchi puntati freddi).

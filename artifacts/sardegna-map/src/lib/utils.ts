@@ -18,3 +18,18 @@ export function getEventImageUrl(immagine: string | null | undefined): string | 
   return getAssetUrl(`/api/event-images/${immagine}`);
 }
 
+/**
+ * Link diretto a Google Maps sul punto esatto dell'evento. Richiede
+ * coordinate precise (gia' derivate dal geocoding sul luogo specifico,
+ * es. "Città, Piazza/Via/Locale") - se mancano, ritorna null: niente
+ * fallback su una ricerca testuale generica, meglio nessun link che uno
+ * poco affidabile.
+ */
+export function googleMapsUrl(
+  latitudine: number | null | undefined,
+  longitudine: number | null | undefined
+): string | null {
+  if (latitudine == null || longitudine == null) return null;
+  return `https://www.google.com/maps/search/?api=1&query=${latitudine},${longitudine}`;
+}
+

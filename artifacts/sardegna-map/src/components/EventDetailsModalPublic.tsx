@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { XCircle, Globe, Calendar, MapPin, Clock, FileText } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { getAssetUrl } from "../lib/utils";
+import { getAssetUrl, googleMapsUrl } from "../lib/utils";
 
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
@@ -26,6 +26,9 @@ export interface EventDetailsModalPublicProps {
   allEvents: any[];
   onSelectEvent: (id: number) => void;
   imageUrl: (ev: any) => string | null;
+  /** Cliccando un tag si chiude la scheda e si apre il calendario filtrato
+   * su quel tag, con tutti gli eventi futuri che lo hanno. */
+  onTagClick?: (tag: string) => void;
 }
 
 export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = ({
@@ -34,6 +37,7 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
   allEvents,
   onSelectEvent,
   imageUrl,
+  onTagClick,
 }) => {
   if (!event) return null;
 
@@ -143,6 +147,11 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
                     ⭐ FESTIVAL
                   </Badge>
                 ) : null}
+                {event.is_ingresso_gratuito && (
+                  <Badge className="bg-emerald-500 hover:bg-emerald-500 text-white font-bold border border-emerald-600">
+                    Gratuito
+                  </Badge>
+                )}
               </div>
               <CardTitle className="text-xl font-serif font-bold text-foreground leading-tight mt-1">
                 {event.titolo}
@@ -198,11 +207,27 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
                 <div className="bg-muted/40 p-3 rounded-lg border border-border/60">
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">Tag</span>
                   <div className="flex flex-wrap gap-1">
-                    {event.tags.map((tag: string, i: number) => (
-                      <Badge key={i} variant="secondary" className="bg-sky-100/60 dark:bg-sky-900/30 text-sky-900 dark:text-sky-200 border-none text-[10px] px-2 py-0.5">
-                        {tag}
-                      </Badge>
-                    ))}
+                    {event.tags.map((tag: string, i: number) =>
+                      onTagClick ? (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => onTagClick(tag)}
+                          title={`Vedi tutti gli eventi con il tag "${tag}"`}
+                        >
+                          <Badge
+                            variant="secondary"
+                            className="bg-sky-100/60 dark:bg-sky-900/30 text-sky-900 dark:text-sky-200 border-none text-[10px] px-2 py-0.5 cursor-pointer hover:bg-sky-200/70 dark:hover:bg-sky-800/40 transition-colors"
+                          >
+                            {tag}
+                          </Badge>
+                        </button>
+                      ) : (
+                        <Badge key={i} variant="secondary" className="bg-sky-100/60 dark:bg-sky-900/30 text-sky-900 dark:text-sky-200 border-none text-[10px] px-2 py-0.5">
+                          {tag}
+                        </Badge>
+                      )
+                    )}
                   </div>
                 </div>
               )}
@@ -258,6 +283,19 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
                     <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                     <span className="font-semibold">{event.luogo || "Non specificato"}</span>
                   </div>
+                  {(() => {
+                    const mapsUrl = googleMapsUrl(event.latitudine, event.longitudine);
+                    return mapsUrl ? (
+                      <a
+                        href={mapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline w-fit"
+                      >
+                        <MapPin className="w-3.5 h-3.5" /> Apri in Google Maps
+                      </a>
+                    ) : null;
+                  })()}
                 </div>
 
                 {/* Date e Orari */}

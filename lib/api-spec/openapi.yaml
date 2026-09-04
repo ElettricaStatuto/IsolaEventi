@@ -307,6 +307,8 @@ components:
           type: ["boolean", "null"]
         is_evento:
           type: ["boolean", "null"]
+        is_ingresso_gratuito:
+          type: ["boolean", "null"]
         link_organizzatore:
           type: ["string", "null"]
         tags:

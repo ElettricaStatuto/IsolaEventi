@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { XCircle, Globe, Trash2, Brain, Calendar, MapPin, CheckCircle2, Loader2, Eye, Clock, Sparkles, AlertTriangle } from "lucide-react";
+import { googleMapsUrl } from "../../lib/utils";
 
 const AutoResizeTextarea = ({ value, onChange, className, ...props }: any) => {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -190,6 +191,11 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                         {isFestival && (
                           <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black text-xs px-2.5 py-0.5 shadow border border-amber-600 w-fit">
                             ⭐ FESTIVAL / EVENTO PADRE
+                          </Badge>
+                        )}
+                        {inspectingEvent.is_ingresso_gratuito && (
+                          <Badge className="bg-emerald-500 hover:bg-emerald-500 text-white font-bold text-xs px-2.5 py-0.5 border border-emerald-600 w-fit">
+                            Gratuito
                           </Badge>
                         )}
                         {parentEvent && openEventDetails ? (
@@ -472,9 +478,24 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   placeholder="Comune, Luogo Specifico"
                 />
               ) : (
-                <div className="flex items-center gap-2 text-sm text-foreground">
-                  <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <span className="font-semibold">{inspectingEvent.luogo || "Non specificato"}</span>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2 text-sm text-foreground">
+                    <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="font-semibold">{inspectingEvent.luogo || "Non specificato"}</span>
+                  </div>
+                  {(() => {
+                    const mapsUrl = googleMapsUrl(inspectingEvent.latitudine, inspectingEvent.longitudine);
+                    return mapsUrl ? (
+                      <a
+                        href={mapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline w-fit ml-6"
+                      >
+                        <MapPin className="w-3.5 h-3.5" /> Apri in Google Maps
+                      </a>
+                    ) : null;
+                  })()}
                 </div>
               )}
             </div>

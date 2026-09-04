@@ -51,6 +51,8 @@ export interface Event {
   /** @nullable */
   is_evento?: boolean | null;
   /** @nullable */
+  is_ingresso_gratuito?: boolean | null;
+  /** @nullable */
   link_organizzatore?: string | null;
   /** @nullable */
   tags?: string[] | null;

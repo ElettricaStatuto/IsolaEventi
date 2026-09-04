@@ -6,8 +6,12 @@ import type { Event } from "@workspace/api-client-react";
 export function useEventsFilter(events: Event[] = []) {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  // Piu' categorie possono essere selezionate insieme: un evento passa il
+  // filtro se la sua categoria e' una qualunque di quelle scelte (OR), non
+  // solo un'unica categoria esclusiva come prima.
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  // Come le categorie: un evento passa se ha ALMENO uno dei tag selezionati.
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const filteredEvents = useMemo(() => {
     let list = events;
@@ -36,14 +40,15 @@ export function useEventsFilter(events: Event[] = []) {
       });
     }
 
-    // 3. Filter by category
-    if (selectedCategory) {
-      list = list.filter((evt) => evt.categoria === selectedCategory);
+    // 3. Filter by category (un evento passa se la sua categoria e' una
+    // qualsiasi tra quelle selezionate)
+    if (selectedCategories.length > 0) {
+      list = list.filter((evt) => evt.categoria && selectedCategories.includes(evt.categoria));
     }
 
-    // 4. Filter by tag
-    if (selectedTag) {
-      list = list.filter((evt) => evt.tags?.includes(selectedTag));
+    // 4. Filter by tag (un evento passa se ha almeno uno dei tag selezionati)
+    if (selectedTags.length > 0) {
+      list = list.filter((evt) => evt.tags?.some((t) => selectedTags.includes(t)));
     }
 
     // 5. Sort events: future events first (ascending by start date), then past events (descending by start date)
@@ -80,7 +85,7 @@ export function useEventsFilter(events: Event[] = []) {
         return b.data_inizio.localeCompare(a.data_inizio);
       }
     });
-  }, [events, dateRange, searchQuery, selectedCategory, selectedTag]);
+  }, [events, dateRange, searchQuery, selectedCategories, selectedTags]);
 
   return {
     filteredEvents,
@@ -88,9 +93,9 @@ export function useEventsFilter(events: Event[] = []) {
     setDateRange,
     searchQuery,
     setSearchQuery,
-    selectedCategory,
-    setSelectedCategory,
-    selectedTag,
-    setSelectedTag,
+    selectedCategories,
+    setSelectedCategories,
+    selectedTags,
+    setSelectedTags,
   };
 }
