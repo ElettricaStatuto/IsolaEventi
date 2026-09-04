@@ -2,11 +2,12 @@ import React from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { XCircle, Globe, Calendar, MapPin, Clock, FileText, Facebook, Instagram } from "lucide-react";
+import { XCircle, Globe, Calendar, MapPin, Clock, FileText, Facebook, Instagram, Navigation, Loader2 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { getAssetUrl, googleMapsUrl, findSocialLink } from "../lib/utils";
 import { useWeather } from "../hooks/use-weather";
+import { useTravelTime } from "../hooks/use-travel-time";
 
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
@@ -47,6 +48,7 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
   const miniMapRef = React.useRef<HTMLDivElement>(null);
   const leafletMiniMap = React.useRef<any>(null);
   const weather = useWeather(event.latitudine, event.longitudine, event.data_inizio);
+  const travelTime = useTravelTime(event.latitudine, event.longitudine);
 
   React.useEffect(() => {
     if (!miniMapRef.current || event.latitudine == null || event.longitudine == null) return;
@@ -330,6 +332,36 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
                       </a>
                     ) : null;
                   })()}
+
+                  {/* Tempo di percorrenza dalla posizione dell'utente - solo su richiesta esplicita */}
+                  {event.latitudine != null && event.longitudine != null && (
+                    <div className="mt-2">
+                      {travelTime.state === "idle" && (
+                        <button
+                          type="button"
+                          onClick={travelTime.calcola}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline w-fit cursor-pointer bg-transparent border-none p-0"
+                        >
+                          <Navigation className="w-3.5 h-3.5" /> Quanto ci metto ad arrivare?
+                        </button>
+                      )}
+                      {(travelTime.state === "richiedendo_posizione" || travelTime.state === "calcolando") && (
+                        <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          {travelTime.state === "richiedendo_posizione" ? "Rilevo la tua posizione…" : "Calcolo il percorso…"}
+                        </span>
+                      )}
+                      {travelTime.state === "pronto" && travelTime.result && (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                          <Navigation className="w-3.5 h-3.5 text-primary" />
+                          ~{travelTime.result.durataMinuti} min in auto ({travelTime.result.distanzaKm} km)
+                        </span>
+                      )}
+                      {travelTime.state === "errore" && (
+                        <span className="text-xs text-muted-foreground">{travelTime.errorMessage}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Date e Orari */}
