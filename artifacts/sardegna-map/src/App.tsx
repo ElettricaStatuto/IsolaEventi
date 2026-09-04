@@ -11,6 +11,7 @@ import { FestivalPage } from "./pages/festival";
 import { CalendarPage } from "./pages/calendar";
 import { Map, BarChart2, CalendarDays, Sun, Moon, Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ErrorBoundary } from "./components/error-boundary";
 
 // Lazy-loaded — Vite creates a separate chunk, excluded from the public bundle
 const Admin = lazy(() => import("./pages/admin").then((m) => ({ default: m.Admin })));
@@ -163,7 +164,7 @@ function Layout({ children }: { children: React.ReactNode }) {
       </Sheet>
 
       <main className="flex-1 flex flex-col max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
-        {children}
+        <ErrorBoundary>{children}</ErrorBoundary>
       </main>
     </div>
   );

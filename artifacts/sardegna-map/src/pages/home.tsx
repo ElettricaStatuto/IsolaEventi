@@ -11,6 +11,7 @@ import { DateFilter } from "../components/date-filter";
 import { EventList } from "../components/event-list";
 import { MapContainer } from "../components/map-container";
 import { EventDetailsModalPublic } from "../components/EventDetailsModalPublic";
+import { ErrorBoundary } from "../components/error-boundary";
 import { getAssetUrl, getEventImageUrl } from "../lib/utils";
 
 export function Home() {
@@ -18,6 +19,13 @@ export function Home() {
   const [match, params] = useRoute("/eventi/:idAndSlug");
   const [, setLocation] = useLocation();
   const [showEventList, setShowEventList] = useState(true);
+  // Su mobile, il pannello filtri (ricerca/date/categorie) e' molto alto e
+  // schiaccia la mappa quando si e' in "modalita' mappa". Lo teniamo
+  // espanso di default in modalita' lista (dove serve subito), compresso
+  // in modalita' mappa (dove l'utente vuole vedere la mappa, non i filtri) -
+  // resta comunque riapribile con un tocco. Da schermi lg in su i filtri
+  // restano sempre visibili, indipendentemente da questo stato.
+  const [filtersExpanded, setFiltersExpanded] = useState(true);
 
   // Listen for global "toggle-map-view" event from the nav "Mappa" button
   useEffect(() => {
@@ -25,6 +33,10 @@ export function Home() {
     window.addEventListener("toggle-map-view", handleToggle);
     return () => window.removeEventListener("toggle-map-view", handleToggle);
   }, []);
+
+  useEffect(() => {
+    setFiltersExpanded(showEventList);
+  }, [showEventList]);
 
   // Fetch all events not yet ended (client-side filtering handles the rest)
   const {
@@ -104,24 +116,50 @@ export function Home() {
         <aside
           className={
             showEventList
-              ? "w-full lg:w-[320px] xl:w-[360px] flex-shrink-0 flex flex-col gap-3 h-full min-h-0"
+              ? "w-full lg:w-[380px] xl:w-[440px] flex-shrink-0 flex flex-col gap-3 h-full min-h-0"
               : "w-full lg:flex-[2] flex-shrink-0 flex flex-col gap-0 h-full min-h-0"
           }
         >
+          {/* Barra compatta: solo su mobile, solo quando i filtri sono chiusi
+              (di norma in modalita' mappa) - un tocco per riaprirli. */}
+          {!filtersExpanded && (
+            <button
+              type="button"
+              onClick={() => setFiltersExpanded(true)}
+              className="lg:hidden flex items-center justify-center gap-2 bg-card rounded-xl shadow-sm border border-border px-4 py-2.5 flex-shrink-0 text-sm font-semibold text-foreground cursor-pointer"
+            >
+              🔍 Filtri e ricerca
+              {(searchQuery || selectedCategories.length > 0 || selectedTags.length > 0 || dateRange) && (
+                <span className="w-2 h-2 rounded-full bg-primary" aria-hidden="true" />
+              )}
+            </button>
+          )}
+
           {/* Controls panel */}
-          <div className="bg-card rounded-xl shadow-sm border border-border p-4 flex flex-col gap-3.5 flex-shrink-0">
-            <div>
-              <h2 className="font-serif text-xl font-semibold text-foreground mb-0.5">
-                Esplora Eventi
-              </h2>
-              <div className="flex flex-col gap-0.5">
-                <p className="font-serif text-base font-semibold text-foreground leading-snug">
-                  Il tuo calendario sardo:
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  vivi la tua Sardegna.
-                </p>
+          <div className={`${filtersExpanded ? "flex" : "hidden lg:flex"} bg-card rounded-xl shadow-sm border border-border p-4 flex-col gap-3.5 flex-shrink-0`}>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <h2 className="font-serif text-xl font-semibold text-foreground mb-0.5">
+                  Esplora Eventi
+                </h2>
+                <div className="flex flex-col gap-0.5">
+                  <p className="font-serif text-base font-semibold text-foreground leading-snug">
+                    Il tuo calendario sardo:
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    vivi la tua Sardegna.
+                  </p>
+                </div>
               </div>
+              {!showEventList && (
+                <button
+                  type="button"
+                  onClick={() => setFiltersExpanded(false)}
+                  className="lg:hidden text-xs font-semibold text-muted-foreground hover:text-foreground bg-transparent border-none cursor-pointer shrink-0 mt-0.5"
+                >
+                  Mostra mappa ✕
+                </button>
+              )}
             </div>
 
             {/* Barra di ricerca testuale */}
@@ -280,14 +318,16 @@ export function Home() {
         };
 
         return selectedEventDetail ? (
-          <EventDetailsModalPublic
-            event={selectedEventDetail}
-            onClose={() => setLocation("/")}
-            allEvents={events}
-            onSelectEvent={handleSelectEvent}
-            imageUrl={getImageUrl}
-            onTagClick={handleTagClick}
-          />
+          <ErrorBoundary fallbackTitle="Non riesco a mostrare questo evento">
+            <EventDetailsModalPublic
+              event={selectedEventDetail}
+              onClose={() => setLocation("/")}
+              allEvents={events}
+              onSelectEvent={handleSelectEvent}
+              imageUrl={getImageUrl}
+              onTagClick={handleTagClick}
+            />
+          </ErrorBoundary>
         ) : null;
       })()}
     </div>

@@ -142,7 +142,7 @@ export function EventList({
                           Festival
                         </div>
                       )}
-                      <h3 className={`font-bold text-foreground mb-1.5 leading-tight text-sm pr-16 ${isFestival ? "text-amber-950 dark:text-amber-100" : ""}`}>
+                      <h3 className={`font-bold text-foreground mb-1.5 leading-tight text-sm ${isFestival ? "pr-16 text-amber-950 dark:text-amber-100" : ""}`}>
                         {evt.titolo}
                       </h3>
                       {(evt.is_ingresso_gratuito || (evt.tags && evt.tags.length > 0)) && (

@@ -39,16 +39,23 @@ export function useTravelTime(destLat: number | null | undefined, destLng: numbe
         const url = `/api/directions?originLat=${latitude}&originLng=${longitude}&destLat=${destLat}&destLng=${destLng}`;
 
         fetch(url)
-          .then((res) => (res.ok ? res.json() : Promise.reject(new Error("richiesta fallita"))))
-          .then((data) => {
-            if (typeof data.durata_minuti !== "number" || typeof data.distanza_km !== "number") {
-              throw new Error("risposta inattesa");
+          .then(async (res) => {
+            const data = await res.json().catch(() => null);
+            if (!res.ok) {
+              // Mostriamo il vero motivo dato dal backend (es. "servizio non
+              // configurato") invece di un messaggio generico che nasconde
+              // la causa reale - fondamentale per capire subito cosa non va
+              // senza doverlo indovinare.
+              throw new Error(data?.error || `Errore del server (HTTP ${res.status})`);
+            }
+            if (!data || typeof data.durata_minuti !== "number" || typeof data.distanza_km !== "number") {
+              throw new Error("Risposta del server inattesa.");
             }
             setResult({ durataMinuti: data.durata_minuti, distanzaKm: data.distanza_km });
             setState("pronto");
           })
-          .catch(() => {
-            setErrorMessage("Non sono riuscito a calcolare il tempo di percorrenza. Riprova più tardi.");
+          .catch((err: Error) => {
+            setErrorMessage(err.message || "Non sono riuscito a calcolare il tempo di percorrenza. Riprova più tardi.");
             setState("errore");
           });
       },
