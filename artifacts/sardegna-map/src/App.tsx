@@ -49,23 +49,25 @@ function Layout({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border shadow-sm">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 sm:gap-3 group min-w-0">
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-serif italic text-xl shrink-0">S</div>
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-serif italic text-xl shrink-0">S</div>
             <h1 className="font-serif text-lg sm:text-2xl font-bold tracking-tight text-foreground group-hover:text-primary transition-colors truncate">Sardegna Eventi</h1>
           </Link>
 
-          {/* Nav completa: solo da tablet in su, tutte le voci con testo */}
+          {/* Nav completa: solo da tablet in su, tutte le voci con testo. Icone
+              monocromatiche coerenti (nessun colore diverso per icona) - solo
+              lo stato hover le distingue. */}
           <nav className="hidden md:flex items-center gap-3">
             <button
               onClick={handleToggleMappa}
               className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted text-sm font-medium transition-colors cursor-pointer bg-transparent border-none text-foreground"
             >
-              <Map className="w-4 h-4 text-primary" /> Mappa
+              <Map className="w-4 h-4 text-foreground/60" strokeWidth={1.75} /> Mappa
             </button>
             <Link href="/calendario" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted text-sm font-medium transition-colors text-foreground">
-              <CalendarDays className="w-4 h-4 text-secondary" /> Calendario
+              <CalendarDays className="w-4 h-4 text-foreground/60" strokeWidth={1.75} /> Calendario
             </Link>
             <Link href="/stats" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted text-sm font-medium transition-colors text-foreground">
-              <BarChart2 className="w-4 h-4 text-secondary" /> Statistiche
+              <BarChart2 className="w-4 h-4 text-foreground/60" strokeWidth={1.75} /> Statistiche
             </Link>
             <button
               onClick={() => setIsDark(!isDark)}
@@ -74,11 +76,11 @@ function Layout({ children }: { children: React.ReactNode }) {
             >
               {isDark ? (
                 <>
-                  <Sun className="w-4 h-4 text-amber-400" /> <span className="hidden sm:inline">Chiaro</span>
+                  <Sun className="w-4 h-4 text-foreground/60" strokeWidth={1.75} /> <span className="hidden sm:inline">Chiaro</span>
                 </>
               ) : (
                 <>
-                  <Moon className="w-4 h-4 text-indigo-500" /> <span className="hidden sm:inline">Scuro</span>
+                  <Moon className="w-4 h-4 text-foreground/60" strokeWidth={1.75} /> <span className="hidden sm:inline">Scuro</span>
                 </>
               )}
             </button>
@@ -92,7 +94,7 @@ function Layout({ children }: { children: React.ReactNode }) {
                 title="Vai alla Mappa"
                 className="flex items-center justify-center w-10 h-10 rounded-md hover:bg-muted cursor-pointer bg-transparent border-none text-foreground"
               >
-                <Map className="w-5 h-5 text-primary" />
+                <Map className="w-5 h-5 text-foreground/60" strokeWidth={1.75} />
               </button>
             ) : (
               <Link
@@ -100,7 +102,7 @@ function Layout({ children }: { children: React.ReactNode }) {
                 title="Vai al Calendario"
                 className="flex items-center justify-center w-10 h-10 rounded-md hover:bg-muted text-foreground"
               >
-                <CalendarDays className="w-5 h-5 text-secondary" />
+                <CalendarDays className="w-5 h-5 text-foreground/60" strokeWidth={1.75} />
               </Link>
             )}
             <button
@@ -127,21 +129,21 @@ function Layout({ children }: { children: React.ReactNode }) {
             }}
             className="flex items-center gap-3 px-3 py-3 rounded-md hover:bg-muted text-base font-medium transition-colors cursor-pointer bg-transparent border-none text-foreground text-left"
           >
-            <Map className="w-5 h-5 text-primary" /> Mappa
+            <Map className="w-5 h-5 text-foreground/60" strokeWidth={1.75} /> Mappa
           </button>
           <Link
             href="/calendario"
             onClick={() => setMobileMenuOpen(false)}
             className="flex items-center gap-3 px-3 py-3 rounded-md hover:bg-muted text-base font-medium transition-colors text-foreground"
           >
-            <CalendarDays className="w-5 h-5 text-secondary" /> Calendario
+            <CalendarDays className="w-5 h-5 text-foreground/60" strokeWidth={1.75} /> Calendario
           </Link>
           <Link
             href="/stats"
             onClick={() => setMobileMenuOpen(false)}
             className="flex items-center gap-3 px-3 py-3 rounded-md hover:bg-muted text-base font-medium transition-colors text-foreground"
           >
-            <BarChart2 className="w-5 h-5 text-secondary" /> Statistiche
+            <BarChart2 className="w-5 h-5 text-foreground/60" strokeWidth={1.75} /> Statistiche
           </Link>
           <button
             onClick={() => {
@@ -152,11 +154,11 @@ function Layout({ children }: { children: React.ReactNode }) {
           >
             {isDark ? (
               <>
-                <Sun className="w-5 h-5 text-amber-400" /> Tema Chiaro
+                <Sun className="w-5 h-5 text-foreground/60" strokeWidth={1.75} /> Tema Chiaro
               </>
             ) : (
               <>
-                <Moon className="w-5 h-5 text-indigo-500" /> Tema Scuro
+                <Moon className="w-5 h-5 text-foreground/60" strokeWidth={1.75} /> Tema Scuro
               </>
             )}
           </button>

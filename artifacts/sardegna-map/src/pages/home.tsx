@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Search } from "lucide-react";
 import { useRoute, useLocation } from "wouter";
 import {
   useListEvents,
@@ -128,7 +129,7 @@ export function Home() {
               onClick={() => setFiltersExpanded(true)}
               className="lg:hidden flex items-center justify-center gap-2 bg-card rounded-xl shadow-sm border border-border px-4 py-2.5 flex-shrink-0 text-sm font-semibold text-foreground cursor-pointer"
             >
-              🔍 Filtri e ricerca
+              <Search className="w-3.5 h-3.5 text-foreground/60" strokeWidth={1.75} /> Filtri e ricerca
               {(searchQuery || selectedCategories.length > 0 || selectedTags.length > 0 || dateRange) && (
                 <span className="w-2 h-2 rounded-full bg-primary" aria-hidden="true" />
               )}
@@ -139,10 +140,10 @@ export function Home() {
           <div className={`${filtersExpanded ? "flex" : "hidden lg:flex"} bg-card rounded-xl shadow-sm border border-border p-4 flex-col gap-3.5 flex-shrink-0`}>
             <div className="flex items-start justify-between gap-2">
               <div>
-                <h2 className="font-serif text-xl font-semibold text-foreground mb-0.5">
+                <h2 className="font-serif text-2xl font-semibold text-foreground mb-1.5 tracking-tight">
                   Esplora Eventi
                 </h2>
-                <div className="flex flex-col gap-0.5">
+                <div className="flex flex-col gap-1">
                   <p className="font-serif text-base font-semibold text-foreground leading-snug">
                     Il tuo calendario sardo:
                   </p>
@@ -162,50 +163,53 @@ export function Home() {
               )}
             </div>
 
-            {/* Barra di ricerca testuale */}
+            {/* Barra di ricerca testuale — a pillola, piena larghezza */}
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-muted-foreground text-sm">🔍</span>
+              <Search className="absolute inset-y-0 left-3.5 my-auto w-3.5 h-3.5 pointer-events-none text-muted-foreground" strokeWidth={1.75} />
               <input
                 type="text"
                 placeholder="Cerca per titolo, città o locale..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-background border border-border rounded-lg pl-9 pr-8 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-foreground"
+                className="w-full bg-background border border-border rounded-full pl-9 pr-8 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-foreground"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground bg-transparent border-none cursor-pointer text-xs"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-muted-foreground hover:text-foreground bg-transparent border-none cursor-pointer text-xs"
                 >
                   ✕
                 </button>
               )}
             </div>
 
-            {/* Date range picker */}
+            {/* Date range picker — piena larghezza, stessa "riga" della ricerca */}
             <DateFilter
               dateRange={dateRange}
               onDateRangeChange={setDateRange}
             />
 
-            {/* Categorie principali */}
+            {/* Categorie principali — pillole outline: la selezionata ha il
+                bordo in terracotta (l'accento principale, usato con
+                parsimonia), le altre in verde salvia. Su mobile scorrono in
+                riga orizzontale invece di andare a capo. */}
             <div className="flex flex-col gap-1.5">
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Categorie</span>
-              <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
+              <div className="flex flex-nowrap lg:flex-wrap gap-1.5 overflow-x-auto lg:overflow-x-visible lg:max-h-32 lg:overflow-y-auto -mx-1 px-1 pb-1 lg:pb-0">
                 {(() => {
-                  const categoryStyles: Record<string, { color: string; icon: string }> = {
-                    Musica: { color: "#3b82f6", icon: "🎵" },
-                    Teatro: { color: "#8b5cf6", icon: "🎭" },
-                    Cinema: { color: "#ec4899", icon: "🎬" },
-                    Arte: { color: "#10b981", icon: "🎨" },
-                    Incontro: { color: "#f59e0b", icon: "🗣️" },
-                    Enogastronomia: { color: "#ea580c", icon: "🍷" },
-                    Folklore: { color: "#dc2626", icon: "🥁" },
-                    Sport: { color: "#06b6d4", icon: "🏆" },
-                    "Eventi per Bambini": { color: "#84cc16", icon: "🎈" },
+                  const categoryIcons: Record<string, string> = {
+                    Musica: "🎵",
+                    Teatro: "🎭",
+                    Cinema: "🎬",
+                    Arte: "🎨",
+                    Incontro: "🗣️",
+                    Enogastronomia: "🍷",
+                    Folklore: "🥁",
+                    Sport: "🏆",
+                    "Eventi per Bambini": "🎈",
                   };
 
-                  return Object.entries(categoryStyles).map(([catName, style]) => {
+                  return Object.entries(categoryIcons).map(([catName, icon]) => {
                     const isSelected = selectedCategories.includes(catName);
                     return (
                       <button
@@ -215,18 +219,13 @@ export function Home() {
                             isSelected ? prev.filter((c) => c !== catName) : [...prev, catName]
                           )
                         }
-                        style={{
-                          borderColor: isSelected ? style.color : "transparent",
-                          backgroundColor: isSelected ? `${style.color}15` : "",
-                          color: isSelected ? style.color : "",
-                        }}
-                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[10px] border font-semibold cursor-pointer transition-all ${
-                          isSelected 
-                            ? "shadow-sm border-2" 
-                            : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground border-border/40"
+                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[10px] border-2 font-semibold cursor-pointer transition-all shrink-0 bg-transparent ${
+                          isSelected
+                            ? "border-primary text-primary"
+                            : "border-secondary/40 text-secondary hover:border-secondary hover:bg-secondary/5"
                         }`}
                       >
-                        <span>{style.icon}</span>
+                        <span>{icon}</span>
                         <span>{catName}</span>
                       </button>
                     );

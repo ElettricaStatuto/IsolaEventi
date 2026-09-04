@@ -50,16 +50,16 @@ export function DateFilter({ dateRange, onDateRangeChange }: DateFilterProps) {
   }, [dateRange, hoverDate]);
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-1.5 w-full">
       <style>{styles}</style>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             variant={dateRange?.from ? "default" : "outline"}
             size="sm"
-            className="gap-2 transition-all"
+            className="gap-2 transition-all flex-1 min-w-0 justify-start"
           >
-            <CalendarDays className="w-3.5 h-3.5" />
+            <CalendarDays className="w-3.5 h-3.5" strokeWidth={1.75} />
             {label}
           </Button>
         </PopoverTrigger>

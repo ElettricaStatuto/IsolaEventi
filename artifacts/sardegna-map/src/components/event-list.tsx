@@ -145,32 +145,22 @@ export function EventList({
                       <h3 className={`font-bold text-foreground mb-1.5 leading-tight text-sm break-words ${isFestival ? "pr-16 text-amber-950 dark:text-amber-100" : ""}`}>
                         {evt.titolo}
                       </h3>
-                      {(evt.is_ingresso_gratuito || (evt.tags && evt.tags.length > 0)) && (
-                        <div className="flex flex-wrap gap-1 mb-2">
+                      {/* Un solo badge di stato ben visibile: il "Gratuito" (un
+                          bollino, non un tag) e la categoria principale — non
+                          più tutta la fila di tag colorati affiancati. I tag
+                          restano consultabili ed esplorabili nella scheda di
+                          dettaglio, dove c'è spazio per mostrarli bene. */}
+                      {(evt.is_ingresso_gratuito || evt.categoria) && (
+                        <div className="flex flex-wrap items-center gap-1.5 mb-2">
                           {evt.is_ingresso_gratuito && (
-                            <span className="bg-emerald-500 text-white px-1.5 py-0.5 rounded text-[10px] font-bold">
-                              Gratuito
+                            <span className="bg-emerald-500 text-white px-1.5 py-0.5 rounded-full text-[10px] font-bold">
+                              ✓ Gratuito
                             </span>
                           )}
-                          {evt.tags?.map((tag, i) =>
-                            onTagClick ? (
-                              <button
-                                key={i}
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onTagClick(tag);
-                                }}
-                                title={`Vedi tutti gli eventi con il tag "${tag}"`}
-                                className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-1.5 py-0.5 rounded text-[10px] font-medium cursor-pointer transition-colors"
-                              >
-                                {tag}
-                              </button>
-                            ) : (
-                              <span key={i} className="bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded text-[10px] font-medium">
-                                {tag}
-                              </span>
-                            )
+                          {evt.categoria && (
+                            <span className="bg-secondary/10 text-secondary border border-secondary/25 px-2 py-0.5 rounded-full text-[10px] font-semibold">
+                              {evt.categoria}
+                            </span>
                           )}
                         </div>
                       )}

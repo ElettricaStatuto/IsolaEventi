@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..900;1,9..144,400..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
@@ -45,6 +45,10 @@
   --color-chart-3: hsl(var(--chart-3));
   --color-chart-4: hsl(var(--chart-4));
   --color-chart-5: hsl(var(--chart-5));
+
+  --color-map-bg: hsl(var(--map-bg));
+  --color-map-bg-foreground: hsl(var(--map-bg-foreground));
+  --color-map-panel: hsl(var(--map-panel));
 
   --color-sidebar: hsl(var(--sidebar));
   --color-sidebar-foreground: hsl(var(--sidebar-foreground));
@@ -106,43 +110,48 @@
   --elevate-1: rgba(0,0,0, .03);
   --elevate-2: rgba(0,0,0, .08);
 
-  --background: 40 33% 96%; /* Sun-bleached stone */
-  --foreground: 220 50% 15%; 
-  --border: 40 20% 85%;
-  --card: 40 33% 98%;
-  --card-foreground: 220 50% 15%;
-  --card-border: 40 20% 85%;
-  --sidebar: 40 33% 96%;
-  --sidebar-foreground: 220 50% 15%;
-  --sidebar-border: 40 20% 85%;
-  --sidebar-primary: 15 75% 55%;
-  --sidebar-primary-foreground: 40 33% 96%;
-  --sidebar-accent: 15 50% 85%;
-  --sidebar-accent-foreground: 220 50% 15%;
-  --sidebar-ring: 15 75% 55%;
-  --popover: 40 33% 98%;
-  --popover-foreground: 220 50% 15%;
-  --popover-border: 40 20% 85%;
-  --primary: 15 75% 55%; /* Terracotta */
-  --primary-foreground: 40 33% 96%;
-  --secondary: 200 60% 40%; /* Sea blue */
-  --secondary-foreground: 40 33% 96%;
-  --muted: 40 20% 90%;
-  --muted-foreground: 220 20% 40%;
-  --accent: 15 50% 85%;
-  --accent-foreground: 220 50% 15%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 210 40% 98%;
-  --input: 40 20% 85%;
-  --ring: 15 75% 55%;
-  --chart-1: 15 75% 55%;
-  --chart-2: 200 60% 40%;
-  --chart-3: 40 60% 60%;
-  --chart-4: 120 40% 50%;
-  --chart-5: 280 40% 50%;
+  --background: 30 18% 97%; /* Bianco caldo neutro, non crema piatta */
+  --foreground: 25 20% 14%; /* Ink caldo, non blu-tech */
+  --border: 30 15% 88%;
+  --card: 30 20% 99%;
+  --card-foreground: 25 20% 14%;
+  --card-border: 30 15% 88%;
+  --sidebar: 30 18% 97%;
+  --sidebar-foreground: 25 20% 14%;
+  --sidebar-border: 30 15% 88%;
+  --sidebar-primary: 16 50% 52%;
+  --sidebar-primary-foreground: 30 20% 99%;
+  --sidebar-accent: 101 20% 90%;
+  --sidebar-accent-foreground: 25 20% 14%;
+  --sidebar-ring: 16 50% 52%;
+  --popover: 30 20% 99%;
+  --popover-foreground: 25 20% 14%;
+  --popover-border: 30 15% 88%;
+  --primary: 16 50% 52%; /* Terracotta / granito — riservato a pochi elementi chiave */
+  --primary-foreground: 30 20% 99%;
+  --secondary: 101 11% 51%; /* Verde salvia / macchia mediterranea */
+  --secondary-foreground: 30 20% 99%;
+  --muted: 30 12% 92%;
+  --muted-foreground: 25 10% 42%;
+  --accent: 101 20% 90%;
+  --accent-foreground: 25 20% 14%;
+  --destructive: 0 70% 50%;
+  --destructive-foreground: 30 20% 99%;
+  --input: 30 15% 88%;
+  --ring: 16 50% 52%;
+  --chart-1: 16 50% 52%;
+  --chart-2: 101 11% 51%;
+  --chart-3: 40 55% 55%;
+  --chart-4: 177 41% 30%;
+  --chart-5: 280 25% 50%;
+
+  /* Sezione mappa: teal scuro dedicato, indipendente dal resto della palette */
+  --map-bg: 177 41% 21%;
+  --map-bg-foreground: 36 25% 94%;
+  --map-panel: 177 35% 16%;
 
   --app-font-sans: 'Plus Jakarta Sans', sans-serif;
-  --app-font-serif: 'Playfair Display', serif;
+  --app-font-serif: 'Fraunces', serif;
   --app-font-mono: Menlo, monospace;
   --radius: .5rem; /* 8px */
   --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00); /*replace with H S L */
@@ -197,40 +206,44 @@
   --elevate-1: rgba(255,255,255, .04);
   --elevate-2: rgba(255,255,255, .09);
 
-  --background: 220 50% 10%;
-  --foreground: 40 33% 96%;
-  --border: 220 30% 20%;
-  --card: 220 50% 12%;
-  --card-foreground: 40 33% 96%;
-  --card-border: 220 30% 20%;
-  --sidebar: 220 50% 10%;
-  --sidebar-foreground: 40 33% 96%;
-  --sidebar-border: 220 30% 20%;
-  --sidebar-primary: 15 75% 55%;
-  --sidebar-primary-foreground: 40 33% 96%;
-  --sidebar-accent: 220 30% 25%;
-  --sidebar-accent-foreground: 40 33% 96%;
-  --sidebar-ring: 15 75% 55%;
-  --popover: 220 50% 12%;
-  --popover-foreground: 40 33% 96%;
-  --popover-border: 220 30% 20%;
-  --primary: 15 75% 55%;
-  --primary-foreground: 40 33% 96%;
-  --secondary: 200 60% 40%;
-  --secondary-foreground: 40 33% 96%;
-  --muted: 220 30% 20%;
-  --muted-foreground: 40 20% 70%;
-  --accent: 220 30% 25%;
-  --accent-foreground: 40 33% 96%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 210 40% 98%;
-  --input: 220 30% 20%;
-  --ring: 15 75% 55%;
-  --chart-1: 15 75% 55%;
-  --chart-2: 200 60% 40%;
-  --chart-3: 40 60% 60%;
-  --chart-4: 120 40% 50%;
-  --chart-5: 280 40% 50%;
+  --background: 25 16% 9%;
+  --foreground: 36 25% 94%;
+  --border: 25 14% 20%;
+  --card: 25 16% 12%;
+  --card-foreground: 36 25% 94%;
+  --card-border: 25 14% 20%;
+  --sidebar: 25 16% 9%;
+  --sidebar-foreground: 36 25% 94%;
+  --sidebar-border: 25 14% 20%;
+  --sidebar-primary: 16 58% 58%;
+  --sidebar-primary-foreground: 25 16% 9%;
+  --sidebar-accent: 101 15% 22%;
+  --sidebar-accent-foreground: 36 25% 94%;
+  --sidebar-ring: 16 58% 58%;
+  --popover: 25 16% 12%;
+  --popover-foreground: 36 25% 94%;
+  --popover-border: 25 14% 20%;
+  --primary: 16 58% 58%;
+  --primary-foreground: 25 16% 9%;
+  --secondary: 101 15% 55%;
+  --secondary-foreground: 25 16% 9%;
+  --muted: 25 14% 20%;
+  --muted-foreground: 30 12% 68%;
+  --accent: 101 15% 22%;
+  --accent-foreground: 36 25% 94%;
+  --destructive: 0 70% 55%;
+  --destructive-foreground: 25 16% 9%;
+  --input: 25 14% 20%;
+  --ring: 16 58% 58%;
+  --chart-1: 16 58% 58%;
+  --chart-2: 101 15% 55%;
+  --chart-3: 40 50% 60%;
+  --chart-4: 177 41% 45%;
+  --chart-5: 280 25% 60%;
+
+  --map-bg: 177 45% 12%;
+  --map-bg-foreground: 36 25% 94%;
+  --map-panel: 177 40% 9%;
 
   --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
   --shadow-xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
@@ -376,3 +389,49 @@
     inset: -1px;
   }
 }
+
+/**
+ * Riveste la mappa Leaflet (di default bianca/azzurra, pensata per un sito
+ * qualunque) con la palette del sito: sfondo teal scuro dedicato, popup e
+ * controlli coerenti con card/bottoni invece del bianco spoglio standard.
+ */
+.leaflet-container {
+  background: hsl(var(--map-bg)) !important;
+  font-family: var(--app-font-sans);
+}
+
+.leaflet-popup-content-wrapper {
+  background: hsl(var(--card)) !important;
+  color: hsl(var(--card-foreground)) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25) !important;
+}
+.leaflet-popup-tip {
+  background: hsl(var(--card)) !important;
+}
+.leaflet-popup-content { margin: 12px 14px !important; }
+.leaflet-popup-close-button {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.leaflet-control-zoom {
+  border: none !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25) !important;
+}
+.leaflet-control-zoom a {
+  background: hsl(var(--map-panel)) !important;
+  color: hsl(var(--map-bg-foreground)) !important;
+  border-color: hsl(var(--map-bg) / 0.6) !important;
+}
+.leaflet-control-zoom a:hover {
+  background: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+}
+.leaflet-control-attribution {
+  background: hsl(var(--map-panel) / 0.85) !important;
+  color: hsl(var(--map-bg-foreground) / 0.7) !important;
+  border-radius: 6px 0 0 0;
+}
+.leaflet-control-attribution a { color: hsl(var(--map-bg-foreground) / 0.9) !important; }
