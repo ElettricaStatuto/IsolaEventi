@@ -97,7 +97,7 @@ export function Home() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] gap-0">
+    <div className="flex flex-col h-[calc(100dvh-4rem)] gap-0">
       {/* ── Sidebar + Map layout ── */}
       <div className="flex flex-1 gap-4 min-h-0 lg:flex-row flex-col">
         {/* ── Left sidebar: controls always on top, then list or map below ── */}
@@ -259,9 +259,11 @@ export function Home() {
           )}
         </aside>
 
-        {/* ── Right map area — only when event list is visible ── */}
+        {/* ── Right map area — solo da schermi grandi in su, quando la lista e' visibile.
+            Sotto lg, lista e mappa condividono la stessa area (il toggle "Mappa"
+            decide quale delle due mostrare) invece di impilarsi una sopra l'altra. ── */}
         {showEventList && (
-          <div className="flex-1 rounded-xl overflow-hidden shadow-sm border border-border min-h-[50vh] lg:min-h-0">
+          <div className="hidden lg:block flex-1 rounded-xl overflow-hidden shadow-sm border border-border min-h-0">
             <MapContainer
               events={filteredEvents}
               selectedEventId={selectedEventId}
