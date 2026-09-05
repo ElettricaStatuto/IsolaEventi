@@ -4,6 +4,8 @@ import { it } from "date-fns/locale";
 import { eachDayOfInterval, format, isAfter, isBefore } from "date-fns";
 import { CalendarDays, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
@@ -27,6 +29,11 @@ interface DateFilterProps {
 export function DateFilter({ dateRange, onDateRangeChange }: DateFilterProps) {
   const [open, setOpen] = useState(false);
   const [hoverDate, setHoverDate] = useState<Date | undefined>(undefined);
+  // Di default si seleziona un solo giorno (un clic, chiude subito). Con
+  // "Più giorni" attivo si passa alla selezione di un intervallo, che
+  // aspetta a chiudersi finche' non si e' cliccato sia il giorno di inizio
+  // che quello di fine.
+  const [multiGiorno, setMultiGiorno] = useState(false);
 
   const label = dateRange?.from
     ? dateRange.to
@@ -41,13 +48,13 @@ export function DateFilter({ dateRange, onDateRangeChange }: DateFilterProps) {
   }, [dateRange]);
 
   const previewDays = useMemo(() => {
-    if (!dateRange?.from || dateRange?.to || !hoverDate) return [];
+    if (!multiGiorno || !dateRange?.from || dateRange?.to || !hoverDate) return [];
 
     // Non mostrare preview se l'hover è prima dell'inizio
     if (isBefore(hoverDate, dateRange.from)) return [];
 
     return eachDayOfInterval({ start: dateRange.from, end: hoverDate });
-  }, [dateRange, hoverDate]);
+  }, [multiGiorno, dateRange, hoverDate]);
 
   return (
     <div className="flex items-center gap-1.5 w-full">
@@ -76,27 +83,62 @@ export function DateFilter({ dateRange, onDateRangeChange }: DateFilterProps) {
               Reset
             </Button>
           </div>
-          <DayPicker
-            mode="range"
-            // Visualizza 1 mese su mobile, 2 su desktop
-            numberOfMonths={
-              typeof window !== "undefined" && window.innerWidth < 768 ? 1 : 2
-            }
-            selected={dateRange}
-            onSelect={(range) => {
-              onDateRangeChange(range);
-              // Chiudi solo quando l'intervallo è completo
-              if (range?.from && range?.to) setOpen(false);
-            }}
-            onDayMouseEnter={(day) => setHoverDate(day)}
-            onDayMouseLeave={() => setHoverDate(undefined)}
-            modifiers={{ range_preview: previewDays }}
-            modifiersClassNames={{ range_preview: "rdp-day_range_preview" }}
-            locale={it}
-            className="p-3"
-            // Opzionale: disabilita date passate
-            // disabled={{ before: new Date() }}
-          />
+
+          {/* Un solo giorno (default, un clic e chiude) oppure un intervallo
+              di più giorni (aspetta il clic sia sul giorno di inizio che su
+              quello di fine prima di chiudersi). */}
+          <div className="flex items-center gap-2 px-4 py-2.5 border-b">
+            <Switch
+              id="date-filter-multi-giorno"
+              checked={multiGiorno}
+              onCheckedChange={(checked) => {
+                setMultiGiorno(checked);
+                onDateRangeChange(undefined);
+              }}
+            />
+            <Label htmlFor="date-filter-multi-giorno" className="text-xs font-medium cursor-pointer">
+              Più giorni (intervallo)
+            </Label>
+          </div>
+
+          {multiGiorno ? (
+            <DayPicker
+              mode="range"
+              // Visualizza 1 mese su mobile, 2 su desktop
+              numberOfMonths={
+                typeof window !== "undefined" && window.innerWidth < 768 ? 1 : 2
+              }
+              selected={dateRange}
+              onSelect={(range) => {
+                onDateRangeChange(range);
+                // Chiudi solo quando l'intervallo è completo
+                if (range?.from && range?.to) setOpen(false);
+              }}
+              onDayMouseEnter={(day) => setHoverDate(day)}
+              onDayMouseLeave={() => setHoverDate(undefined)}
+              modifiers={{ range_preview: previewDays }}
+              modifiersClassNames={{ range_preview: "rdp-day_range_preview" }}
+              locale={it}
+              className="p-3"
+              // Opzionale: disabilita date passate
+              // disabled={{ before: new Date() }}
+            />
+          ) : (
+            <DayPicker
+              mode="single"
+              numberOfMonths={
+                typeof window !== "undefined" && window.innerWidth < 768 ? 1 : 2
+              }
+              selected={dateRange?.from}
+              onSelect={(day) => {
+                // Un solo clic: seleziona quel giorno soltanto e chiude subito.
+                onDateRangeChange(day ? { from: day, to: day } : undefined);
+                if (day) setOpen(false);
+              }}
+              locale={it}
+              className="p-3"
+            />
+          )}
         </PopoverContent>
       </Popover>
 

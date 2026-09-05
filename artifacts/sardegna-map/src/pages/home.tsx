@@ -107,21 +107,24 @@ export function Home() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-4rem)] gap-0">
+    <div className="flex flex-col gap-0 lg:h-[calc(100dvh-4rem)]">
       <NearbySection
         events={events}
         selectedCategories={selectedCategories}
         onSelectEvent={handleSelectEvent}
       />
 
-      {/* ── Sidebar + Map layout ── */}
-      <div className="flex flex-1 gap-4 min-h-0 lg:flex-row flex-col">
+      {/* ── Sidebar + Map layout — su schermi sotto lg impilati in normale
+          flusso di pagina (scrollabile), cosi' la mappa resta sempre
+          raggiungibile scendendo; da lg in su affiancati e vincolati
+          all'altezza dello schermo, senza scroll di pagina. ── */}
+      <div className="flex flex-col lg:flex-row gap-4 lg:flex-1 lg:min-h-0">
         {/* ── Left sidebar: controls always on top, then list or map below ── */}
         <aside
           className={
             showEventList
-              ? "w-full lg:w-[380px] xl:w-[440px] flex-shrink-0 flex flex-col gap-3 h-full min-h-0 min-w-0"
-              : "w-full lg:flex-[2] flex-shrink-0 flex flex-col gap-0 h-full min-h-0 min-w-0"
+              ? "w-full lg:w-[380px] xl:w-[440px] flex-shrink-0 flex flex-col gap-3 lg:h-full lg:min-h-0 min-w-0"
+              : "w-full lg:flex-[2] flex-shrink-0 flex flex-col gap-0 lg:h-full lg:min-h-0 min-w-0"
           }
         >
           {/* Controls panel — sempre visibile, su ogni dimensione di schermo */}
@@ -168,11 +171,11 @@ export function Home() {
 
             {/* Categorie principali — pillole outline: la selezionata ha il
                 bordo in terracotta (l'accento principale, usato con
-                parsimonia), le altre in verde salvia. Su mobile scorrono in
-                riga orizzontale invece di andare a capo. */}
+                parsimonia), le altre in verde salvia. Vanno tutte a capo,
+                cosi' sono visibili tutte insieme anche su mobile. */}
             <div className="flex flex-col gap-1.5">
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Categorie</span>
-              <div className="flex flex-nowrap lg:flex-wrap gap-1.5 overflow-x-auto lg:overflow-x-visible lg:max-h-32 lg:overflow-y-auto -mx-1 px-1 pb-1 lg:pb-0">
+              <div className="flex flex-wrap gap-1.5">
                 {(() => {
                   const categoryIcons: Record<string, string> = {
                     Musica: "🎵",
@@ -249,21 +252,25 @@ export function Home() {
             )}
           </div>
 
-          {/* Scrollable event list — shown when "Mappa" is OFF */}
+          {/* Scrollable event list — shown when "Mappa" is OFF. Altezza minima
+              fissa su mobile (dove "aside" non ha piu' un'altezza imposta
+              dall'alto): senza, la lista si schiaccerebbe a zero. */}
           {showEventList && (
-            <EventList
-              events={filteredEvents}
-              selectedEventId={selectedEventId}
-              onSelectEvent={handleSelectEvent}
-              onTagClick={handleTagClick}
-              isLoading={isLoading}
-              isError={isError}
-            />
+            <div className="flex-1 min-h-[70vh] lg:min-h-0 flex flex-col">
+              <EventList
+                events={filteredEvents}
+                selectedEventId={selectedEventId}
+                onSelectEvent={handleSelectEvent}
+                onTagClick={handleTagClick}
+                isLoading={isLoading}
+                isError={isError}
+              />
+            </div>
           )}
 
           {/* Map in sidebar — shown when "Mappa" is ON (no gap, flush under controls) */}
           {!showEventList && (
-            <div className="flex-1 rounded-xl overflow-hidden shadow-sm border border-border min-h-0 mt-0">
+            <div className="flex-1 min-h-[70vh] lg:min-h-0 rounded-xl overflow-hidden shadow-sm border border-border mt-0">
               <MapContainer
                 events={filteredEvents}
                 selectedEventId={selectedEventId}

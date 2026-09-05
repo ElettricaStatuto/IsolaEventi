@@ -189,10 +189,10 @@ export function NearbySection({ events, selectedCategories, onSelectEvent }: Nea
                   {evt.luogo && (
                     <span className="text-[11px] text-muted-foreground">{evt.luogo}</span>
                   )}
-                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-foreground">
+                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                     {km != null && (() => {
                       const stradale = stimaDistanzaStradaleKm(km);
-                      return <span>{stradale < 1 ? "< 1 km di strada" : `~${Math.round(stradale)} km di strada`}</span>;
+                      return <span>{stradale < 1 ? "< 1 km" : `~${Math.round(stradale)} km`}</span>;
                     })()}
                     <WeatherBadge latitudine={evt.latitudine} longitudine={evt.longitudine} dataInizio={evt.data_inizio} />
                   </div>
