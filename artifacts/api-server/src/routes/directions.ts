@@ -23,7 +23,10 @@ router.get("/directions", async (req, res): Promise<void> => {
   }
 
   try {
-    const orsResponse = await fetch("https://api.openrouteservice.org/v2/directions/driving-car", {
+    // Variante /geojson: restituisce le coordinate del percorso gia' come
+    // lista di punti (LineString), senza dover decodificare una polilinea
+    // codificata - ci serve per trovare i punti di interesse lungo la strada.
+    const orsResponse = await fetch("https://api.openrouteservice.org/v2/directions/driving-car/geojson", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -47,7 +50,9 @@ router.get("/directions", async (req, res): Promise<void> => {
     }
 
     const data: any = await orsResponse.json();
-    const summary = data?.routes?.[0]?.summary;
+    const feature = data?.features?.[0];
+    const summary = feature?.properties?.summary;
+    const coordinateLonLat: [number, number][] | undefined = feature?.geometry?.coordinates;
     if (!summary || typeof summary.duration !== "number" || typeof summary.distance !== "number") {
       res.status(502).json({ error: "Risposta del servizio di instradamento inattesa" });
       return;
@@ -56,6 +61,8 @@ router.get("/directions", async (req, res): Promise<void> => {
     res.json({
       durata_minuti: Math.round(summary.duration / 60),
       distanza_km: Math.round((summary.distance / 1000) * 10) / 10,
+      // Convertita in [lat, lon] per coerenza con il resto del progetto.
+      percorso: coordinateLonLat?.map(([lon, lat]) => [lat, lon]) ?? [],
     });
   } catch (err) {
     req.log.error({ err }, "Errore nel calcolo del percorso");

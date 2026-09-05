@@ -8,7 +8,7 @@ import "leaflet/dist/leaflet.css";
 import { getAssetUrl, googleMapsUrl, findSocialLink, formatDurata } from "../lib/utils";
 import { useWeather } from "../hooks/use-weather";
 import { useTravelTime } from "../hooks/use-travel-time";
-import { PoiSection } from "./poi-section";
+import { PoiSection, PoiLungoStradaSection } from "./poi-section";
 
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
@@ -453,6 +453,13 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
             latitudine={event.latitudine}
             longitudine={event.longitudine}
           />
+
+          {travelTime.state === "pronto" && travelTime.result && (
+            <PoiLungoStradaSection
+              titolo="Lungo la strada puoi trovare"
+              percorso={travelTime.result.percorso}
+            />
+          )}
 
           {/* Sotto-eventi (Programma del Festival) */}
           {isLoadingSubEvents && (

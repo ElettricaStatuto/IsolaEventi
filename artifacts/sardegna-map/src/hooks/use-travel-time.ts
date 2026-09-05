@@ -12,6 +12,9 @@ import { useState } from "react";
 export interface TravelTimeResult {
   durataMinuti: number;
   distanzaKm: number;
+  /** Coordinate del percorso reale, come [lat, lon] - usate per trovare i
+   * punti di interesse lungo la strada, non solo vicino alla destinazione. */
+  percorso: [number, number][];
 }
 
 export type TravelTimeState = "idle" | "richiedendo_posizione" | "calcolando" | "pronto" | "errore";
@@ -51,7 +54,11 @@ export function useTravelTime(destLat: number | null | undefined, destLng: numbe
             if (!data || typeof data.durata_minuti !== "number" || typeof data.distanza_km !== "number") {
               throw new Error("Risposta del server inattesa.");
             }
-            setResult({ durataMinuti: data.durata_minuti, distanzaKm: data.distanza_km });
+            setResult({
+              durataMinuti: data.durata_minuti,
+              distanzaKm: data.distanza_km,
+              percorso: Array.isArray(data.percorso) ? data.percorso : [],
+            });
             setState("pronto");
           })
           .catch((err: Error) => {

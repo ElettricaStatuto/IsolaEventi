@@ -1,4 +1,4 @@
-import { usePuntiInteresseVicini } from "../hooks/use-punti-interesse";
+import { usePuntiInteresseVicini, usePuntiInteresseLungoStrada, type PuntoInteresse } from "../hooks/use-punti-interesse";
 
 const ICONA_CATEGORIA: Record<string, string> = {
   Nuraghe: "🗿",
@@ -14,21 +14,13 @@ const ICONA_CATEGORIA: Record<string, string> = {
   "Area naturale": "🏞️",
 };
 
-interface PoiSectionProps {
-  titolo: string;
-  latitudine: number | null | undefined;
-  longitudine: number | null | undefined;
-  raggioKm?: number;
-}
-
-/** Sezione "Scopri [comune]" o "Lungo la strada": una riga scorrevole di
- * punti di interesse vicino a un luogo, nello stesso linguaggio visivo
+/** Riga scorrevole di punti di interesse, nello stesso linguaggio visivo
  * delle card di "Vicino a te" nella home. Se non ci sono punti, non
- * renderizza nulla - niente stato vuoto a riempire spazio. */
-export function PoiSection({ titolo, latitudine, longitudine, raggioKm = 15 }: PoiSectionProps) {
-  const { punti, isLoading } = usePuntiInteresseVicini(latitudine, longitudine, raggioKm);
-
-  if (isLoading || punti.length === 0) return null;
+ * renderizza nulla - niente stato vuoto a riempire spazio. Usata sia per
+ * "Da vedere nei dintorni" (vicino all'evento) sia per "Lungo la strada"
+ * (vicino al percorso reale). */
+function PoiStrip({ titolo, punti }: { titolo: string; punti: PuntoInteresse[] }) {
+  if (punti.length === 0) return null;
 
   return (
     <div className="border-t border-border pt-4">
@@ -69,4 +61,33 @@ export function PoiSection({ titolo, latitudine, longitudine, raggioKm = 15 }: P
       </div>
     </div>
   );
+}
+
+interface PoiSectionProps {
+  titolo: string;
+  latitudine: number | null | undefined;
+  longitudine: number | null | undefined;
+  raggioKm?: number;
+}
+
+/** "Da vedere nei dintorni": punti vicino alle coordinate dell'evento,
+ * sempre disponibile, nessuna azione richiesta all'utente. */
+export function PoiSection({ titolo, latitudine, longitudine, raggioKm = 15 }: PoiSectionProps) {
+  const { punti, isLoading } = usePuntiInteresseVicini(latitudine, longitudine, raggioKm);
+  if (isLoading) return null;
+  return <PoiStrip titolo={titolo} punti={punti} />;
+}
+
+interface PoiLungoStradaSectionProps {
+  titolo: string;
+  percorso: [number, number][] | null | undefined;
+  raggioKm?: number;
+}
+
+/** "Lungo la strada": punti vicino al percorso reale gia' calcolato - da
+ * mostrare solo dopo che l'utente ha chiesto il tempo di percorrenza. */
+export function PoiLungoStradaSection({ titolo, percorso, raggioKm = 3 }: PoiLungoStradaSectionProps) {
+  const { punti, isLoading } = usePuntiInteresseLungoStrada(percorso, raggioKm);
+  if (isLoading) return null;
+  return <PoiStrip titolo={titolo} punti={punti} />;
 }
