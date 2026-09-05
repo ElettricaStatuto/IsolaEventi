@@ -161,36 +161,40 @@ export function NearbySection({ events, selectedCategories, onSelectEvent }: Nea
                 onClick={() => onSelectEvent(evt.id)}
                 className="flex-shrink-0 w-[220px] text-left rounded-lg border border-border bg-background hover:border-primary/50 hover:shadow-sm transition-all cursor-pointer overflow-hidden flex flex-col"
               >
-                <span className="text-xs font-bold text-foreground leading-snug px-2.5 pt-2.5 pb-1.5 line-clamp-2">
-                  {evt.titolo}
-                </span>
-
-                <div className="w-full h-24 bg-muted flex items-center justify-center overflow-hidden">
+                {/* Immagine con il tag categoria sovrapposto in alto a destra */}
+                <div className="relative w-full h-28 bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
                   {img ? (
                     <img src={img} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <Navigation className="w-6 h-6 text-muted-foreground/40" />
                   )}
-                </div>
-
-                <div className="p-2.5 flex flex-col gap-1">
                   {evt.categoria && (
-                    <span className="self-start text-[10px] font-semibold text-secondary uppercase tracking-wide bg-secondary/10 border border-secondary/25 rounded-full px-2 py-0.5 mb-0.5">
+                    <span className="absolute top-2 right-2 text-[10px] font-semibold text-secondary-foreground uppercase tracking-wide bg-secondary/90 rounded-full px-2 py-0.5 shadow-sm">
                       {evt.categoria}
                     </span>
                   )}
-                  <div className="flex flex-col gap-0.5 text-[11px] text-muted-foreground">
-                    <span className="font-medium text-foreground">
-                      {evt.data_inizio && format(new Date(`${evt.data_inizio}T00:00:00`), "EEEE d MMMM", { locale: it })}
-                    </span>
-                    {evt.luogo && <span>{evt.luogo}</span>}
-                    <div className="flex items-center gap-1.5">
-                      {km != null && (() => {
-                        const stradale = stimaDistanzaStradaleKm(km);
-                        return <span>{stradale < 1 ? "< 1 km di strada" : `~${Math.round(stradale)} km di strada`}</span>;
-                      })()}
-                      <WeatherBadge latitudine={evt.latitudine} longitudine={evt.longitudine} dataInizio={evt.data_inizio} />
-                    </div>
+                </div>
+
+                {/* Testo: posizioni fisse riga per riga (titolo / data e citta' /
+                    distanza e meteo), cosi' le card restano allineate tra loro
+                    anche quando il titolo occupa piu' righe. Il titolo non e'
+                    mai troncato. */}
+                <div className="p-2.5 flex flex-col gap-1">
+                  <span className="text-xs font-bold text-foreground leading-snug min-h-[2.2em]">
+                    {evt.titolo}
+                  </span>
+                  <span className="text-[11px] font-medium text-foreground">
+                    {evt.data_inizio && format(new Date(`${evt.data_inizio}T00:00:00`), "EEEE d MMMM", { locale: it })}
+                  </span>
+                  {evt.luogo && (
+                    <span className="text-[11px] text-muted-foreground">{evt.luogo}</span>
+                  )}
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-foreground">
+                    {km != null && (() => {
+                      const stradale = stimaDistanzaStradaleKm(km);
+                      return <span>{stradale < 1 ? "< 1 km di strada" : `~${Math.round(stradale)} km di strada`}</span>;
+                    })()}
+                    <WeatherBadge latitudine={evt.latitudine} longitudine={evt.longitudine} dataInizio={evt.data_inizio} />
                   </div>
                 </div>
               </button>
