@@ -126,9 +126,13 @@ export function DateFilter({ dateRange, onDateRangeChange }: DateFilterProps) {
               }
               selected={dateRange}
               onSelect={(range) => {
+                // Chiudi SOLO al secondo clic (quando si passa da "solo
+                // l'inizio impostato" a "inizio e fine impostati"), mai al
+                // primo - indipendentemente da come react-day-picker
+                // ricalcola l'intervallo internamente.
+                const eraIncompleto = !!dateRange?.from && !dateRange?.to;
                 onDateRangeChange(range);
-                // Chiudi solo quando l'intervallo è completo
-                if (range?.from && range?.to) setOpen(false);
+                if (eraIncompleto && range?.from && range?.to) setOpen(false);
               }}
               onDayMouseEnter={(day) => setHoverDate(day)}
               onDayMouseLeave={() => setHoverDate(undefined)}
