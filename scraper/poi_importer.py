@@ -103,10 +103,19 @@ def estrai_coordinate(elemento: dict) -> Optional[tuple]:
     return None
 
 
+def pulisci_nome_comune(nome: Optional[str]) -> Optional[str]:
+    """In Sardegna molti comuni sono taggati su OSM come 'Nome sardo/Nome
+    italiano' (es. "l'Alguer/Alghero"). Per un turista e' piu' chiaro il
+    nome italiano, quindi teniamo solo la parte dopo la barra se presente."""
+    if not nome:
+        return nome
+    return nome.split("/")[-1].strip() if "/" in nome else nome.strip()
+
+
 def comune_da_tags_o_nominatim(tags: dict, lat: float, lon: float) -> Optional[str]:
     for chiave in ("addr:city", "addr:town", "addr:village"):
         if tags.get(chiave):
-            return tags[chiave]
+            return pulisci_nome_comune(tags[chiave])
 
     try:
         time.sleep(1.1)  # Nominatim rate limit: 1 req/sec
@@ -118,7 +127,8 @@ def comune_da_tags_o_nominatim(tags: dict, lat: float, lon: float) -> Optional[s
         )
         if resp.ok:
             address = resp.json().get("address", {})
-            return address.get("city") or address.get("town") or address.get("village") or address.get("hamlet")
+            nome = address.get("city") or address.get("town") or address.get("village") or address.get("hamlet")
+            return pulisci_nome_comune(nome)
     except requests.RequestException as e:
         logger.warning(f"Reverse geocoding fallito per {lat},{lon}: {e}")
     return None
