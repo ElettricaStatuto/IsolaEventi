@@ -13,6 +13,7 @@ import { EventList } from "../components/event-list";
 import { MapContainer } from "../components/map-container";
 import { EventDetailsModalPublic } from "../components/EventDetailsModalPublic";
 import { ErrorBoundary } from "../components/error-boundary";
+import { NearbySection } from "../components/nearby-section";
 import { getAssetUrl, getEventImageUrl } from "../lib/utils";
 
 export function Home() {
@@ -107,6 +108,12 @@ export function Home() {
 
   return (
     <div className="flex flex-col h-[calc(100dvh-4rem)] gap-0">
+      <NearbySection
+        events={events}
+        selectedCategories={selectedCategories}
+        onSelectEvent={handleSelectEvent}
+      />
+
       {/* ── Sidebar + Map layout ── */}
       <div className="flex flex-1 gap-4 min-h-0 lg:flex-row flex-col">
         {/* ── Left sidebar: controls always on top, then list or map below ── */}
