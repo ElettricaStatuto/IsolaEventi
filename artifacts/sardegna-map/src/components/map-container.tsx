@@ -73,16 +73,22 @@ export function MapContainer({
     };
   }, []);
 
-  // Invalidate map size when container dimensions may have changed
+  // Ricalcola le dimensioni di Leaflet ogni volta che il contenitore cambia
+  // davvero dimensione (es. il pulsante "espandi mappa" su mobile, la
+  // sidebar che passa da lista a mappa, il ridimensionamento della
+  // finestra) - un ResizeObserver copre tutti questi casi senza doverli
+  // elencare uno per uno tramite dipendenze di useEffect.
   useEffect(() => {
     const map = leafletMap.current;
-    if (!map) return;
-    const timer = setTimeout(() => {
+    const div = mapDivRef.current;
+    if (!map || !div) return;
+
+    const observer = new ResizeObserver(() => {
       map.invalidateSize();
-    }, 100);
-    return () => clearTimeout(timer);
-  // Re-run whenever events list length changes (sidebar may collapse/expand)
-  }, [events.length]);
+    });
+    observer.observe(div);
+    return () => observer.disconnect();
+  }, []);
 
   // Rebuild markers whenever events change
   useEffect(() => {

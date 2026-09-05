@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search } from "lucide-react";
+import { Search, Maximize2, Minimize2 } from "lucide-react";
 import { useRoute, useLocation } from "wouter";
 import {
   useListEvents,
@@ -28,6 +28,12 @@ export function Home() {
     if (typeof window === "undefined") return true;
     return window.innerWidth >= 1024;
   });
+  // Su schermi piccoli la mappa e' spesso troppo piccola per navigarla
+  // comodamente (pizzicare/trascinare in uno spazio ridotto). Un tocco sul
+  // pulsante di espansione la fa crescere quasi a schermo intero, restando
+  // pero' nel normale flusso di pagina (i filtri sopra restano raggiungibili
+  // scorrendo su, non vengono nascosti).
+  const [mappaEspansa, setMappaEspansa] = useState(false);
 
   // Listen for global "toggle-map-view" event from the nav "Mappa" button
   useEffect(() => {
@@ -273,12 +279,24 @@ export function Home() {
 
           {/* Map in sidebar — shown when "Mappa" is ON (no gap, flush under controls) */}
           {!showEventList && (
-            <div className="flex-1 h-[70vh] lg:h-auto lg:min-h-0 rounded-xl overflow-hidden shadow-sm border border-border mt-0">
+            <div
+              className={`relative flex-1 lg:h-auto lg:min-h-0 rounded-xl overflow-hidden shadow-sm border border-border mt-0 ${
+                mappaEspansa ? "h-[calc(100dvh-4rem)]" : "h-[70vh]"
+              }`}
+            >
               <MapContainer
                 events={filteredEvents}
                 selectedEventId={selectedEventId}
                 onSelectEvent={handleSelectEvent}
               />
+              <button
+                type="button"
+                onClick={() => setMappaEspansa((prev) => !prev)}
+                title={mappaEspansa ? "Rimpicciolisci la mappa" : "Espandi la mappa per navigarla meglio"}
+                className="lg:hidden absolute top-3 left-3 z-[1001] flex items-center justify-center w-9 h-9 rounded-lg bg-card/95 border border-border shadow-sm text-foreground cursor-pointer"
+              >
+                {mappaEspansa ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              </button>
             </div>
           )}
         </aside>
