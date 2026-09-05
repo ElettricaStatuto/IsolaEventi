@@ -84,22 +84,38 @@ export function DateFilter({ dateRange, onDateRangeChange }: DateFilterProps) {
             </Button>
           </div>
 
-          {/* Un solo giorno (default, un clic e chiude) oppure un intervallo
-              di più giorni (aspetta il clic sia sul giorno di inizio che su
-              quello di fine prima di chiudersi). */}
-          <div className="flex items-center gap-2 px-4 py-2.5 border-b">
-            <Switch
-              id="date-filter-multi-giorno"
-              checked={multiGiorno}
-              onCheckedChange={(checked) => {
-                setMultiGiorno(checked);
-                onDateRangeChange(undefined);
-              }}
-            />
-            <Label htmlFor="date-filter-multi-giorno" className="text-xs font-medium cursor-pointer">
-              Più giorni (intervallo)
-            </Label>
+          {/* Un solo giorno (default, un clic e chiude) oppure più giorni di
+              fila (aspetta il clic sia sul giorno di inizio che su quello di
+              fine prima di chiudersi). onClick con stopPropagation: attivare
+              l'interruttore non deve mai far chiudere il calendario. */}
+          <div
+            className="flex flex-col gap-2 px-4 py-2.5 border-b"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="text-xs font-semibold text-foreground">
+              Seleziona un giorno o un intervallo
+            </span>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="date-filter-multi-giorno"
+                checked={multiGiorno}
+                onCheckedChange={(checked) => {
+                  setMultiGiorno(checked);
+                  onDateRangeChange(undefined);
+                }}
+              />
+              <Label htmlFor="date-filter-multi-giorno" className="text-xs font-medium cursor-pointer">
+                Intervallo di più giorni
+              </Label>
+            </div>
           </div>
+
+          {/* Istruzione chiara su come si usa, diversa a seconda della modalità */}
+          <p className="text-[11px] text-muted-foreground px-4 py-2 border-b bg-muted/30">
+            {multiGiorno
+              ? "Tocca il giorno di inizio, poi il giorno di fine."
+              : "Tocca un giorno per selezionarlo."}
+          </p>
 
           {multiGiorno ? (
             <DayPicker
