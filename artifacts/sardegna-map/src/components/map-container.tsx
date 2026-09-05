@@ -55,6 +55,13 @@ export function MapContainer({
       maxZoom: 21,
     });
 
+    // Uno zoom fisso mostra piu' o meno Sardegna a seconda di quanto e'
+    // largo il contenitore (es. la mappa a schermo intero, molto piu' larga
+    // della vista affiancata): su un contenitore largo si vedrebbe fin
+    // dentro la Francia e la Sicilia. fitBounds adatta lo zoom iniziale al
+    // contenitore reale, cosi' si vede sempre "tutta e solo la Sardegna".
+    map.fitBounds(SARDINIA_BOUNDS);
+
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright">Leaflet</a> | &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
