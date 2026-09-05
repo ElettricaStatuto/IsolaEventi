@@ -114,6 +114,27 @@ export function Home() {
 
   return (
     <div className="flex flex-col gap-0 lg:h-[calc(100dvh-4rem)]">
+      {/* Mappa espansa: nasconde tutto il resto (filtri, lista, "vicino a
+          te") per navigare solo la mappa, su qualunque dimensione di
+          schermo - un'esplicita scelta dell'utente, non lo stato di default. */}
+      {mappaEspansa ? (
+        <div className="relative flex-1 h-[calc(100dvh-4rem)] rounded-xl overflow-hidden shadow-sm border border-border">
+          <MapContainer
+            events={filteredEvents}
+            selectedEventId={selectedEventId}
+            onSelectEvent={handleSelectEvent}
+          />
+          <button
+            type="button"
+            onClick={() => setMappaEspansa(false)}
+            title="Chiudi la mappa a schermo intero"
+            className="absolute top-3 left-3 z-[1001] flex items-center justify-center w-9 h-9 rounded-lg bg-card/95 border border-border shadow-sm text-foreground cursor-pointer"
+          >
+            <Minimize2 className="w-4 h-4" />
+          </button>
+        </div>
+      ) : (
+        <>
       <NearbySection
         events={events}
         selectedCategories={selectedCategories}
@@ -279,11 +300,7 @@ export function Home() {
 
           {/* Map in sidebar — shown when "Mappa" is ON (no gap, flush under controls) */}
           {!showEventList && (
-            <div
-              className={`relative flex-1 lg:h-auto lg:min-h-0 rounded-xl overflow-hidden shadow-sm border border-border mt-0 ${
-                mappaEspansa ? "h-[calc(100dvh-4rem)]" : "h-[70vh]"
-              }`}
-            >
+            <div className="relative flex-1 h-[70vh] lg:h-auto lg:min-h-0 rounded-xl overflow-hidden shadow-sm border border-border mt-0">
               <MapContainer
                 events={filteredEvents}
                 selectedEventId={selectedEventId}
@@ -291,11 +308,11 @@ export function Home() {
               />
               <button
                 type="button"
-                onClick={() => setMappaEspansa((prev) => !prev)}
-                title={mappaEspansa ? "Rimpicciolisci la mappa" : "Espandi la mappa per navigarla meglio"}
-                className="lg:hidden absolute top-3 left-3 z-[1001] flex items-center justify-center w-9 h-9 rounded-lg bg-card/95 border border-border shadow-sm text-foreground cursor-pointer"
+                onClick={() => setMappaEspansa(true)}
+                title="Espandi la mappa per navigarla meglio"
+                className="absolute top-3 left-3 z-[1001] flex items-center justify-center w-9 h-9 rounded-lg bg-card/95 border border-border shadow-sm text-foreground cursor-pointer"
               >
-                {mappaEspansa ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                <Maximize2 className="w-4 h-4" />
               </button>
             </div>
           )}
@@ -305,15 +322,25 @@ export function Home() {
             Sotto lg, lista e mappa condividono la stessa area (il toggle "Mappa"
             decide quale delle due mostrare) invece di impilarsi una sopra l'altra. ── */}
         {showEventList && (
-          <div className="hidden lg:block flex-1 rounded-xl overflow-hidden shadow-sm border border-border min-h-0">
+          <div className="relative hidden lg:block flex-1 rounded-xl overflow-hidden shadow-sm border border-border min-h-0">
             <MapContainer
               events={filteredEvents}
               selectedEventId={selectedEventId}
               onSelectEvent={handleSelectEvent}
             />
+            <button
+              type="button"
+              onClick={() => setMappaEspansa(true)}
+              title="Espandi la mappa per navigarla meglio"
+              className="absolute top-3 left-3 z-[1001] flex items-center justify-center w-9 h-9 rounded-lg bg-card/95 border border-border shadow-sm text-foreground cursor-pointer"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
           </div>
         )}
       </div>
+        </>
+      )}
 
       {/* Public Event Details Overlay */}
       {(() => {
