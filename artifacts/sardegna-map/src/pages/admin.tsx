@@ -20,6 +20,7 @@ import { PublishedEventsTable } from "@/components/admin/PublishedEventsTable";
 import { RejectedEventsTable } from "@/components/admin/RejectedEventsTable";
 import { EventDetailsModal } from "@/components/admin/EventDetailsModal";
 import { CrawlerLogsModal } from "@/components/admin/CrawlerLogsModal";
+import { PuntiInteressePendingTable } from "@/components/admin/PuntiInteressePendingTable";
 import { MergeModal } from "@/components/merge-modal";
 import { getAssetUrl, getEventImageUrl } from "../lib/utils";
 
@@ -1870,7 +1871,7 @@ export function Admin() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-7 max-w-5xl">
+          <TabsList className="grid w-full grid-cols-8 max-w-6xl">
             <TabsTrigger value="scraping">
               <Eye className="w-4 h-4 mr-1" /> Scraping
             </TabsTrigger>
@@ -1888,6 +1889,9 @@ export function Admin() {
             </TabsTrigger>
             <TabsTrigger value="rejected">
               <AlertTriangle className="w-4 h-4 mr-1" /> Scartati
+            </TabsTrigger>
+            <TabsTrigger value="poi">
+              <MapPin className="w-4 h-4 mr-1" /> Punti Interesse
             </TabsTrigger>
             <TabsTrigger value="stats">
               <BarChart3 className="w-4 h-4 mr-1" /> Statistiche
@@ -2121,6 +2125,11 @@ export function Admin() {
               filteredRejectedEvents={filteredRejectedEvents}
               restoreRejected={restoreRejected}
             />
+          </TabsContent>
+
+          {/* ── PUNTI DI INTERESSE TAB ── */}
+          <TabsContent value="poi" className="mt-4">
+            <PuntiInteressePendingTable adminKey={adminKey} />
           </TabsContent>
 
           {/* ── ANALYZED TAB ── */}

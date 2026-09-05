@@ -8,6 +8,7 @@ import "leaflet/dist/leaflet.css";
 import { getAssetUrl, googleMapsUrl, findSocialLink, formatDurata } from "../lib/utils";
 import { useWeather } from "../hooks/use-weather";
 import { useTravelTime } from "../hooks/use-travel-time";
+import { PoiSection } from "./poi-section";
 
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
@@ -362,6 +363,12 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
                       )}
                     </div>
                   )}
+
+                  <PoiSection
+                    titolo="Da vedere nei dintorni"
+                    latitudine={event.latitudine}
+                    longitudine={event.longitudine}
+                  />
                 </div>
 
                 {/* Date e Orari */}
