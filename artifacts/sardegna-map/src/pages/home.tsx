@@ -252,11 +252,14 @@ export function Home() {
             )}
           </div>
 
-          {/* Scrollable event list — shown when "Mappa" is OFF. Altezza minima
-              fissa su mobile (dove "aside" non ha piu' un'altezza imposta
-              dall'alto): senza, la lista si schiaccerebbe a zero. */}
+          {/* Scrollable event list — shown when "Mappa" is OFF. Altezza fissa
+              (non solo min-height) su mobile: un discendente con height:100%
+              (la ScrollArea di Leaflet/EventList) non si risolve contro un
+              antenato che ha solo min-height e nessuna altezza esplicita -
+              resterebbe alto 0px. Da lg in su torna al comportamento
+              originale (flex-1 dentro la colonna ad altezza piena). */}
           {showEventList && (
-            <div className="flex-1 min-h-[70vh] lg:min-h-0 flex flex-col">
+            <div className="flex-1 h-[70vh] lg:h-auto lg:min-h-0 flex flex-col">
               <EventList
                 events={filteredEvents}
                 selectedEventId={selectedEventId}
@@ -270,7 +273,7 @@ export function Home() {
 
           {/* Map in sidebar — shown when "Mappa" is ON (no gap, flush under controls) */}
           {!showEventList && (
-            <div className="flex-1 min-h-[70vh] lg:min-h-0 rounded-xl overflow-hidden shadow-sm border border-border mt-0">
+            <div className="flex-1 h-[70vh] lg:h-auto lg:min-h-0 rounded-xl overflow-hidden shadow-sm border border-border mt-0">
               <MapContainer
                 events={filteredEvents}
                 selectedEventId={selectedEventId}
