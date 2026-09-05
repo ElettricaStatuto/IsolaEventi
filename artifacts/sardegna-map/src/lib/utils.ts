@@ -83,3 +83,20 @@ export function distanzaKm(
   return R * c;
 }
 
+/**
+ * Fattore di "circuitazione" stradale: quanto piu' lunga e' in media una
+ * strada reale rispetto alla linea d'aria. In Sardegna, tra entroterra
+ * montuoso e costa frastagliata, 1.3x e' una stima ragionevole (letteratura
+ * sui trasporti indica in genere un intervallo 1.2-1.4 per reti stradali
+ * miste). Non e' preciso come un vero calcolo di instradamento (quello lo
+ * fa OpenRouteService, usato su richiesta per il singolo evento), ma non
+ * costa nessuna chiamata API: utile per stimare tante distanze in una lista.
+ */
+const FATTORE_CIRCUITAZIONE_STRADALE = 1.3;
+
+/** Stima gratuita (nessuna chiamata API) della distanza stradale in km, a
+ * partire dalla distanza in linea d'aria. */
+export function stimaDistanzaStradaleKm(lineaAriaKm: number): number {
+  return lineaAriaKm * FATTORE_CIRCUITAZIONE_STRADALE;
+}
+

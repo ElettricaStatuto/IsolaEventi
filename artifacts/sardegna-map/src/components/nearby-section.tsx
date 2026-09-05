@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useUserLocation } from "../hooks/use-user-location";
 import { WeatherBadge } from "../hooks/use-weather";
-import { getEventImageUrl, distanzaKm } from "../lib/utils";
+import { getEventImageUrl, distanzaKm, stimaDistanzaStradaleKm } from "../lib/utils";
 
 type Periodo = "oggi" | "weekend" | "settimana" | "mese";
 
@@ -159,8 +159,12 @@ export function NearbySection({ events, selectedCategories, onSelectEvent }: Nea
                 key={evt.id}
                 type="button"
                 onClick={() => onSelectEvent(evt.id)}
-                className="flex-shrink-0 w-[200px] text-left rounded-lg border border-border bg-background hover:border-primary/50 hover:shadow-sm transition-all cursor-pointer overflow-hidden"
+                className="flex-shrink-0 w-[220px] text-left rounded-lg border border-border bg-background hover:border-primary/50 hover:shadow-sm transition-all cursor-pointer overflow-hidden flex flex-col"
               >
+                <span className="text-xs font-bold text-foreground leading-snug px-2.5 pt-2.5 pb-1.5 line-clamp-2">
+                  {evt.titolo}
+                </span>
+
                 <div className="w-full h-24 bg-muted flex items-center justify-center overflow-hidden">
                   {img ? (
                     <img src={img} alt="" className="w-full h-full object-cover" />
@@ -168,19 +172,25 @@ export function NearbySection({ events, selectedCategories, onSelectEvent }: Nea
                     <Navigation className="w-6 h-6 text-muted-foreground/40" />
                   )}
                 </div>
+
                 <div className="p-2.5 flex flex-col gap-1">
                   {evt.categoria && (
-                    <span className="text-[10px] font-semibold text-secondary uppercase tracking-wide">
+                    <span className="self-start text-[10px] font-semibold text-secondary uppercase tracking-wide bg-secondary/10 border border-secondary/25 rounded-full px-2 py-0.5 mb-0.5">
                       {evt.categoria}
                     </span>
                   )}
-                  <span className="text-xs font-bold text-foreground leading-tight line-clamp-2">
-                    {evt.titolo}
-                  </span>
-                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-0.5">
-                    <span>{evt.data_inizio && format(new Date(`${evt.data_inizio}T00:00:00`), "d MMM", { locale: it })}</span>
-                    {km != null && <span>· {km < 1 ? "< 1 km" : `${Math.round(km)} km`}</span>}
-                    <WeatherBadge latitudine={evt.latitudine} longitudine={evt.longitudine} dataInizio={evt.data_inizio} />
+                  <div className="flex flex-col gap-0.5 text-[11px] text-muted-foreground">
+                    <span className="font-medium text-foreground">
+                      {evt.data_inizio && format(new Date(`${evt.data_inizio}T00:00:00`), "EEEE d MMMM", { locale: it })}
+                    </span>
+                    {evt.luogo && <span>{evt.luogo}</span>}
+                    <div className="flex items-center gap-1.5">
+                      {km != null && (() => {
+                        const stradale = stimaDistanzaStradaleKm(km);
+                        return <span>{stradale < 1 ? "< 1 km di strada" : `~${Math.round(stradale)} km di strada`}</span>;
+                      })()}
+                      <WeatherBadge latitudine={evt.latitudine} longitudine={evt.longitudine} dataInizio={evt.data_inizio} />
+                    </div>
                   </div>
                 </div>
               </button>
