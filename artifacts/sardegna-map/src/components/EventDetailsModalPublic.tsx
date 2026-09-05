@@ -309,8 +309,45 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
                 />
               </div>
 
-              {/* Right Column: Dove & Quando Stacked */}
+              {/* Right Column: Quando & Dove Stacked */}
               <div className="flex-1 flex flex-col gap-3 justify-between">
+                {/* Date e Orari */}
+                <div className="p-4 rounded-lg border border-border bg-card flex-1 flex flex-col justify-center">
+                  <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">
+                    Quando
+                  </h4>
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2 text-sm text-foreground">
+                      <Calendar className="w-4 h-4 text-primary shrink-0" />
+                      <span className="font-semibold">
+                        {event.data_inizio ? new Date(event.data_inizio).toLocaleDateString("it-IT") : "N/D"}
+                        {event.data_fine && event.data_fine !== event.data_inizio
+                          ? ` - ${new Date(event.data_fine).toLocaleDateString("it-IT")}`
+                          : ""}
+                      </span>
+                    </div>
+                    {event.dettagli_extra?.ora_inizio && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground ml-6">
+                        <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                        <span>
+                          Inizio ore <strong className="text-foreground">{event.dettagli_extra.ora_inizio}</strong>
+                          {event.dettagli_extra.ora_fine && (
+                            <> fino alle <strong className="text-foreground">{event.dettagli_extra.ora_fine}</strong></>
+                          )}
+                        </span>
+                      </div>
+                    )}
+                    {weather && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground ml-6" title={weather.descrizione}>
+                        <span className="text-base leading-none">{weather.icon}</span>
+                        <span>
+                          {weather.descrizione} · <strong className="text-foreground">{Math.round(weather.tempMax)}°</strong> / {Math.round(weather.tempMin)}°
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {/* Luogo */}
                 <div className="p-4 rounded-lg border border-border bg-card flex-1 flex flex-col justify-center">
                   <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">
@@ -363,49 +400,6 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
                       )}
                     </div>
                   )}
-
-                  <PoiSection
-                    titolo="Da vedere nei dintorni"
-                    latitudine={event.latitudine}
-                    longitudine={event.longitudine}
-                  />
-                </div>
-
-                {/* Date e Orari */}
-                <div className="p-4 rounded-lg border border-border bg-card flex-1 flex flex-col justify-center">
-                  <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">
-                    Quando
-                  </h4>
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center gap-2 text-sm text-foreground">
-                      <Calendar className="w-4 h-4 text-primary shrink-0" />
-                      <span className="font-semibold">
-                        {event.data_inizio ? new Date(event.data_inizio).toLocaleDateString("it-IT") : "N/D"}
-                        {event.data_fine && event.data_fine !== event.data_inizio
-                          ? ` - ${new Date(event.data_fine).toLocaleDateString("it-IT")}`
-                          : ""}
-                      </span>
-                    </div>
-                    {event.dettagli_extra?.ora_inizio && (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground ml-6">
-                        <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                        <span>
-                          Inizio ore <strong className="text-foreground">{event.dettagli_extra.ora_inizio}</strong>
-                          {event.dettagli_extra.ora_fine && (
-                            <> fino alle <strong className="text-foreground">{event.dettagli_extra.ora_fine}</strong></>
-                          )}
-                        </span>
-                      </div>
-                    )}
-                    {weather && (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground ml-6" title={weather.descrizione}>
-                        <span className="text-base leading-none">{weather.icon}</span>
-                        <span>
-                          {weather.descrizione} · <strong className="text-foreground">{Math.round(weather.tempMax)}°</strong> / {Math.round(weather.tempMin)}°
-                        </span>
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
             </div>
@@ -453,6 +447,12 @@ export const EventDetailsModalPublic: React.FC<EventDetailsModalPublicProps> = (
               </div>
             </div>
           )}
+
+          <PoiSection
+            titolo="Da vedere nei dintorni"
+            latitudine={event.latitudine}
+            longitudine={event.longitudine}
+          />
 
           {/* Sotto-eventi (Programma del Festival) */}
           {isLoadingSubEvents && (

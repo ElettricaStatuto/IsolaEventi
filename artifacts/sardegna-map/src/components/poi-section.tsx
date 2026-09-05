@@ -31,11 +31,14 @@ export function PoiSection({ titolo, latitudine, longitudine, raggioKm = 15 }: P
   if (isLoading || punti.length === 0) return null;
 
   return (
-    <div className="mt-3 pt-3 border-t border-border/50">
+    <div className="border-t border-border pt-4">
       <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
         {titolo}
       </h4>
-      <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-1 px-1">
+      {/* touch-pan-x: sulla mappa/scheda che scorre in verticale, dice al
+          browser di gestire lo swipe orizzontale qui invece di farlo
+          diventare uno scroll verticale della scheda intera. */}
+      <div className="flex gap-2.5 overflow-x-auto overflow-y-hidden touch-pan-x pb-1 -mx-1 px-1">
         {punti.map((p) => (
           <a
             key={p.id}
