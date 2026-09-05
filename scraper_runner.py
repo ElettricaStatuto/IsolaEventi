@@ -26,6 +26,7 @@ from scraper.sites.sardegnaturismo import SardegnaTurismoScraper
 from scraper.sites.eventiinsardegna import EventiInSardegnaScraper
 from scraper.sites.timeinjazz import TimeInJazzScraper
 from scraper.sites.saludetrigu import SaludeTriguScraper
+from scraper.sites.spettacolisardegna import SpettacoliSardegnaScraper
 from scraper.ai_analyzer import analyze_event
 from scraper.models import SottoEvento
 
@@ -306,6 +307,9 @@ def main():
 
         if not enabled_sources or "saludetrigu" in enabled_sources:
             scrapers.append(SaludeTriguScraper())
+
+        if not enabled_sources or "spettacolisardegna" in enabled_sources:
+            scrapers.append(SpettacoliSardegnaScraper())
 
         # Configurazione target per eventiinsardegna.it
         eventiinsardegna_targets = []
