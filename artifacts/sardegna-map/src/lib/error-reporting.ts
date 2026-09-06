@@ -40,13 +40,22 @@ export function segnalaErrore(dettagli: DettagliErrore): string {
       componentStack: dettagli.componentStack,
       url: window.location.href,
     });
-    // sendBeacon non blocca la pagina e funziona anche se l'errore avviene
-    // durante uno scaricamento/cambio pagina; se non disponibile, fetch normale.
+    // In produzione frontend e backend sono due servizi Render separati:
+    // window.fetch viene "patchato" in main.tsx per anteporre VITE_API_URL
+    // a qualsiasi chiamata relativa "/api/...", ma navigator.sendBeacon NON
+    // passa da window.fetch, quindi ignora quel patch e spedisce la
+    // richiesta relativa al dominio corrente (il sito statico), dove non
+    // esiste nessun backend ad ascoltare: la segnalazione sparisce nel
+    // nulla senza errori visibili. Bisogna quindi costruire l'URL assoluto
+    // a mano, qui, prima di usare sendBeacon.
+    const apiUrl = (import.meta.env.VITE_API_URL || "").trim().replace(/\/+$/, "");
+    const endpoint = apiUrl ? `${apiUrl}/api/client-errors` : "/api/client-errors";
+
     if (navigator.sendBeacon) {
       const blob = new Blob([payload], { type: "application/json" });
-      navigator.sendBeacon("/api/client-errors", blob);
+      navigator.sendBeacon(endpoint, blob);
     } else {
-      fetch("/api/client-errors", {
+      fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: payload,
