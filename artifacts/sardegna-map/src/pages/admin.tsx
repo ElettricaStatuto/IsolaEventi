@@ -10,9 +10,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Loader2, Info, CheckCircle2, XCircle, ShieldCheck, ArrowLeft, Eye, Database,
-  Trash2, RotateCcw, AlertTriangle, Calendar, MapPin, Globe, Search, RefreshCw, Clock, Terminal, Upload, BarChart3, Brain, FileText, Sun, Moon, Copy
+  Trash2, RotateCcw, AlertTriangle, Calendar, MapPin, Globe, Search, RefreshCw, Clock, Terminal, Upload, BarChart3, Brain, FileText, Sun, Moon, Copy, Bug
 } from "lucide-react";
 import { AdminStats } from "@/components/admin-stats";
+import { AdminClientErrors } from "@/components/admin-client-errors";
 import { ScraperPanel } from "@/components/admin/ScraperPanel";
 import { PendingEventsTable } from "@/components/admin/PendingEventsTable";
 import { AnalyzedEventsTable } from "@/components/admin/AnalyzedEventsTable";
@@ -1871,7 +1872,7 @@ export function Admin() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-8 max-w-6xl">
+          <TabsList className="grid w-full grid-cols-9 max-w-6xl">
             <TabsTrigger value="scraping">
               <Eye className="w-4 h-4 mr-1" /> Scraping
             </TabsTrigger>
@@ -1895,6 +1896,9 @@ export function Admin() {
             </TabsTrigger>
             <TabsTrigger value="stats">
               <BarChart3 className="w-4 h-4 mr-1" /> Statistiche
+            </TabsTrigger>
+            <TabsTrigger value="errori">
+              <Bug className="w-4 h-4 mr-1" /> Errori
             </TabsTrigger>
           </TabsList>
 
@@ -2180,6 +2184,11 @@ export function Admin() {
           {/* ── STATS TAB ── */}
           <TabsContent value="stats" className="mt-4">
             <AdminStats adminKey={adminKey} />
+          </TabsContent>
+
+          {/* ── ERRORI TAB ── */}
+          <TabsContent value="errori" className="mt-4">
+            <AdminClientErrors adminKey={adminKey} />
           </TabsContent>
         </Tabs>
 

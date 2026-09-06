@@ -5,6 +5,7 @@ import duplicatesRouter from "./duplicates.js";
 import telegramRouter from "./telegram";
 import directionsRouter from "./directions";
 import puntiInteresseRouter from "./punti-interesse";
+import clientErrorsRouter from "./client-errors";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(duplicatesRouter);
 router.use(telegramRouter);
 router.use(directionsRouter);
 router.use(puntiInteresseRouter);
+router.use(clientErrorsRouter);
 
 export default router;
