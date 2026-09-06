@@ -16,74 +16,6 @@ import { ErrorBoundary } from "../components/error-boundary";
 import { NearbySection } from "../components/nearby-section";
 import { getAssetUrl, getEventImageUrl } from "../lib/utils";
 
-/**
- * Etichetta diagnostica TEMPORANEA per capire perche' la mappa non si vede
- * su alcuni telefoni: mostra numeri reali letti dal browser dell'utente
- * (dimensioni schermo, risultato della media query, eventuali errori
- * JavaScript catturati) invece di continuare a ipotizzare alla cieca da
- * remoto. Da rimuovere una volta risolto il problema.
- */
-function DebugOverlay() {
-  const [info, setInfo] = useState<string>("...");
-  const [errore, setErrore] = useState<string | null>(null);
-  const [mappaRect, setMappaRect] = useState<string>("non ancora misurata");
-
-  useEffect(() => {
-    const aggiorna = () => {
-      const lg = window.matchMedia("(min-width: 1024px)").matches;
-      setInfo(
-        `${window.innerWidth}x${window.innerHeight}px · dpr=${window.devicePixelRatio} · lg=${lg} · ` +
-        `${navigator.userAgent.slice(0, 60)}`
-      );
-    };
-    aggiorna();
-    window.addEventListener("resize", aggiorna);
-
-    const onError = (e: ErrorEvent) => {
-      setErrore(`${e.message} @ ${e.filename}:${e.lineno}`);
-    };
-    const onRejection = (e: PromiseRejectionEvent) => {
-      setErrore(`Promise non gestita: ${String(e.reason)}`);
-    };
-    window.addEventListener("error", onError);
-    window.addEventListener("unhandledrejection", onRejection);
-
-    const timer = setTimeout(() => {
-      const divs = Array.from(document.querySelectorAll(".leaflet-container"));
-      if (divs.length === 0) {
-        setMappaRect("nessun elemento .leaflet-container trovato nel DOM");
-      } else {
-        const rects = divs.map((d) => {
-          const r = d.getBoundingClientRect();
-          return `${Math.round(r.width)}x${Math.round(r.height)}`;
-        });
-        setMappaRect(`${divs.length} mappa/e trovate, dimensioni: ${rects.join(", ")}`);
-      }
-    }, 1500);
-
-    return () => {
-      window.removeEventListener("resize", aggiorna);
-      window.removeEventListener("error", onError);
-      window.removeEventListener("unhandledrejection", onRejection);
-      clearTimeout(timer);
-    };
-  }, []);
-
-  return (
-    <div className="fixed top-0 left-0 right-0 z-[9999] bg-yellow-300 text-black text-[10px] leading-tight p-2 font-mono break-all border-b-4 border-black">
-      <strong>DEBUG:</strong> {info}
-      <br />
-      <strong>Mappa nel DOM:</strong> {mappaRect}
-      {errore && (
-        <>
-          <br />
-          <strong className="text-red-700">ERRORE JS:</strong> {errore}
-        </>
-      )}
-    </div>
-  );
-}
-
 export function Home() {
   const queryClient = useQueryClient();
   const [match, params] = useRoute("/eventi/:idAndSlug");
@@ -211,12 +143,15 @@ export function Home() {
 
   return (
     <div className="flex flex-col gap-0 lg:h-[calc(100dvh-4rem)]">
-      <DebugOverlay />
       {/* Mappa espansa: nasconde tutto il resto (filtri, lista, "vicino a
           te") per navigare solo la mappa, su qualunque dimensione di
           schermo - un'esplicita scelta dell'utente, non lo stato di default. */}
       {mappaEspansa ? (
-        <div className="relative flex-1 h-[calc(100dvh-4rem)] rounded-xl overflow-hidden shadow-sm border border-border">
+        // Niente flex-1: il contenitore esterno non ha un'altezza propria
+        // su mobile, quindi flex-1 (flex-basis:0%) vincerebbe sull'altezza
+        // esplicita e la mappa a schermo intero restrebbe alta 0px - stesso
+        // bug della mappa compatta qui sotto, stessa soluzione.
+        <div className="relative h-[calc(100dvh-4rem)] rounded-xl overflow-hidden shadow-sm border border-border">
           <MapContainer
             events={filteredEvents}
             selectedEventId={selectedEventId}
@@ -380,15 +315,17 @@ export function Home() {
 
           {/* Mappa: SEMPRE visibile sotto "lg", subito dopo i filtri - via
               pura media query CSS (block/lg:hidden), MAI dietro a un
-              calcolo di larghezza in JavaScript. Su alcuni telefoni (anche
-              Chrome, fascia bassa) il rilevamento "e' desktop?" in JS puo'
-              sbagliare e nascondere per errore un blocco condizionato da
-              quello - mettendo la mappa fuori da qualunque condizione JS
-              non puo' piu' succedere. A schermi lg in su questo blocco e'
-              nascosto: la' la mappa vive nell'area affiancata piu' sotto,
-              o come vista "larga" quando si sceglie la modalita' mappa. */}
+              calcolo di larghezza in JavaScript. A schermi lg in su questo
+              blocco e' nascosto: la' la mappa vive nell'area affiancata piu'
+              sotto, o come vista "larga" in modalita' mappa.
+              NIENTE flex-1 qui: essendo "flex: 1 1 0%", ha la PRECEDENZA
+              sull'altezza esplicita sotto (height in stile inline) quando il
+              contenitore "aside" non ha un'altezza propria su mobile -
+              risultato confermato su un dispositivo reale: la mappa restava
+              alta 0px nonostante l'altezza fosse impostata correttamente.
+              L'altezza qui e' fissa in pixel, flex-grow non serve. */}
           <div
-            className="relative block lg:hidden flex-1 rounded-xl overflow-hidden shadow-sm border border-border"
+            className="relative block lg:hidden rounded-xl overflow-hidden shadow-sm border border-border"
             style={{ height: altezzaMappaMobile }}
           >
             <MapContainer
@@ -414,10 +351,15 @@ export function Home() {
 
           {/* Lista eventi: sotto la mappa su mobile (sempre raggiungibile
               scorrendo), contenuto principale della sidebar su desktop
-              quando si sceglie "Lista" invece di "Mappa". */}
+              quando si sceglie "Lista" invece di "Mappa".
+              flex-1 solo da lg in su (lg:flex-1, non flex-1 semplice): su
+              mobile "aside" non ha un'altezza propria, quindi flex-1
+              (flex-basis:0%) vincerebbe sull'altezza esplicita sotto e la
+              lista restrebbe alta 0px - stesso bug preso e risolto sulla
+              mappa qui sopra. */}
           {showEventList && (
             <div
-              className="flex-1 h-[var(--h-mappa-mobile)] lg:h-auto lg:min-h-0 flex flex-col"
+              className="lg:flex-1 h-[var(--h-mappa-mobile)] lg:h-auto lg:min-h-0 flex flex-col"
               style={{ "--h-mappa-mobile": `${altezzaMappaMobile}px` } as CSSProperties}
             >
               <EventList
