@@ -84,10 +84,18 @@ export function MapView({ events, selectedEventId }: MapViewProps) {
     if (!map || !selectedEventId) return;
 
     const marker = markersRef.current.get(selectedEventId);
-    if (marker) {
-      map.flyTo(marker.getLatLng(), 12, { duration: 1 });
-      marker.openPopup();
-    }
+    if (!marker) return;
+
+    const latlng = marker.getLatLng();
+    // Difesa aggiuntiva: se per qualsiasi motivo lo stato interno della
+    // mappa o le coordinate del marker non sono numeri validi, meglio non
+    // animare affatto la vista piuttosto che far crashare Leaflet (vedi
+    // map-container.tsx per il caso reale che ha causato questo problema).
+    if (!Number.isFinite(latlng.lat) || !Number.isFinite(latlng.lng)) return;
+
+    map.invalidateSize();
+    map.flyTo(latlng, 12, { duration: 1 });
+    marker.openPopup();
   }, [selectedEventId]);
 
   return (

@@ -75,7 +75,20 @@ export function MapContainer({
     // della vista affiancata): su un contenitore largo si vedrebbe fin
     // dentro la Francia e la Sicilia. fitBounds adatta lo zoom iniziale al
     // contenitore reale, cosi' si vede sempre "tutta e solo la Sardegna".
-    map.fitBounds(SARDINIA_BOUNDS);
+    //
+    // Va rimandato con requestAnimationFrame: se si arriva qui con un link
+    // diretto a /eventi/:id (il componente monta "a freddo", non dopo aver
+    // gia' navigato dalla home), il contenitore puo' avere ancora 0x0 di
+    // dimensione perche' il layout della pagina non si e' stabilizzato -
+    // fitBounds su un contenitore vuoto calcola uno zoom NaN/Infinity, che
+    // corrompe lo stato interno della mappa da subito. Ogni flyTo
+    // successivo (es. all'apertura della card di un evento) eredita quello
+    // zoom invalido e Leaflet va in crash con "Invalid LatLng (NaN, NaN)",
+    // anche se le coordinate dell'evento sono perfettamente valide.
+    requestAnimationFrame(() => {
+      map.invalidateSize();
+      map.fitBounds(SARDINIA_BOUNDS);
+    });
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution:
@@ -163,10 +176,17 @@ export function MapContainer({
     if (!map || selectedEventId === null) return;
 
     const marker = markersRef.current.get(selectedEventId);
-    if (marker) {
-      map.flyTo(marker.getLatLng(), 12, { duration: 0.8 });
-      marker.openPopup();
-    }
+    if (!marker) return;
+
+    const latlng = marker.getLatLng();
+    // Difesa aggiuntiva: se per qualsiasi motivo lo stato interno della
+    // mappa o le coordinate del marker non sono numeri validi, meglio non
+    // animare affatto la vista piuttosto che far crashare Leaflet.
+    if (!Number.isFinite(latlng.lat) || !Number.isFinite(latlng.lng)) return;
+
+    map.invalidateSize();
+    map.flyTo(latlng, 12, { duration: 0.8 });
+    marker.openPopup();
   }, [selectedEventId]);
 
   return (
