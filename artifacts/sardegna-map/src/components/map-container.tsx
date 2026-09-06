@@ -27,6 +27,28 @@ interface MapContainerProps {
   interattiva: boolean;
 }
 
+// Un singolo requestAnimationFrame non basta sempre: su un mount "a
+// freddo" (link diretto a /eventi/:id, niente navigazione precedente da
+// cui il layout erediti gia' una dimensione) il contenitore puo' restare
+// a 0x0 per piu' di un frame, mentre il resto della pagina (font, CSS,
+// immagini) finisce di stabilizzarsi. Qui si ritenta finche' il
+// contenitore non ha davvero una dimensione, invece di sperare che un
+// frame sia sempre sufficiente - fitBounds/flyTo su un contenitore vuoto
+// calcolano uno zoom NaN/Infinity che fa crashare Leaflet piu' avanti
+// con "Invalid LatLng", anche quando le coordinate sono valide.
+function eseguiQuandoVisibile(map: L.Map, azione: () => void, tentativiRimasti = 20): void {
+  const size = map.getSize();
+  if (size.x > 0 && size.y > 0) {
+    azione();
+    return;
+  }
+  if (tentativiRimasti <= 0) return; // rinuncia: meglio nessuna animazione che un crash
+  requestAnimationFrame(() => {
+    map.invalidateSize();
+    eseguiQuandoVisibile(map, azione, tentativiRimasti - 1);
+  });
+}
+
 const SARDINIA_CENTER: [number, number] = [40.12, 9.07];
 const DEFAULT_ZOOM = 7;
 
@@ -75,20 +97,7 @@ export function MapContainer({
     // della vista affiancata): su un contenitore largo si vedrebbe fin
     // dentro la Francia e la Sicilia. fitBounds adatta lo zoom iniziale al
     // contenitore reale, cosi' si vede sempre "tutta e solo la Sardegna".
-    //
-    // Va rimandato con requestAnimationFrame: se si arriva qui con un link
-    // diretto a /eventi/:id (il componente monta "a freddo", non dopo aver
-    // gia' navigato dalla home), il contenitore puo' avere ancora 0x0 di
-    // dimensione perche' il layout della pagina non si e' stabilizzato -
-    // fitBounds su un contenitore vuoto calcola uno zoom NaN/Infinity, che
-    // corrompe lo stato interno della mappa da subito. Ogni flyTo
-    // successivo (es. all'apertura della card di un evento) eredita quello
-    // zoom invalido e Leaflet va in crash con "Invalid LatLng (NaN, NaN)",
-    // anche se le coordinate dell'evento sono perfettamente valide.
-    requestAnimationFrame(() => {
-      map.invalidateSize();
-      map.fitBounds(SARDINIA_BOUNDS);
-    });
+    eseguiQuandoVisibile(map, () => map.fitBounds(SARDINIA_BOUNDS));
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution:
@@ -184,9 +193,10 @@ export function MapContainer({
     // animare affatto la vista piuttosto che far crashare Leaflet.
     if (!Number.isFinite(latlng.lat) || !Number.isFinite(latlng.lng)) return;
 
-    map.invalidateSize();
-    map.flyTo(latlng, 12, { duration: 0.8 });
-    marker.openPopup();
+    eseguiQuandoVisibile(map, () => {
+      map.flyTo(latlng, 12, { duration: 0.8 });
+      marker.openPopup();
+    });
   }, [selectedEventId]);
 
   return (

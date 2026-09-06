@@ -21,6 +21,23 @@ interface MapViewProps {
   selectedEventId: number | null;
 }
 
+// Vedi map-container.tsx per la spiegazione completa: su un mount "a
+// freddo" il contenitore puo' restare a 0x0 per piu' di un frame, e
+// flyTo/fitBounds su un contenitore vuoto fanno crashare Leaflet con
+// "Invalid LatLng" - qui si ritenta finche' non ha davvero una dimensione.
+function eseguiQuandoVisibile(map: L.Map, azione: () => void, tentativiRimasti = 20): void {
+  const size = map.getSize();
+  if (size.x > 0 && size.y > 0) {
+    azione();
+    return;
+  }
+  if (tentativiRimasti <= 0) return;
+  requestAnimationFrame(() => {
+    map.invalidateSize();
+    eseguiQuandoVisibile(map, azione, tentativiRimasti - 1);
+  });
+}
+
 export function MapView({ events, selectedEventId }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<L.Map | null>(null);
@@ -93,9 +110,10 @@ export function MapView({ events, selectedEventId }: MapViewProps) {
     // map-container.tsx per il caso reale che ha causato questo problema).
     if (!Number.isFinite(latlng.lat) || !Number.isFinite(latlng.lng)) return;
 
-    map.invalidateSize();
-    map.flyTo(latlng, 12, { duration: 1 });
-    marker.openPopup();
+    eseguiQuandoVisibile(map, () => {
+      map.flyTo(latlng, 12, { duration: 1 });
+      marker.openPopup();
+    });
   }, [selectedEventId]);
 
   return (
