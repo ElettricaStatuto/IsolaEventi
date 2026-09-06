@@ -20,6 +20,11 @@ interface MapContainerProps {
   events: Event[];
   selectedEventId: number | null;
   onSelectEvent: (id: number) => void;
+  /** Se false, la mappa si vede ma non si puo' trascinare/zoomare - usato
+   * su mobile per la mappa compatta, cosi' uno swipe per scorrere la
+   * pagina non viene "rubato" dalla mappa per spostarla. Diventa
+   * interattiva quando l'utente sceglie esplicitamente di espanderla. */
+  interattiva: boolean;
 }
 
 const SARDINIA_CENTER: [number, number] = [40.12, 9.07];
@@ -36,6 +41,7 @@ export function MapContainer({
   events,
   selectedEventId,
   onSelectEvent,
+  interattiva,
 }: MapContainerProps) {
   const mapDivRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<L.Map | null>(null);
@@ -53,6 +59,15 @@ export function MapContainer({
       maxBoundsViscosity: 1.0,
       minZoom: 7,
       maxZoom: 21,
+      // Se non interattiva: la mappa resta visibile ma non si puo'
+      // trascinare/zoomare, cosi' uno swipe verticale sopra di lei scorre
+      // la pagina invece di spostare la vista della mappa.
+      dragging: interattiva,
+      touchZoom: interattiva,
+      scrollWheelZoom: interattiva,
+      doubleClickZoom: interattiva,
+      boxZoom: interattiva,
+      keyboard: interattiva,
     });
 
     // Uno zoom fisso mostra piu' o meno Sardegna a seconda di quanto e'
@@ -68,8 +83,11 @@ export function MapContainer({
       maxZoom: 19,
     }).addTo(map);
 
-    // Zoom control in bottom-right to avoid overlap with fullscreen button
-    L.control.zoom({ position: "bottomright" }).addTo(map);
+    // Controlli zoom solo sulla mappa interattiva - su quella "di anteprima"
+    // (non interattiva) non farebbero comunque nulla di utile da soli.
+    if (interattiva) {
+      L.control.zoom({ position: "bottomright" }).addTo(map);
+    }
 
     leafletMap.current = map;
 

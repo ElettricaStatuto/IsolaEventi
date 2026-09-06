@@ -44,6 +44,21 @@ export function Home() {
   // scorrendo su, non vengono nascosti).
   const [mappaEspansa, setMappaEspansa] = useState(false);
 
+  // Solo su desktop la mappa compatta (non ancora espansa) e' subito
+  // trascinabile - su telefono resta "di anteprima" (si vede ma non si
+  // sposta) finche' non si preme il pulsante di espansione, cosi' uno
+  // swipe verticale per scorrere la pagina non viene scambiato dalla
+  // mappa per un trascinamento della vista.
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(min-width: 1024px)").matches : true
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const aggiorna = () => setIsDesktop(mq.matches);
+    mq.addEventListener("change", aggiorna);
+    return () => mq.removeEventListener("change", aggiorna);
+  }, []);
+
   // Listen for global "toggle-map-view" event from the nav "Mappa" button
   useEffect(() => {
     const handleToggle = () => setShowEventList((prev) => !prev);
@@ -152,6 +167,7 @@ export function Home() {
             events={filteredEvents}
             selectedEventId={selectedEventId}
             onSelectEvent={handleSelectEvent}
+            interattiva
           />
           <button
             type="button"
@@ -340,7 +356,15 @@ export function Home() {
                 events={filteredEvents}
                 selectedEventId={selectedEventId}
                 onSelectEvent={handleSelectEvent}
+                interattiva={isDesktop}
               />
+              {!isDesktop && (
+                <div
+                  className="absolute inset-0 z-[999]"
+                  onClick={() => setMappaEspansa(true)}
+                  aria-label="Tocca per espandere e navigare la mappa"
+                />
+              )}
               <button
                 type="button"
                 onClick={() => setMappaEspansa(true)}
@@ -362,6 +386,7 @@ export function Home() {
               events={filteredEvents}
               selectedEventId={selectedEventId}
               onSelectEvent={handleSelectEvent}
+              interattiva
             />
             <button
               type="button"
