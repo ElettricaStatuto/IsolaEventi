@@ -44,21 +44,6 @@ export function Home() {
   // scorrendo su, non vengono nascosti).
   const [mappaEspansa, setMappaEspansa] = useState(false);
 
-  // Solo su desktop la mappa compatta (non ancora espansa) e' subito
-  // trascinabile - su telefono resta "di anteprima" (si vede ma non si
-  // sposta) finche' non si preme il pulsante di espansione, cosi' uno
-  // swipe verticale per scorrere la pagina non viene scambiato dalla
-  // mappa per un trascinamento della vista.
-  const [isDesktop, setIsDesktop] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(min-width: 1024px)").matches : true
-  );
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 1024px)");
-    const aggiorna = () => setIsDesktop(mq.matches);
-    mq.addEventListener("change", aggiorna);
-    return () => mq.removeEventListener("change", aggiorna);
-  }, []);
-
   // Listen for global "toggle-map-view" event from the nav "Mappa" button
   useEffect(() => {
     const handleToggle = () => setShowEventList((prev) => !prev);
@@ -324,12 +309,43 @@ export function Home() {
             )}
           </div>
 
-          {/* Scrollable event list — shown when "Mappa" is OFF. Altezza fissa
-              (non solo min-height) su mobile: un discendente con height:100%
-              (la ScrollArea di Leaflet/EventList) non si risolve contro un
-              antenato che ha solo min-height e nessuna altezza esplicita -
-              resterebbe alto 0px. Da lg in su torna al comportamento
-              originale (flex-1 dentro la colonna ad altezza piena). */}
+          {/* Mappa: SEMPRE visibile sotto "lg", subito dopo i filtri - via
+              pura media query CSS (block/lg:hidden), MAI dietro a un
+              calcolo di larghezza in JavaScript. Su alcuni telefoni (anche
+              Chrome, fascia bassa) il rilevamento "e' desktop?" in JS puo'
+              sbagliare e nascondere per errore un blocco condizionato da
+              quello - mettendo la mappa fuori da qualunque condizione JS
+              non puo' piu' succedere. A schermi lg in su questo blocco e'
+              nascosto: la' la mappa vive nell'area affiancata piu' sotto,
+              o come vista "larga" quando si sceglie la modalita' mappa. */}
+          <div
+            className="relative block lg:hidden flex-1 rounded-xl overflow-hidden shadow-sm border border-border"
+            style={{ height: altezzaMappaMobile }}
+          >
+            <MapContainer
+              events={filteredEvents}
+              selectedEventId={selectedEventId}
+              onSelectEvent={handleSelectEvent}
+              interattiva={false}
+            />
+            <div
+              className="absolute inset-0 z-[999]"
+              onClick={() => setMappaEspansa(true)}
+              aria-label="Tocca per espandere e navigare la mappa"
+            />
+            <button
+              type="button"
+              onClick={() => setMappaEspansa(true)}
+              title="Espandi la mappa per navigarla meglio"
+              className="absolute top-3 left-3 z-[1001] flex items-center justify-center w-9 h-9 rounded-lg bg-card/95 border border-border shadow-sm text-foreground cursor-pointer"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Lista eventi: sotto la mappa su mobile (sempre raggiungibile
+              scorrendo), contenuto principale della sidebar su desktop
+              quando si sceglie "Lista" invece di "Mappa". */}
           {showEventList && (
             <div
               className="flex-1 h-[var(--h-mappa-mobile)] lg:h-auto lg:min-h-0 flex flex-col"
@@ -346,33 +362,17 @@ export function Home() {
             </div>
           )}
 
-          {/* Map in sidebar — shown when "Mappa" is ON (no gap, flush under controls) */}
+          {/* Mappa "larga": solo da lg in su, quando si sceglie la modalita'
+              Mappa al posto della lista - su mobile la mappa e' gia' sempre
+              visibile piu' sopra, quindi qui resta nascosta. */}
           {!showEventList && (
-            <div
-              className="relative flex-1 h-[var(--h-mappa-mobile)] lg:h-auto lg:min-h-0 rounded-xl overflow-hidden shadow-sm border border-border mt-0"
-              style={{ "--h-mappa-mobile": `${altezzaMappaMobile}px` } as CSSProperties}
-            >
+            <div className="relative hidden lg:block flex-1 lg:h-auto lg:min-h-0 rounded-xl overflow-hidden shadow-sm border border-border mt-0">
               <MapContainer
                 events={filteredEvents}
                 selectedEventId={selectedEventId}
                 onSelectEvent={handleSelectEvent}
-                interattiva={isDesktop}
+                interattiva
               />
-              {!isDesktop && (
-                <div
-                  className="absolute inset-0 z-[999]"
-                  onClick={() => setMappaEspansa(true)}
-                  aria-label="Tocca per espandere e navigare la mappa"
-                />
-              )}
-              <button
-                type="button"
-                onClick={() => setMappaEspansa(true)}
-                title="Espandi la mappa per navigarla meglio"
-                className="absolute top-3 left-3 z-[1001] flex items-center justify-center w-9 h-9 rounded-lg bg-card/95 border border-border shadow-sm text-foreground cursor-pointer"
-              >
-                <Maximize2 className="w-4 h-4" />
-              </button>
             </div>
           )}
         </aside>
