@@ -287,6 +287,19 @@
  */
 @layer utilities {
 
+  /* Altezza per l'area lista/mappa su mobile: alcuni browser mobili
+     calcolano "vh" in modo incoerente rispetto allo spazio davvero
+     visibile (barra degli indirizzi che appare/scompare), il che su
+     alcuni telefoni puo' far risultare l'area alta 0px e quindi invisibile.
+     "dvh" risolve il problema mobile piu' correttamente, ma su un
+     browser che non lo riconosce la riga viene ignorata dal parser CSS e
+     resta valida quella precedente in "vh" - un fallback vero, non un
+     compromesso a meta'. */
+  .h-mappa-mobile {
+    height: 70vh;
+    height: 70dvh;
+  }
+
   /* Hide ugly search cancel button in Chrome until we can style it properly */
   input[type="search"]::-webkit-search-cancel-button {
     @apply hidden;

@@ -95,7 +95,11 @@ export function CalendarPage() {
 
                   return (
                     <Link key={evt.id} href={href}>
-                      <a className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card hover:border-primary/50 hover:shadow-sm transition-all">
+                      {/* items-start (non items-center) + min-h sul testo:
+                          cosi' tutte le card hanno la stessa altezza minima
+                          e restano allineate in alto anche quando un titolo
+                          va su due righe invece di una. */}
+                      <a className="flex items-start gap-3 p-3 rounded-lg border border-border bg-card hover:border-primary/50 hover:shadow-sm transition-all min-h-[4.5rem]">
                         {img ? (
                           <img
                             src={img}
@@ -108,7 +112,7 @@ export function CalendarPage() {
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm text-foreground truncate">{evt.titolo}</p>
+                          <p className="font-semibold text-sm text-foreground leading-snug min-h-[2.2em]">{evt.titolo}</p>
                           <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                             {ora && (
                               <span className="flex items-center gap-1 flex-shrink-0">
