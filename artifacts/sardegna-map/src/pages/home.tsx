@@ -24,9 +24,18 @@ export function Home() {
   // su mobile e' quello che si vuole vedere subito aprendo il sito. Da lg
   // in su lista e mappa sono affiancate, quindi si parte comunque con la
   // lista visibile a sinistra.
+  //
+  // Usiamo matchMedia sulla STESSA soglia (1024px) del breakpoint "lg" di
+  // Tailwind, invece di window.innerWidth: sono due sistemi diversi che su
+  // alcuni browser mobili (es. i browser integrati di Instagram/Facebook,
+  // "richiedi sito desktop", certi zoom) possono disallinearsi - risultato,
+  // il JS sceglie "lista" ma il CSS nasconde comunque il pannello mappa
+  // riservato al desktop, lasciando l'utente senza ne' l'uno ne' l'altro.
+  // matchMedia interroga la stessa media query CSS che decide il layout,
+  // quindi i due non possono piu' contraddirsi.
   const [showEventList, setShowEventList] = useState(() => {
     if (typeof window === "undefined") return true;
-    return window.innerWidth >= 1024;
+    return window.matchMedia("(min-width: 1024px)").matches;
   });
   // Su schermi piccoli la mappa e' spesso troppo piccola per navigarla
   // comodamente (pizzicare/trascinare in uno spazio ridotto). Un tocco sul
