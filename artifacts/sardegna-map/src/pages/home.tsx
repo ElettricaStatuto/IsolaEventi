@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type CSSProperties } from "react";
 import { Search, Maximize2, Minimize2 } from "lucide-react";
 import { useRoute, useLocation } from "wouter";
 import {
@@ -40,6 +40,26 @@ export function Home() {
     const handleToggle = () => setShowEventList((prev) => !prev);
     window.addEventListener("toggle-map-view", handleToggle);
     return () => window.removeEventListener("toggle-map-view", handleToggle);
+  }, []);
+
+  // Altezza dell'area lista/mappa su mobile, misurata DIRETTAMENTE in
+  // JavaScript (window.innerHeight) invece di affidarsi a unita' CSS come
+  // vh/dvh - alcuni browser mobili le calcolano in modo incoerente rispetto
+  // allo spazio davvero visibile, risultando in un'area alta 0px (quindi
+  // mappa invisibile) su certi telefoni. innerHeight e' un numero reale,
+  // uguale per tutti i motori di rendering.
+  const [altezzaMappaMobile, setAltezzaMappaMobile] = useState<number>(() =>
+    typeof window !== "undefined" ? Math.round(window.innerHeight * 0.7) : 500
+  );
+  useEffect(() => {
+    const aggiorna = () => setAltezzaMappaMobile(Math.round(window.innerHeight * 0.7));
+    aggiorna();
+    window.addEventListener("resize", aggiorna);
+    window.addEventListener("orientationchange", aggiorna);
+    return () => {
+      window.removeEventListener("resize", aggiorna);
+      window.removeEventListener("orientationchange", aggiorna);
+    };
   }, []);
 
   // Fetch all events not yet ended (client-side filtering handles the rest)
@@ -286,7 +306,10 @@ export function Home() {
               resterebbe alto 0px. Da lg in su torna al comportamento
               originale (flex-1 dentro la colonna ad altezza piena). */}
           {showEventList && (
-            <div className="flex-1 h-mappa-mobile lg:h-auto lg:min-h-0 flex flex-col">
+            <div
+              className="flex-1 h-[var(--h-mappa-mobile)] lg:h-auto lg:min-h-0 flex flex-col"
+              style={{ "--h-mappa-mobile": `${altezzaMappaMobile}px` } as CSSProperties}
+            >
               <EventList
                 events={filteredEvents}
                 selectedEventId={selectedEventId}
@@ -300,7 +323,10 @@ export function Home() {
 
           {/* Map in sidebar — shown when "Mappa" is ON (no gap, flush under controls) */}
           {!showEventList && (
-            <div className="relative flex-1 h-mappa-mobile lg:h-auto lg:min-h-0 rounded-xl overflow-hidden shadow-sm border border-border mt-0">
+            <div
+              className="relative flex-1 h-[var(--h-mappa-mobile)] lg:h-auto lg:min-h-0 rounded-xl overflow-hidden shadow-sm border border-border mt-0"
+              style={{ "--h-mappa-mobile": `${altezzaMappaMobile}px` } as CSSProperties}
+            >
               <MapContainer
                 events={filteredEvents}
                 selectedEventId={selectedEventId}
