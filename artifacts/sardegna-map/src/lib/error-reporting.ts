@@ -47,21 +47,25 @@ export function segnalaErrore(dettagli: DettagliErrore): string {
     // richiesta relativa al dominio corrente (il sito statico), dove non
     // esiste nessun backend ad ascoltare: la segnalazione sparisce nel
     // nulla senza errori visibili. Bisogna quindi costruire l'URL assoluto
-    // a mano, qui, prima di usare sendBeacon.
+    // a mano, qui.
     const apiUrl = (import.meta.env.VITE_API_URL || "").trim().replace(/\/+$/, "");
     const endpoint = apiUrl ? `${apiUrl}/api/client-errors` : "/api/client-errors";
 
-    if (navigator.sendBeacon) {
-      const blob = new Blob([payload], { type: "application/json" });
-      navigator.sendBeacon(endpoint, blob);
-    } else {
-      fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: payload,
-        keepalive: true,
-      }).catch(() => {});
-    }
+    // sendBeacon avrebbe anche un secondo problema qui: e' una richiesta
+    // cross-origin (frontend e backend sono due domini Render diversi) e un
+    // Blob con type "application/json" NON e' un content-type "semplice"
+    // secondo le regole CORS - il browser puo' scartarlo in silenzio senza
+    // nessun errore visibile, ne' lato client ne' lato server. fetch con
+    // keepalive gestisce invece il CORS correttamente (il backend ha
+    // app.use(cors()) permissivo, usato gia' da tutte le altre chiamate API
+    // dell'app) ed e' comunque pensato per sopravvivere alla chiusura della
+    // pagina quando serve.
+    fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: payload,
+      keepalive: true,
+    }).catch(() => {});
   } catch {
     // silenzioso di proposito
   }
