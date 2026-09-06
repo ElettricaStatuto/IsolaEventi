@@ -9,6 +9,7 @@ import { Home } from "./pages/home";
 import { Stats } from "./pages/stats";
 import { FestivalPage } from "./pages/festival";
 import { CalendarPage } from "./pages/calendar";
+import { InstallaPage } from "./pages/installa";
 import { Map, BarChart2, CalendarDays, Sun, Moon, Menu, Download, Share } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -242,6 +243,7 @@ function Router() {
             <Route path="/calendario" component={CalendarPage} />
             <Route path="/stats" component={Stats} />
             <Route path="/festival/:id" component={FestivalPage} />
+            <Route path="/installa" component={InstallaPage} />
             <Route component={NotFound} />
           </Switch>
         </Layout>
