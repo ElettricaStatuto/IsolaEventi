@@ -8,45 +8,15 @@ from ..base import BaseScraper
 from ..models import Evento, SottoEvento
 from ..crawler_ai.crawler_strutturato import run_structured_crawler, sanitize_folder_name
 from ..crawler_ai.estrai_schema_locandina_ai_con_llm import genera_database_relazionale_con_llm
+from ..cloudinary_utils import carica_su_cloudinary
 
 logger = logging.getLogger(__name__)
 
 
 def ensure_cloudinary_image(url: str | None) -> str | None:
-    if not url or not isinstance(url, str) or not url.startswith("http") or "cloudinary.com" in url:
+    if not url or not isinstance(url, str) or not url.startswith("http"):
         return url
-    
-    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME")
-    api_key = os.environ.get("CLOUDINARY_API_KEY")
-    api_secret = os.environ.get("CLOUDINARY_API_SECRET")
-
-    if not (cloud_name and api_key and api_secret):
-        return url
-
-    try:
-        import cloudinary
-        import cloudinary.uploader
-        cloudinary.config(
-            cloud_name=cloud_name,
-            api_key=api_key,
-            api_secret=api_secret
-        )
-        res = cloudinary.uploader.upload(
-            url,
-            folder="isola-eventi",
-            transformation=[
-                {"width": 800, "height": 1000, "crop": "limit"},
-                {"quality": "auto:eco", "fetch_format": "auto"}
-            ]
-        )
-        cloud_url = res.get("secure_url")
-        if cloud_url:
-            logger.info(f"Immagine caricata su Cloudinary: {url} -> {cloud_url}")
-            return cloud_url
-        return url
-    except Exception as e:
-        logger.warning(f"Impossibile caricare immagine {url} su Cloudinary: {e}")
-        return url
+    return carica_su_cloudinary(url)
 
 
 class StructuredCrawlerScraper(BaseScraper):

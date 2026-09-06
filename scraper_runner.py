@@ -29,6 +29,7 @@ from scraper.sites.saludetrigu import SaludeTriguScraper
 from scraper.sites.spettacolisardegna import SpettacoliSardegnaScraper
 from scraper.ai_analyzer import analyze_event
 from scraper.models import SottoEvento
+from scraper.cloudinary_utils import carica_su_cloudinary, cloudinary_configurato
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -217,10 +218,20 @@ def _upsert_festival_parent(festival_name: str, fonte: str, eventi: list) -> int
 
 
 def _download_image(url: str, event_id: int) -> Optional[str]:
-    """Scarica un'immagine da URL e la salva come evento_{id}.{ext}.
-    Restituisce il nome file relativo (es. 'evento_42.jpg')."""
+    """Se Cloudinary e' configurato, carica l'immagine li' e ritorna l'URL
+    completo (https://res.cloudinary.com/...) - persistente, a differenza
+    del disco locale di Render che si azzera ad ogni deploy. Altrimenti
+    scarica su disco locale come prima (comodo per lo sviluppo in locale) e
+    ritorna solo il nome file relativo (es. 'evento_42.jpg')."""
     if not url:
         return None
+
+    if cloudinary_configurato():
+        cloud_url = carica_su_cloudinary(url)
+        if cloud_url and cloud_url != url:
+            return cloud_url
+        logger.warning(f"Upload su Cloudinary non riuscito per {url}, provo il salvataggio su disco locale.")
+
     try:
         parsed = urlparse(url)
         # Estrai estensione dal path
