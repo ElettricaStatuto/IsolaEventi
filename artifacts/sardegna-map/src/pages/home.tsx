@@ -16,6 +16,74 @@ import { ErrorBoundary } from "../components/error-boundary";
 import { NearbySection } from "../components/nearby-section";
 import { getAssetUrl, getEventImageUrl } from "../lib/utils";
 
+/**
+ * Etichetta diagnostica TEMPORANEA per capire perche' la mappa non si vede
+ * su alcuni telefoni: mostra numeri reali letti dal browser dell'utente
+ * (dimensioni schermo, risultato della media query, eventuali errori
+ * JavaScript catturati) invece di continuare a ipotizzare alla cieca da
+ * remoto. Da rimuovere una volta risolto il problema.
+ */
+function DebugOverlay() {
+  const [info, setInfo] = useState<string>("...");
+  const [errore, setErrore] = useState<string | null>(null);
+  const [mappaRect, setMappaRect] = useState<string>("non ancora misurata");
+
+  useEffect(() => {
+    const aggiorna = () => {
+      const lg = window.matchMedia("(min-width: 1024px)").matches;
+      setInfo(
+        `${window.innerWidth}x${window.innerHeight}px · dpr=${window.devicePixelRatio} · lg=${lg} · ` +
+        `${navigator.userAgent.slice(0, 60)}`
+      );
+    };
+    aggiorna();
+    window.addEventListener("resize", aggiorna);
+
+    const onError = (e: ErrorEvent) => {
+      setErrore(`${e.message} @ ${e.filename}:${e.lineno}`);
+    };
+    const onRejection = (e: PromiseRejectionEvent) => {
+      setErrore(`Promise non gestita: ${String(e.reason)}`);
+    };
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
+
+    const timer = setTimeout(() => {
+      const divs = Array.from(document.querySelectorAll(".leaflet-container"));
+      if (divs.length === 0) {
+        setMappaRect("nessun elemento .leaflet-container trovato nel DOM");
+      } else {
+        const rects = divs.map((d) => {
+          const r = d.getBoundingClientRect();
+          return `${Math.round(r.width)}x${Math.round(r.height)}`;
+        });
+        setMappaRect(`${divs.length} mappa/e trovate, dimensioni: ${rects.join(", ")}`);
+      }
+    }, 1500);
+
+    return () => {
+      window.removeEventListener("resize", aggiorna);
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRejection);
+      clearTimeout(timer);
+    };
+  }, []);
+
+  return (
+    <div className="fixed top-0 left-0 right-0 z-[9999] bg-yellow-300 text-black text-[10px] leading-tight p-2 font-mono break-all border-b-4 border-black">
+      <strong>DEBUG:</strong> {info}
+      <br />
+      <strong>Mappa nel DOM:</strong> {mappaRect}
+      {errore && (
+        <>
+          <br />
+          <strong className="text-red-700">ERRORE JS:</strong> {errore}
+        </>
+      )}
+    </div>
+  );
+}
+
 export function Home() {
   const queryClient = useQueryClient();
   const [match, params] = useRoute("/eventi/:idAndSlug");
@@ -143,6 +211,7 @@ export function Home() {
 
   return (
     <div className="flex flex-col gap-0 lg:h-[calc(100dvh-4rem)]">
+      <DebugOverlay />
       {/* Mappa espansa: nasconde tutto il resto (filtri, lista, "vicino a
           te") per navigare solo la mappa, su qualunque dimensione di
           schermo - un'esplicita scelta dell'utente, non lo stato di default. */}
