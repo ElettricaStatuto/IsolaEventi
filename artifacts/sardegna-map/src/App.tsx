@@ -9,10 +9,12 @@ import { Home } from "./pages/home";
 import { Stats } from "./pages/stats";
 import { FestivalPage } from "./pages/festival";
 import { CalendarPage } from "./pages/calendar";
-import { Map, BarChart2, CalendarDays, Sun, Moon, Menu } from "lucide-react";
+import { Map, BarChart2, CalendarDays, Sun, Moon, Menu, Download, Share } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ErrorBoundary } from "./components/error-boundary";
 import { attivaSegnalazioneErroriGlobale } from "./lib/error-reporting";
+import { useInstallPrompt } from "./hooks/use-install-prompt";
 
 // Lazy-loaded — Vite creates a separate chunk, excluded from the public bundle
 const Admin = lazy(() => import("./pages/admin").then((m) => ({ default: m.Admin })));
@@ -26,6 +28,13 @@ function Layout({ children }: { children: React.ReactNode }) {
       (!localStorage.getItem("sardegna_theme") && window.matchMedia("(prefers-color-scheme: dark)").matches);
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [istruzioniIosAperte, setIstruzioniIosAperte] = useState(false);
+  const { puoiInstallareOra, mostraIstruzioniIos, installaOra } = useInstallPrompt();
+  const mostraVoceInstalla = puoiInstallareOra || mostraIstruzioniIos;
+  const handleInstalla = () => {
+    if (puoiInstallareOra) installaOra();
+    else if (mostraIstruzioniIos) setIstruzioniIosAperte(true);
+  };
   const isCalendarPage = location === "/calendario";
   const handleToggleMappa = () => {
     if (location !== "/" && !location.startsWith("/eventi/")) {
@@ -83,6 +92,15 @@ function Layout({ children }: { children: React.ReactNode }) {
                 </>
               )}
             </button>
+            {mostraVoceInstalla && (
+              <button
+                onClick={handleInstalla}
+                title="Installa l'app sul dispositivo"
+                className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-primary/90 text-sm font-medium transition-colors cursor-pointer bg-primary text-primary-foreground border-none ml-1"
+              >
+                <Download className="w-4 h-4" /> <span className="hidden sm:inline">Installa app</span>
+              </button>
+            )}
           </nav>
 
           {/* Nav mobile: scorciatoia rapida (Mappa<->Calendario) sempre visibile + menu ☰ per il resto */}
@@ -161,8 +179,42 @@ function Layout({ children }: { children: React.ReactNode }) {
               </>
             )}
           </button>
+          {mostraVoceInstalla && (
+            <button
+              onClick={() => {
+                handleInstalla();
+                setMobileMenuOpen(false);
+              }}
+              className="flex items-center gap-3 px-3 py-3 rounded-md text-base font-medium transition-colors cursor-pointer bg-primary text-primary-foreground border-none text-left mt-1"
+            >
+              <Download className="w-5 h-5" /> Installa app
+            </button>
+          )}
         </SheetContent>
       </Sheet>
+
+      {/* Istruzioni per iOS: Safari non permette di avviare l'installazione
+          via codice, l'utente deve farlo a mano da Condividi → Aggiungi a Home */}
+      <Dialog open={istruzioniIosAperte} onOpenChange={setIstruzioniIosAperte}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Installa Sardegna Eventi</DialogTitle>
+            <DialogDescription>
+              Su iPhone/iPad l'installazione si fa da Safari, in due passaggi:
+            </DialogDescription>
+          </DialogHeader>
+          <ol className="space-y-3 text-sm text-foreground">
+            <li className="flex items-center gap-3">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold shrink-0">1</span>
+              Tocca l'icona <Share className="w-4 h-4 inline mx-1" /> <strong>Condividi</strong> nella barra di Safari
+            </li>
+            <li className="flex items-center gap-3">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold shrink-0">2</span>
+              Scorri e scegli <strong>"Aggiungi a Home"</strong>
+            </li>
+          </ol>
+        </DialogContent>
+      </Dialog>
 
       <main className="flex-1 flex flex-col max-w-[1600px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
         <ErrorBoundary>{children}</ErrorBoundary>
